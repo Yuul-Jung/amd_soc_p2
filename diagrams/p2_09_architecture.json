@@ -1,0 +1,292 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 09장 · UART · 모드 통합 구조도",
+ "title": "제2부 09장 · UART · 모드 통합 구조도",
+ "subtitle": "",
+ "width": 1440,
+ "height": 674,
+ "headings": {
+  "title": {
+   "x": 720.0,
+   "y": 44,
+   "w": 1360,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 720.0,
+   "y": 90,
+   "w": 1360,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "UART",
+   "type": "rect",
+   "x": 143,
+   "y": 376,
+   "w": 166,
+   "h": 76,
+   "title": "PC UART 문자열",
+   "sub": "LED / MODE / IRQ",
+   "fill": "#f6f6fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "CPU",
+   "type": "rect",
+   "x": 451,
+   "y": 376,
+   "w": 150,
+   "h": 76,
+   "title": "MicroBlaze V",
+   "sub": "main_p2_09.c",
+   "fill": "#f6f6fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "MODE",
+   "type": "rect",
+   "x": 826,
+   "y": 188,
+   "w": 219,
+   "h": 76,
+   "title": "p2_09_mode_logic.c",
+   "sub": "자동/수동 명령 정책",
+   "fill": "#f6f6fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "ISR",
+   "type": "rect",
+   "x": 826,
+   "y": 313,
+   "w": 301,
+   "h": 76,
+   "title": "setup_integrated_interrupts()",
+   "sub": "btn_irq_handler() · timer_callback()",
+   "fill": "#f6f6fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "GPIO",
+   "type": "rect",
+   "x": 826,
+   "y": 438,
+   "w": 151,
+   "h": 76,
+   "title": "기존 AXI GPIO",
+   "sub": "LED14 / LED15",
+   "fill": "#f6f6fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "DEV",
+   "type": "rect",
+   "x": 826,
+   "y": 556,
+   "w": 276,
+   "h": 76,
+   "title": "기존 AXI IP 01~08",
+   "sub": "CdS / SONIC / PWM / MOTOR / FND",
+   "fill": "#f6f6fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "IO",
+   "type": "rect",
+   "x": 1238,
+   "y": 556,
+   "w": 223,
+   "h": 76,
+   "title": "LED0~2 / FND / 모터",
+   "sub": "외부 CdS · HC-SR04 · XADC",
+   "fill": "#f6f6fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "UART",
+   "to": "CPU",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "CPU",
+   "to": "MODE",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     560,
+     376
+    ],
+    [
+     560,
+     188
+    ]
+   ]
+  },
+  {
+   "id": "e3",
+   "from": "CPU",
+   "to": "ISR",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     560,
+     376
+    ],
+    [
+     560,
+     313
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "CPU",
+   "to": "GPIO",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     560,
+     376
+    ],
+    [
+     560,
+     438
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "CPU",
+   "to": "DEV",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     560,
+     376
+    ],
+    [
+     560,
+     556
+    ]
+   ]
+  },
+  {
+   "id": "e6",
+   "from": "DEV",
+   "to": "IO",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  }
+ ]
+}

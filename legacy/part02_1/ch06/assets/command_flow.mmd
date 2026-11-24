@@ -1,0 +1,12 @@
+flowchart LR
+    A["poll_uart() 문자열 수신"] --> B["handle_line()"]
+    B --> C{"sonic_parse_command()"}
+    C -->|"SONIC ON"| D["AUTO 설정 / sonic_view=1"]
+    C -->|"SONIC OFF"| E["AUTO 해제 / 기존 FND 복귀"]
+    C -->|"SONIC READ"| F["sonic_print_reading()"]
+    C -->|"SONIC SHOT"| G["START 원샷 요청"]
+    C -->|"WARN 20"| H["WARN_CM=20 / WARN_EN=1"]
+    C -->|"WARN OFF"| I["WARN_EN=0"]
+    C -->|"기존 명령"| J["CDS/PWM/LED/DISP/STATUS 처리"]
+    D --> K["service_sonic_display() / SEQ 갱신 감지"]
+    K --> L["fnd_commit() / 거리 4자리 또는 소등"]

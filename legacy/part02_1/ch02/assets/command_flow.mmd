@@ -1,0 +1,23 @@
+flowchart LR
+    A["main()"] --> B["read_command_line()"]
+    B --> C{"result > 0?"}
+    C -->|아니오| D{"result == -2?"}
+    D -->|예| E["ERROR: invalid character"]
+    D -->|아니오| F{"result < 0?"}
+    F -->|예| G["ERROR: command too long"]
+    F -->|아니오 / 빈 줄| B
+    C -->|예| H["handle_command(line)"]
+    H --> I{"문자열 일치?"}
+    I -->|LED ON / LED OFF| J["Xil_Out32(LED_REG0)"]
+    I -->|DISP dddd| K["parse_disp_digits() → Xil_Out32(REG0, REG1)"]
+    I -->|DISP OFF| L["Xil_Out32(FND_CTRL_REG, 0)"]
+    I -->|STATUS| M["report_led() + report_fnd()"]
+    I -->|기타| N["ERROR: invalid command"]
+    J --> O["UART 응답 / 재대기"]
+    K --> O
+    L --> O
+    M --> O
+    N --> O
+    E --> O
+    G --> O
+    O --> B

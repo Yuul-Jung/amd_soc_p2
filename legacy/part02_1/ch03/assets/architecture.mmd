@@ -1,0 +1,10 @@
+flowchart LR
+    TERM["PC UART 115200 8N1"] --> UART["기존 AXI UART Lite"]
+    UART --> CPU["MicroBlaze V : C 응용"]
+    BTN["btnU/D/L/R"] --> CORE["button_event_core : 2FF/디바운스/5초"]
+    CORE --> IP["p2_03_axi_buttons_v1_0 : PENDING/ENABLE/IRQ"]
+    IP --> INTC["기존 AXI INTC : IRQ 입력 추가"]
+    INTC --> CPU
+    CPU --> FND["기존 p2_02_axi_fnd : BCD/ENABLE"]
+    FND --> DISP["Basys3 FND 4자리"]
+    CPU --> LED["기존 p2_01_axi_led : LED0"]

@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="820" viewBox="0 0 1480 820" role="img" aria-labelledby="title desc">
+<title id="title">제2부 02장 AXI FND 전체 동작 구조</title>
+<desc id="desc">PC UART 명령이 MicroBlaze V와 AXI4-Lite를 거쳐 p2_02_axi_fnd_v1_0 및 fnd_scan_controller로 전달되고 Basys3 FND를 구동하는 흐름과, 기존 01장 LED0 제어 경로를 함께 나타낸 구조도</desc>
+<defs>
+  <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+    <path d="M0 0 L8 4 L0 8 Z" fill="#38536f"/>
+  </marker>
+</defs>
+<style>
+  text{font-family:'Noto Sans KR','DejaVu Sans',sans-serif;fill:#1c3045}
+  .heading{font-size:27px;font-weight:700}.subtitle{font-size:15px;fill:#52677c}
+  .box{fill:#fff;stroke:#8aa2b6;stroke-width:2;rx:12}
+  .cpu{fill:#f2f6fc}.ip{fill:#eff8f5}.core{fill:#f1f8ee}.out{fill:#fff8ec}.existing{fill:#f4f5f8}
+  .boxhead{font-size:18px;font-weight:700;text-anchor:middle}.desc{font-size:14px;text-anchor:middle;fill:#4b6075}
+  .wire{fill:none;stroke:#38536f;stroke-width:2.5;marker-end:url(#arrow)}
+  .return{fill:none;stroke:#6c7f92;stroke-width:2;marker-end:url(#arrow)}
+  .label{font-size:13px;fill:#4b6075;text-anchor:middle}.section{font-size:14px;font-weight:700;fill:#687b90}
+  .note{font-size:13px;fill:#52677c}.signal{font-family:'DejaVu Sans Mono',monospace;font-size:13px;fill:#38536f;text-anchor:middle}
+</style>
+<rect width="1480" height="820" fill="#fff"/>
+<text x="48" y="58" class="heading">제2부 02장 · 사용자 AXI FND IP 전체 동작 구조</text>
+<text x="48" y="89" class="subtitle">PC UART → MicroBlaze V → AXI4-Lite → p2_02_axi_fnd_v1_0 → fnd_scan_controller → Basys3 FND</text>
+<line x1="48" y1="108" x2="1432" y2="108" stroke="#c9d5e2" stroke-width="2"/>
+
+<text x="48" y="151" class="section">02장 추가 기능 · 4자리 BCD 표시</text>
+
+<rect class="box" x="48" y="202" width="186" height="142"/>
+<text class="boxhead" x="141" y="239">PC 터미널</text>
+<text class="desc" x="141" y="269">DISP dddd / DISP OFF</text>
+<text class="desc" x="141" y="292">STATUS</text>
+<text class="desc" x="141" y="315">UART 명령·응답</text>
+
+<rect class="box cpu" x="290" y="202" width="208" height="142"/>
+<text class="boxhead" x="394" y="239">MicroBlaze V</text>
+<text class="desc" x="394" y="269">main_p2_02.c</text>
+<text class="desc" x="394" y="292">Xil_Out32 / Xil_In32</text>
+<text class="desc" x="394" y="315">FND_VALUE_REG / CTRL</text>
+
+<rect class="box cpu" x="554" y="202" width="174" height="142"/>
+<text class="boxhead" x="641" y="242">AXI4-Lite</text>
+<text class="desc" x="641" y="272">인터커넥트</text>
+<text class="desc" x="641" y="298">S00_AXI</text>
+
+<rect class="box ip" x="784" y="174" width="276" height="198"/>
+<text class="boxhead" x="922" y="211">p2_02_axi_fnd_v1_0</text>
+<text class="desc" x="922" y="239">u_axi : p2_02_axi_fnd_v1_0_S00_AXI</text>
+<line x1="808" y1="255" x2="1036" y2="255" stroke="#b7c9c0"/>
+<text class="desc" x="922" y="280">REG0 0x00 · reg_disp_bcd[15:0]</text>
+<text class="desc" x="922" y="305">REG1 0x04 · reg_disp_enable</text>
+<text class="desc" x="922" y="335">display_bcd[15:0] · display_enable</text>
+
+<rect class="box core" x="1116" y="202" width="214" height="142"/>
+<text class="boxhead" x="1223" y="239">fnd_scan_controller</text>
+<text class="desc" x="1223" y="268">4자리 BCD 프레임</text>
+<text class="desc" x="1223" y="291">Active-Low 자리 스캔</text>
+<text class="desc" x="1223" y="314">dp = 1'b1 (소수점 OFF)</text>
+
+<rect class="box out" x="1380" y="202" width="52" height="142"/>
+<text class="boxhead" x="1406" y="236" transform="rotate(90 1406 236)">Basys3 FND</text>
+
+<path class="wire" d="M234 273 H290"/>
+<text class="label" x="262" y="185">UART RX</text>
+<text class="signal" x="262" y="203">RsRx</text>
+
+<path class="wire" d="M498 273 H554"/>
+<text class="label" x="526" y="185">메모리 맵 I/O</text>
+
+<path class="wire" d="M728 273 H784"/>
+<text class="label" x="756" y="185">AXI 쓰기·읽기</text>
+
+<path class="wire" d="M1060 273 H1116"/>
+<text class="signal" x="1088" y="173">display_bcd[15:0]</text>
+<text class="signal" x="1088" y="191">display_enable</text>
+
+<path class="wire" d="M1330 273 H1380"/>
+<text class="signal" x="1355" y="166">fnd_seg[6:0] → seg[6:0]</text>
+<text class="signal" x="1355" y="184">fnd_an[3:0] → an[3:0]</text>
+<text class="signal" x="1355" y="365">fnd_dp → dp</text>
+
+<path class="return" d="M394 344 V410 H141 V344"/>
+<text class="label" x="267" y="400">UART TX (RsTx) · STATUS / OK 응답</text>
+
+<rect x="784" y="408" width="548" height="82" rx="10" fill="#f8fafc" stroke="#c7d3df" stroke-width="1.5"/>
+<text class="note" x="808" y="435">BCD 자리 연결: display_bcd[15:12] = 왼쪽 AN3 · [11:8] = AN2 · [7:4] = AN1 · [3:0] = 오른쪽 AN0</text>
+<text class="note" x="808" y="461">표시 Enable: display_enable = 0이면 an[3:0] = 4'b1111, seg[6:0] = 7'b1111111</text>
+<text class="note" x="808" y="482">보드 출력은 모두 Active-Low이며 dp는 항상 1(OFF)입니다.</text>
+
+<line x1="48" y1="530" x2="1432" y2="530" stroke="#d8e0e8" stroke-width="2"/>
+<text x="48" y="570" class="section">01장 보존 기능 · LED0 제어 경로</text>
+
+<rect class="box existing" x="290" y="606" width="208" height="112"/>
+<text class="boxhead" x="394" y="644">MicroBlaze V</text>
+<text class="desc" x="394" y="673">LED ON / LED OFF</text>
+<text class="desc" x="394" y="696">USER_IP_BASEADDR + REG0</text>
+
+<rect class="box existing" x="554" y="606" width="174" height="112"/>
+<text class="boxhead" x="641" y="646">AXI4-Lite</text>
+<text class="desc" x="641" y="676">기존 인터커넥트</text>
+
+<rect class="box existing" x="784" y="606" width="276" height="112"/>
+<text class="boxhead" x="922" y="643">p2_01_axi_led</text>
+<text class="desc" x="922" y="673">S00_AXI · REG0[0]</text>
+<text class="desc" x="922" y="696">led_o → p2_led_o</text>
+
+<rect class="box out" x="1116" y="606" width="214" height="112"/>
+<text class="boxhead" x="1223" y="644">basys3_soc11_top</text>
+<text class="desc" x="1223" y="673">p2_led_o → ip_led0</text>
+<text class="desc" x="1223" y="696">led[0]</text>
+
+<path class="wire" d="M498 662 H554"/>
+<path class="wire" d="M728 662 H784"/>
+<path class="wire" d="M1060 662 H1116"/>
+<text class="signal" x="1088" y="645">p2_led_o</text>
+
+<text x="48" y="778" class="subtitle">02장 FND 기능을 추가해도 01장의 LED0 AXI 제어 경로는 독립적으로 유지됩니다.</text>
+</svg>

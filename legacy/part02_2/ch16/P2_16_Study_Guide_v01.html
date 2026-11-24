@@ -1,0 +1,392 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>제2부 16장 | DS3231 I²C RTC 시간·날짜 읽기</title><style>*{box-sizing:border-box}body{margin:0;background:#f3f7fb;color:#213749;font:16px/1.82 system-ui,-apple-system,"Noto Sans KR",sans-serif}header{background:linear-gradient(115deg,#183e63,#1b6e8e);color:#fff;padding:42px max(20px,calc((100vw - 1080px)/2))}header h1{font-size:clamp(25px,3.2vw,36px);line-height:1.35;margin:7px 0}header p{color:#dcecf5;margin:8px 0}.series{font-size:13px;letter-spacing:2px;font-weight:800}main{max-width:1080px;margin:25px auto;padding:0 20px 70px}section{background:#fff;border:1px solid #d8e4ed;border-radius:13px;padding:24px 29px;margin:18px 0}h2{font-size:22px;color:#165579;margin:0 0 14px;border-bottom:2px solid #e6edf4;padding-bottom:8px}h3{font-size:18px;color:#286583}table{width:100%;border-collapse:collapse;margin:13px 0}th,td{border:1px solid #cfdee9;padding:8px 12px;text-align:left;vertical-align:top}th{background:#e9f2f8}pre{border-radius:8px;padding:18px;background:#182c41;color:#e8f3fa;overflow:auto;font:13px/1.7 ui-monospace,Consolas,monospace}code{font-family:ui-monospace,Consolas,monospace}p code,li code,td code{background:#ecf3f9;padding:1px 5px;border-radius:4px;color:#1b5e81}details{padding:11px;border:1px solid #cbdfe9;border-radius:8px;margin:11px 0}summary{cursor:pointer;font-weight:700;color:#14577b}.warn{padding:13px 16px;border-left:4px solid #b98c32;background:#fff7e8}.ok{padding:13px 16px;border-left:4px solid #378977;background:#eff8f3}a{color:#0d6592}svg{max-width:100%;height:auto}footer{text-align:center;color:#698092;padding:27px}@media(max-width:660px){section{padding:15px}table{font-size:13px}header{padding:31px 19px}}</style></head><body><header><div class="series">BASYS3 · MICROBLAZE V · PART 02</div><h1>제16장 · DS3231 I²C 실시간 시계</h1><p>시간·날짜 레지스터 → Repeated START → BCD 변환 → 윤년·OSF 검증</p></header><main><section><h2>1. 과제 개요</h2><p>DS3231(디에스3231)은 I²C(아이투씨, 두 선식 직렬 통신) 기반의 RTC(Real-Time Clock, 실시간 시계) 장치다. 시간·날짜를 내장 발진기로 유지하고 백업 배터리 전원도 지원한다. DS18B20의 Dallas 1-Wire와는 프로토콜이 다르다.</p><p>이번 실습은 <strong>DS3231의 시간·날짜 7바이트 레지스터 읽기 순서</strong>를 설계하고, BCD(이진화 십진수)를 십진수로 변환하여 정상 시각과 오류를 구분한다. 기존 제14장 I²C 단일 바이트 쓰기 수업에서 <em>Repeated START(반복 시작)</em>와 연속 읽기로 확장되는 부분을 학습한다.</p><p class="warn"><strong>시험 상태:</strong> 호스트 C와 전송 명령 시퀀서 RTL의 모의 장치 테스트는 PASS. 실제 SDA/SCL 물리 I²C Master의 반복 START/읽기 구현, 신규 AXI IP, Vivado·Vitis·Basys3 실물은 아직 검증되지 않았다. 합성·실물 시험은 사용자 요청으로 보류한다.</p></section><section><h2>2. 계층형 시스템 구조</h2><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1035 330" role="img" aria-label="MicroBlaze V와 DS3231 RTC 데이터 읽기 구조">
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7z" fill="#4380a0"/></marker></defs>
+<rect x="13" y="13" width="1007" height="297" rx="13" fill="#f8fafc" stroke="#bad5e3" stroke-width="2"/>
+<g font-size="17" text-anchor="middle" fill="#17435b">
+<rect x="31" y="53" width="177" height="88" rx="9" fill="#dfeaf8" stroke="#73a0c0"/><text x="119" y="88">MicroBlaze V</text><text x="119" y="110" font-size="12">AXI 통합 후속</text>
+<rect x="269" y="53" width="202" height="88" rx="9" fill="#cce8e3" stroke="#6caa9d"/><text x="370" y="87">Burst Sequencer</text><text x="370" y="111" font-size="12">ds3231_burst_sequencer</text>
+<rect x="534" y="53" width="208" height="88" rx="9" fill="#cce8e3" stroke="#6caa9d"/><text x="638" y="86">I²C Read Master</text><text x="638" y="111" font-size="12">추가 구현 필요</text>
+<rect x="801" y="53" width="205" height="88" rx="9" fill="#f5e1bf" stroke="#c69e63"/><text x="904" y="88">DS3231 RTC</text><text x="904" y="110" font-size="12">SCL · SDA · 0x68</text>
+<path d="M208 97H269M471 97H534M742 97H801" fill="none" stroke="#4380a0" stroke-width="3" marker-end="url(#a)"/>
+<rect x="271" y="216" width="470" height="65" rx="9" fill="#e8e8f7" stroke="#aeb4d0"/><text x="506" y="240">sw/ds3231_time.c</text><text x="506" y="262" font-size="13">BCD·날짜·윤년·12h/24h·OSF 검증</text>
+<path d="M370 141V216" fill="none" stroke="#4380a0" stroke-width="2" marker-end="url(#a)"/>
+</g></svg>
+<p>현재 검증한 경로는 <strong>Sequencer + 모의 버스 응답</strong> 및 <strong>C + 모의 DS3231 레지스터</strong> 두 개다. 가운데의 실제 I²C Read Master는 아직 연결되지 않았으므로 임의로 실장 성공으로 표시하지 않는다.</p></section><section><h2>3. I²C 장치 주소와 레지스터</h2><p>DS3231의 7비트 장치 주소는 <code>0x68</code>이다. I²C 버스에서 8비트 주소 프레임으로 송신할 때 쓰기는 <code>0xD0</code>, 읽기는 <code>0xD1</code>이다.</p><table><thead><tr><th>레지스터 주소</th><th>내용</th><th>표현/주의</th></tr></thead><tbody>
+<tr><td>0x00</td><td>Seconds(초)</td><td>BCD 00~59</td></tr>
+<tr><td>0x01</td><td>Minutes(분)</td><td>BCD 00~59</td></tr>
+<tr><td>0x02</td><td>Hours(시)</td><td>12/24시간제 선택 및 AM/PM</td></tr>
+<tr><td>0x03</td><td>Day(요일 번호)</td><td>1~7, 요일 이름과 숫자 연결은 사용자 설정</td></tr>
+<tr><td>0x04</td><td>Date(일)</td><td>01~31, 실제 월별 유효 범위 검사</td></tr>
+<tr><td>0x05</td><td>Month/Century</td><td>1~12, bit7 Century</td></tr>
+<tr><td>0x06</td><td>Year(년)</td><td>00~99, 교육용 2000년 기준 변환</td></tr>
+<tr><td>0x0F</td><td>Status(상태)</td><td>bit7 OSF: 시계 발진 중단 이력</td></tr></tbody></table>
+<p>OSF(Oscillator Stop Flag, 발진 중단 표시)가 1이라면 읽힌 날짜·시간을 곧바로 신뢰하지 않는다. 초기 시각 설정과 플래그 정리가 필요한지는 실제 장치 상태에 따라 결정한다. 본 실습에서 OSF를 자동으로 지우지 않는다. <a href="https://www.analog.com/media/en/technical-documentation/data-sheets/DS3231.pdf">Analog Devices 공식 DS3231 데이터시트</a>.</p></section><section><h2>4. Repeated START를 사용하는 7바이트 읽기</h2><pre><code>START
+  → 0xD0 : DS3231 쓰기 주소
+  → ACK
+  → 0x00 : 시작 레지스터 포인터(Seconds)
+  → ACK
+  → REPEATED START
+  → 0xD1 : DS3231 읽기 주소
+  → ACK
+  → Read Seconds(0x00) → ACK
+  → Read Minutes(0x01) → ACK
+  → Read Hours(0x02)   → ACK
+  → Read Weekday(0x03) → ACK
+  → Read Date(0x04)    → ACK
+  → Read Month(0x05)   → ACK
+  → Read Year(0x06)    → NACK
+  → STOP</code></pre>
+<p>마지막 바이트 후 마스터는 NACK을 보내고 STOP으로 종료한다. 원래 14장 <code>i2c_write_byte_master</code>는 <strong>쓰기 전용</strong>이므로 그대로 16장 읽기를 지원한다고 보고할 수 없다. 16장의 <code>ds3231_burst_sequencer</code>는 하위 I²C 버스 엔진에 전달할 명령만 만든다.</p></section><section><h2>5. BCD 변환과 날짜의 유효성</h2><p>BCD는 10진수 각 자리(0~9)를 4비트씩 인코딩하는 표현이다. 예를 들어 <code>0x42</code>는 16진 정수 66이 아니라 <strong>42분</strong>이다.</p>
+<table><thead><tr><th>Raw 데이터</th><th>변환</th><th>결과</th></tr></thead><tbody>
+<tr><td>Seconds <code>0x58</code></td><td>5×10 + 8</td><td>58초</td></tr>
+<tr><td>Minutes <code>0x42</code></td><td>4×10 + 2</td><td>42분</td></tr>
+<tr><td>Hours <code>0x09</code></td><td>0×10 + 9</td><td>09시(24시간제)</td></tr>
+<tr><td>Date <code>0x11</code></td><td>1×10 + 1</td><td>11일</td></tr>
+<tr><td>Month <code>0x11</code></td><td>1×10 + 1</td><td>11월</td></tr>
+<tr><td>Year <code>0x26</code></td><td>20 + 6</td><td>2026년(2000 기준)</td></tr></tbody></table>
+<p>12시간제에서는 12 AM → 00시, 12 PM → 12시, 1 PM → 13시로 변환한다. 실제 날짜 검증에서 윤년·월별 일수도 확인한다. 예를 들어 <strong>2024년 2월 29일은 유효하지만 2100년 2월 29일은 유효하지 않다.</strong></p>
+<p>DS3231 내부 연도를 무조건 컴퓨터 현재 날짜로 간주하지 않는다. BCD 값 자체가 올바르더라도 OSF 및 초기설정 상태를 검증하지 않은 경우 시각의 실제 정확도는 미확인이다.</p></section><section><h2>6. 코드·테스트벤치 전체</h2><p>다음은 한 곳에 모은 원본 소스다. C는 실제 장치 호출부와 독립된 콜백을 사용하며, RTL은 I²C 버스 제어 명령을 순서대로 발행한다. 기존 14장 RTL 및 15장 센서 RTL을 변경하지 않는다.</p><details><summary>sw/ds3231_time.h · 전체 코드 펼치기</summary><pre><code>#ifndef P2_16_DS3231_TIME_H
+#define P2_16_DS3231_TIME_H
+#include &lt;stdint.h&gt;
+#include &lt;stddef.h&gt;
+#define DS3231_I2C_ADDR 0x68u
+// 7-byte register burst is obtained with pointer 0x00 and repeated START.
+// Return 0 on success, nonzero for bus errors.
+typedef int (*ds3231_read_regs_fn)(void *ctx, uint8_t addr7,
+                                  uint8_t reg, uint8_t *dest, size_t len);
+typedef struct {
+    uint16_t year;       // 2000..2199 if century flag is used.
+    uint8_t month, day, weekday, hour, minute, second;
+} ds3231_datetime_t;
+typedef enum {
+    DS3231_OK=0,
+    DS3231_ERR_ARG=-1,
+    DS3231_ERR_BUS=-2,
+    DS3231_ERR_BCD=-3,
+    DS3231_ERR_RANGE=-4,
+    DS3231_ERR_OSF=-5
+} ds3231_result_t;
+// Hour 12/24 handling; weekday 1..7 is DS3231 user-defined sequence.
+ds3231_result_t ds3231_decode_datetime(const uint8_t raw[7],
+                                        ds3231_datetime_t *out);
+// Reads status reg 0x0F OSF bit and time regs 0x00..0x06.
+// OSF=1 rejects timestamp as untrusted; does not clear status by itself.
+ds3231_result_t ds3231_read_datetime(ds3231_read_regs_fn reader, void *ctx,
+                                      ds3231_datetime_t *out);
+#endif
+</code></pre></details>
+<details><summary>sw/ds3231_time.c · 전체 코드 펼치기</summary><pre><code>#include "ds3231_time.h"
+static int bcd_to_uint(uint8_t v,int *out)
+{
+    if ((v &amp; 0x0fu)&gt;9u || ((v&gt;&gt;4)&amp;0x0fu)&gt;9u) return -1;
+    *out=(int)((v&gt;&gt;4)*10u+(v&amp;0x0fu));
+    return 0;
+}
+static int leap(unsigned y)
+{
+    return (y%4u==0u &amp;&amp; (y%100u!=0u || y%400u==0u));
+}
+ds3231_result_t ds3231_decode_datetime(const uint8_t raw[7],
+                                        ds3231_datetime_t *out)
+{
+    ds3231_datetime_t t;
+    int seconds,minutes,hours,date,month,year,weekday,dim;
+    const int days[12]={31,28,31,30,31,30,31,31,30,31,30,31};
+    if(!raw||!out) return DS3231_ERR_ARG;
+    if((raw[0]&amp;0x80u) || (raw[1]&amp;0x80u) || (raw[2]&amp;0x80u) ||
+       (raw[3]&amp;0xf8u) || (raw[4]&amp;0xc0u) || (raw[5]&amp;0x60u))
+        return DS3231_ERR_RANGE;
+    if(bcd_to_uint(raw[0]&amp;0x7fu,&amp;seconds) ||
+       bcd_to_uint(raw[1]&amp;0x7fu,&amp;minutes) ||
+       bcd_to_uint(raw[3]&amp;0x07u,&amp;weekday) ||
+       bcd_to_uint(raw[4]&amp;0x3fu,&amp;date) ||
+       bcd_to_uint(raw[5]&amp;0x1fu,&amp;month) ||
+       bcd_to_uint(raw[6],&amp;year)) return DS3231_ERR_BCD;
+    if(raw[2]&amp;0x40u) {
+        // DS3231 hours register bit6=1: 12-hour, bit5=PM.
+        int h12;
+        if((raw[2]&amp;0x80u) || bcd_to_uint(raw[2]&amp;0x1fu,&amp;h12))
+            return DS3231_ERR_BCD;
+        if(h12&lt;1 || h12&gt;12) return DS3231_ERR_RANGE;
+        hours=h12%12 + ((raw[2]&amp;0x20u)?12:0);
+    } else {
+        if(bcd_to_uint(raw[2]&amp;0x3fu,&amp;hours)) return DS3231_ERR_BCD;
+    }
+    t.year=(uint16_t)(2000+year+((raw[5]&amp;0x80u)?100:0));
+    if(seconds&gt;59 || minutes&gt;59 || hours&gt;23 || weekday&lt;1 ||
+       weekday&gt;7 || month&lt;1 || month&gt;12 || date&lt;1)
+        return DS3231_ERR_RANGE;
+    dim=days[month-1];
+    if(month==2 &amp;&amp; leap(t.year)) dim++;
+    if(date&gt;dim) return DS3231_ERR_RANGE;
+    t.second=(uint8_t)seconds;t.minute=(uint8_t)minutes;
+    t.hour=(uint8_t)hours;t.day=(uint8_t)date;
+    t.month=(uint8_t)month;t.weekday=(uint8_t)weekday;
+    *out=t; return DS3231_OK;
+}
+ds3231_result_t ds3231_read_datetime(ds3231_read_regs_fn reader, void *ctx,
+                                      ds3231_datetime_t *out)
+{
+    uint8_t raw[7],status;
+    if(!reader||!out) return DS3231_ERR_ARG;
+    // Check OSF before and after snapshot to reject oscillator-stop
+    // conditions arising during the read.
+    if(reader(ctx,DS3231_I2C_ADDR,0x0f,&amp;status,1)!=0)
+        return DS3231_ERR_BUS;
+    if(status&amp;0x80u) return DS3231_ERR_OSF;
+    if(reader(ctx,DS3231_I2C_ADDR,0x00,raw,7)!=0)
+        return DS3231_ERR_BUS;
+    if(reader(ctx,DS3231_I2C_ADDR,0x0f,&amp;status,1)!=0)
+        return DS3231_ERR_BUS;
+    if(status&amp;0x80u) return DS3231_ERR_OSF;
+    return ds3231_decode_datetime(raw,out);
+}
+</code></pre></details>
+<details><summary>rtl/ds3231_burst_sequencer.v · 전체 코드 펼치기</summary><pre><code>`timescale 1ns/1ps
+// P2-16 transaction-level RTC register read planner (NOT physical I2C).
+// Valid/ready command interface to a FUTURE I2C write/read engine.
+// Sequence: START, D0(write address), 00(pointer), RESTART,
+//           D1(read address), 6 READ_ACK, READ_NACK, STOP.
+// Each bus command produces one response pulse; READ responses carry data.
+// I2C opcode: 0 START,1 WRITE_BYTE,2 RESTART,3 READ_ACK,
+//             4 READ_NACK,5 STOP. No electrical SCL/SDA RTL in this module.
+module ds3231_burst_sequencer (
+    input wire clk,input wire resetn,input wire start_pulse,
+    output reg busy,output reg done_pulse,output reg error_pulse,
+    output wire bus_valid,input wire bus_ready,
+    output reg [2:0] bus_op,output reg [7:0] bus_wdata,
+    input wire bus_rsp_valid,input wire bus_rsp_error,
+    input wire [7:0] bus_rdata,
+    output reg [55:0] raw_bcd // byte0 seconds is raw_bcd[7:0]
+);
+    localparam [1:0] IDLE=0, SEND=1, WAIT_RSP=2, FINISH=3;
+    reg [1:0] state;
+    reg [3:0] step;
+    reg [55:0] shifted;
+    reg [7:0] tmp_data;
+    assign bus_valid=(state==SEND);
+    always @(*) begin
+        bus_op=0;bus_wdata=0;
+        case(step)
+        0:bus_op=0;                       // START
+        1:begin bus_op=1;bus_wdata=8'hd0;end
+        2:begin bus_op=1;bus_wdata=8'h00;end
+        3:bus_op=2;                       // REPEATED START
+        4:begin bus_op=1;bus_wdata=8'hd1;end
+        5,6,7,8,9,10:bus_op=3;           // read + ACK
+        11:bus_op=4;                      // read + NACK final
+        12:bus_op=5;                      // STOP
+        default:bus_op=0;
+        endcase
+    end
+    always @(posedge clk) begin
+        if(!resetn) begin
+            state&lt;=IDLE;step&lt;=0;busy&lt;=0;done_pulse&lt;=0;
+            error_pulse&lt;=0;raw_bcd&lt;=0;shifted&lt;=0;tmp_data&lt;=0;
+        end else begin
+            done_pulse&lt;=0;error_pulse&lt;=0;
+            case(state)
+            IDLE:if(start_pulse)begin
+                step&lt;=0;busy&lt;=1;shifted&lt;=0;state&lt;=SEND;
+            end
+            SEND:if(bus_ready)state&lt;=WAIT_RSP;
+            WAIT_RSP:if(bus_rsp_valid)begin
+                if(bus_rsp_error)begin
+                    // Report failure; do not publish partial data.
+                    // Actual I2C engine shall release bus on error.
+                    error_pulse&lt;=1;busy&lt;=0;state&lt;=IDLE;
+                end else begin
+                    if(step&gt;=5 &amp;&amp; step&lt;=11)
+                        shifted[8*(step-5)+:8]&lt;=bus_rdata;
+                    if(step==12)begin
+                        raw_bcd&lt;=shifted;state&lt;=FINISH;
+                    end else begin step&lt;=step+1'b1;state&lt;=SEND;end
+                end
+            end
+            FINISH:begin
+                done_pulse&lt;=1;busy&lt;=0;state&lt;=IDLE;
+            end
+            default:state&lt;=IDLE;
+            endcase
+        end
+    end
+endmodule
+</code></pre></details>
+<details><summary>tests/test_ds3231_time.c · 전체 코드 펼치기</summary><pre><code>#include &lt;assert.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include "../sw/ds3231_time.h"
+typedef struct {uint8_t regs[0x13];int calls,fail_at,osf_during_read;} fake_rtc_t;
+static int fake_read(void *ctx,uint8_t addr,uint8_t reg,uint8_t *dest,size_t len)
+{
+    fake_rtc_t *f=(fake_rtc_t*)ctx;
+    f-&gt;calls++;
+    if(f-&gt;fail_at==f-&gt;calls || addr!=0x68 || (size_t)reg+len&gt;sizeof(f-&gt;regs))
+        return -1;
+    if(f-&gt;osf_during_read &amp;&amp; f-&gt;calls==3) f-&gt;regs[0x0f]|=0x80;
+    memcpy(dest,f-&gt;regs+reg,len);
+    return 0;
+}
+static void seed(fake_rtc_t *f)
+{
+    memset(f,0,sizeof(*f));
+    // 2026-11-11 09:42:58, user-defined weekday 4.
+    uint8_t v[7]={0x58,0x42,0x09,0x04,0x11,0x11,0x26};
+    memcpy(f-&gt;regs,v,7);
+}
+int main(void)
+{
+    fake_rtc_t f;ds3231_datetime_t t;
+    seed(&amp;f);
+    assert(ds3231_read_datetime(fake_read,&amp;f,&amp;t)==DS3231_OK);
+    assert(f.calls==3 &amp;&amp; t.year==2026 &amp;&amp; t.month==11 &amp;&amp; t.day==11 &amp;&amp;
+           t.hour==9 &amp;&amp; t.minute==42 &amp;&amp; t.second==58 &amp;&amp; t.weekday==4);
+    puts("P2_16_RTC_BURST_BCD_24H_PASS");
+    seed(&amp;f);f.regs[2]=0x72; // 12-hour 12 PM -&gt; 12:xx
+    assert(ds3231_read_datetime(fake_read,&amp;f,&amp;t)==DS3231_OK &amp;&amp; t.hour==12);
+    f.calls=0;f.regs[2]=0x52; // 12 AM -&gt; 00:xx
+    assert(ds3231_read_datetime(fake_read,&amp;f,&amp;t)==DS3231_OK &amp;&amp; t.hour==0);
+    f.calls=0;f.regs[2]=0x61; // 1 PM -&gt; 13:xx
+    assert(ds3231_read_datetime(fake_read,&amp;f,&amp;t)==DS3231_OK &amp;&amp; t.hour==13);
+    puts("P2_16_RTC_12H_AM_PM_PASS");
+    seed(&amp;f);f.regs[4]=0x29;f.regs[5]=0x02;f.regs[6]=0x24;
+    assert(ds3231_decode_datetime(f.regs,&amp;t)==DS3231_OK &amp;&amp; t.day==29);
+    f.regs[6]=0x25;
+    assert(ds3231_decode_datetime(f.regs,&amp;t)==DS3231_ERR_RANGE);
+    f.regs[4]=0x31;f.regs[5]=0x04;
+    assert(ds3231_decode_datetime(f.regs,&amp;t)==DS3231_ERR_RANGE);
+    puts("P2_16_RTC_LEAP_CALENDAR_PASS");
+    seed(&amp;f);f.regs[5]=0x91;f.regs[6]=0x00;f.regs[4]=0x11;
+    assert(ds3231_decode_datetime(f.regs,&amp;t)==DS3231_OK &amp;&amp; t.year==2100);
+    f.regs[4]=0x29;f.regs[5]=0x82;
+    assert(ds3231_decode_datetime(f.regs,&amp;t)==DS3231_ERR_RANGE);
+    puts("P2_16_RTC_CENTURY_2100_PASS");
+    seed(&amp;f);f.regs[1]=0x6a;
+    assert(ds3231_decode_datetime(f.regs,&amp;t)==DS3231_ERR_BCD);
+    seed(&amp;f);f.regs[0]=0x60;
+    assert(ds3231_decode_datetime(f.regs,&amp;t)==DS3231_ERR_RANGE);
+    seed(&amp;f);f.regs[3]=0;
+    assert(ds3231_decode_datetime(f.regs,&amp;t)==DS3231_ERR_RANGE);
+    puts("P2_16_RTC_INVALID_DATA_REJECT_PASS");
+    seed(&amp;f);f.regs[0x0f]=0x80;
+    assert(ds3231_read_datetime(fake_read,&amp;f,&amp;t)==DS3231_ERR_OSF);
+    seed(&amp;f);f.osf_during_read=1;
+    assert(ds3231_read_datetime(fake_read,&amp;f,&amp;t)==DS3231_ERR_OSF);
+    seed(&amp;f);f.fail_at=2;
+    assert(ds3231_read_datetime(fake_read,&amp;f,&amp;t)==DS3231_ERR_BUS);
+    puts("P2_16_RTC_OSF_BUS_ERROR_PASS");
+    puts("P2_16_HOST_RTC_TESTS_PASS");
+    return 0;
+}
+</code></pre></details>
+<details><summary>tests/tb_ds3231_burst_sequencer.v · 전체 코드 펼치기</summary><pre><code>`timescale 1ns/1ps
+// Fake transaction responder verifies exact DS3231 repeated-start
+// sequence, reads 7 BCD register bytes, and injects a bus error.
+module tb_ds3231_burst_sequencer;
+    reg clk=0;always #5 clk=~clk;
+    reg resetn=0,start=0,ready=1;
+    wire busy,done,error,valid;
+    wire [2:0] op;
+    wire [7:0] wdata;
+    wire [55:0] raw;
+    reg rsp_valid=0,rsp_error=0;
+    reg [7:0] rsp_data=0;
+    reg [7:0] sample [0:6];
+    integer cmd_count=0,read_count=0,mode=0;
+    ds3231_burst_sequencer dut(
+        .clk(clk),.resetn(resetn),.start_pulse(start),
+        .busy(busy),.done_pulse(done),.error_pulse(error),
+        .bus_valid(valid),.bus_ready(ready),
+        .bus_op(op),.bus_wdata(wdata),
+        .bus_rsp_valid(rsp_valid),.bus_rsp_error(rsp_error),
+        .bus_rdata(rsp_data),.raw_bcd(raw)
+    );
+    reg queued=0, queued_error=0;
+    reg [7:0] queued_data=0;
+    // (변경) 유효한 bus_valid/bus_ready 핸드셰이크는 상승 에지에서 수락.
+    // 다음 반주기에서 응답을 준비하여 WAIT_RSP 상승 에지까지 유지한다.
+    always @(posedge clk) begin
+        if(!resetn) queued&lt;=0;
+        else begin
+            queued&lt;=0;
+            if(valid &amp;&amp; ready)begin
+                if(cmd_count&gt;12) $fatal(1,"too many commands");
+                case(cmd_count)
+                0:if(op!==0) $fatal(1,"expected START");
+                1:if(op!==1 || wdata!==8'hd0) $fatal(1,"expected D0");
+                2:if(op!==1 || wdata!==8'h00) $fatal(1,"expected pointer00");
+                3:if(op!==2) $fatal(1,"expected RESTART");
+                4:if(op!==1 || wdata!==8'hd1) $fatal(1,"expected D1");
+                5,6,7,8,9,10:if(op!==3) $fatal(1,"expected READ_ACK");
+                11:if(op!==4) $fatal(1,"expected READ_NACK");
+                12:if(op!==5) $fatal(1,"expected STOP");
+                endcase
+                if(cmd_count&gt;=5 &amp;&amp; cmd_count&lt;=11)begin
+                    queued_data=sample[read_count];
+                    read_count=read_count+1;
+                end else queued_data=0;
+                queued_error=(mode==1 &amp;&amp; cmd_count==4);
+                cmd_count=cmd_count+1;
+                queued&lt;=1;
+            end
+        end
+    end
+    always @(negedge clk) begin
+        rsp_valid=queued;
+        rsp_error=queued_error;
+        rsp_data=queued_data;
+    end
+    task begin_test;
+        input integer test_mode;
+        begin
+            @(negedge clk);mode=test_mode;
+            cmd_count=0;read_count=0;start=1;
+            @(negedge clk);start=0;
+        end
+    endtask
+    initial begin
+        sample[0]=8'h58;sample[1]=8'h42;sample[2]=8'h09;
+        sample[3]=8'h04;sample[4]=8'h11;sample[5]=8'h11;
+        sample[6]=8'h26;
+        repeat(3) @(negedge clk);resetn=1;
+        begin_test(0);
+        wait(done);#1;
+        if(raw!==56'h26111104094258 ||
+           cmd_count!=13 || read_count!=7 || busy)
+            $fatal(1,"DS3231 burst or packing error %h cmds=%0d reads=%0d",
+                   raw,cmd_count,read_count);
+        $display("P2_16_RTC_I2C_BURST_SEQUENCE_PASS");
+        begin_test(1);
+        wait(error);#1;
+        if(cmd_count!=5 || raw!==56'h26111104094258 || busy)
+            $fatal(1,"partial/error frame unexpectedly published");
+        $display("P2_16_RTC_I2C_ERROR_REJECT_PASS");
+        $display("P2_16_RTC_BURST_RTL PASS");
+        $finish;
+    end
+    initial begin #100000;$fatal(1,"TIMEOUT");end
+endmodule
+</code></pre></details>
+<h3>Ubuntu에서 실행하기</h3>
+<pre><code># 1. 패키지 목록 갱신 및 Icarus Verilog 설치(최초 한 번)
+sudo apt update
+sudo apt install -y iverilog
+
+# 2. 저장소 루트에서 C 계산·오류 처리 검사
+bash part02/chapters/P2_16_Lesson/tests/run_host_tests.sh
+
+# 3. RTL 반복 START 및 7바이트 읽기 명령 검사
+bash part02/chapters/P2_16_Lesson/tests/run_rtl_tests.sh</code></pre>
+<p>GCC(지씨씨, C 컴파일러)는 날짜·시간 계산과 오류를 시험한다. Icarus Verilog는 아래 하위 I²C 버스 엔진의 가짜 응답을 사용한다. 실제 물리적 SDA/SCL 신호가 나오는 테스트는 아직 아니다.</p></section><section><h2>7. 검증 결과와 경계</h2><table><thead><tr><th>항목</th><th>결과</th><th>실제 확인 내용</th></tr></thead><tbody>
+<tr><td>HOST_C BCD·12/24h</td><td>PASS</td><td>7바이트 레지스터 모델과 오전·오후 변환</td></tr>
+<tr><td>HOST_C Calendar</td><td>PASS</td><td>윤년/월별 일수/2100년 세기 비트</td></tr>
+<tr><td>HOST_C OSF</td><td>PASS</td><td>발진 중단 상태 및 버스 오류 거부</td></tr>
+<tr><td>RTL_SIM Sequencer</td><td>PASS</td><td>START·D0·00·반복 START·D1·7바이트 읽기·STOP</td></tr>
+<tr><td>RTL_SIM 오류</td><td>PASS</td><td>모의 하위 버스 오류 수신 시 결과 미공개</td></tr>
+<tr><td>I²C 물리 SDA/SCL Master</td><td>미구현</td><td>읽기 파형·ACK 실측 미검증</td></tr>
+<tr><td>AXI4-Lite/SoC</td><td>미구현</td><td>실제 BD/주소맵 미검증</td></tr>
+<tr><td>Vivado 합성·타이밍</td><td>보류</td><td>실제 도구 실행 없음</td></tr>
+<tr><td>Vitis·실물 RTC</td><td>보류</td><td>실제 타깃 빌드·RTC 동작 없음</td></tr>
+<tr><td>UVM</td><td>미실행</td><td>현재 self-checking Verilog TB</td></tr></tbody></table>
+<p class="ok"><a href="https://github.com/Yuul-Jung/amd_soc/actions/runs/42945777999">제16장 HOST_C/RTL_SIM 실제 PASS 로그</a> · <a href="../../docs/P2_16_SIM_VERIFICATION_20261111.md">검증 보고서</a>. 첫 실행에서 발견된 테스트벤치의 응답 타이밍 문제는 수정 후 재검증했다.</p></section><section><h2>8. 전기적 연결과 후속 확장</h2><p>DS3231의 SDA·SCL은 오픈드레인 I²C 신호이며 3.3V 풀업을 사용해야 한다. 흔한 DS3231 모듈 중에는 5V 전원·충전 배터리 회로·5V 풀업을 포함하는 제품도 있으므로 <strong>현물 회로와 풀업 전압을 검토하기 전 Basys3와 직접 연결하지 않는다.</strong> 실제 XDC는 보드의 기존 핀 배정을 확인한 다음 정한다.</p>
+<p>16.1 BCD 시간 읽기 → 16.2 7바이트 버스트 읽기 → 16.3 상태/OSF 검증 → 16.4 완전한 I²C Read Master 및 LCD/FND 시간 표시로 확장한다. 이미 작성된 RTL Sequencer와 C 검증 코드를 재사용한다.</p>
+<p><a href="./README.md">16장 전체 소스 목록</a> · <a href="../P2_14_Lesson/P2_14_Study_Guide_v02.html">14장 I²C LCD</a> · <a href="../P2_15_Lesson/P2_15_Study_Guide_v01.html">15장 DS18B20</a></p></section></main><footer>제2부 16장 · Host C 및 I²C 명령 Sequencer RTL 시뮬레이션 PASS · 합성/실물 보류</footer></body></html>

@@ -1,0 +1,1122 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>제2부 07장 | DC 모터 방향 제어와 초음파 근접 정지 학습안내서</title><style>*{box-sizing:border-box}body{margin:0;color:#213045;background:#f2f5f8;font:15px/1.72 system-ui,"Noto Sans KR","Malgun Gothic",sans-serif}main{max-width:1060px;margin:28px auto;background:white;padding:40px 50px}h1{font-size:28px;line-height:1.35;margin:0 0 18px}h2{font-size:21px;margin:34px 0 15px;padding-bottom:9px;border-bottom:1px solid #dce4ed}h3{font-size:17px;margin:20px 0 8px}p{margin:8px 0}.lead{font-size:16px}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #dbe2eb;text-align:left;vertical-align:top;padding:9px}th{background:#eef3f7}.diagram{margin:15px 0}.diagram img{width:100%;height:auto;border:1px solid #dce3ec}.diagram figcaption{text-align:center;font-size:13px;color:#62758a;margin:6px 0}pre{background:#f3f6f9;border:1px solid #dee5ed;border-radius:5px;padding:15px;font:13px/1.55 ui-monospace,monospace;overflow:auto;max-height:630px}code{font-family:ui-monospace,monospace}p code,li code,td code{background:#edf1f6;padding:2px 4px}.practice{padding-left:26px}.practice li{margin:18px 0;padding-left:6px}.practice p{margin:4px 0}.check{color:#52687e}.safety{background:#fffaf2;border-left:3px solid #b77e3c;padding:10px 14px}details{border:1px solid #dce4eb;border-radius:6px;padding:13px;margin:15px 0}summary{font-weight:700;cursor:pointer}.foot{font-size:13px;color:#65788d;margin-top:35px;padding-top:13px;border-top:1px solid #dde5ee}@media(max-width:750px){main{margin:0;padding:20px}.practice{padding-left:20px}}</style></head><body><main><h1>제2부 07장 · DC 모터 방향 제어와 초음파 근접 정지</h1><section id="overview"><h2>1. 과제 개요</h2><p class="lead">L298N 드라이버를 통해 DC 모터를 정·역방향 제어하고, HC-SR04의 위험 상태를 모터 RTL 제어에 연결해 안전 정지 기능을 구현합니다.</p></section><section id="io"><h2>2. 입력·출력 정의</h2><div class="tablewrap"><table><thead><tr><th>구분</th><th>신호·명령</th><th>기능</th></tr></thead><tbody><tr><td>UART 명령</td><td>MOTOR FWD / REV / STOP</td><td>정방향·역방향·정지</td></tr><tr><td>안전 입력</td><td>SONIC TRIP · 측정 유효성</td><td>안전한 방향 전환·정지 조건</td></tr><tr><td>AXI 입출력</td><td>모터 CMD/STATUS</td><td>CPU 제어·상태 조회</td></tr><tr><td>FPGA 출력</td><td>JB1/2/3 → L298N IN1/IN2/ENA</td><td>3.3V 로직 제어</td></tr><tr><td>외부 전원</td><td>모터 별도 전원·GND 공통</td><td>모터는 FPGA 핀에서 직접 공급하지 않음</td></tr></tbody></table></div></section><section id="architecture"><h2>3. 전체 동작 구조</h2><figure class="diagram"><img src="assets/P2_07_Architecture.svg" alt="제2부 07장 시스템 흐름도"><figcaption>모듈·인터페이스 흐름; 병렬 제어·인터럽트 세부 경로는 아래 해설 참조</figcaption></figure></section><section id="features"><h2>4. 기존 기능과 추가 기능</h2><p><strong>유지:</strong> LED0·FND·버튼 IRQ·PWM·CdS·초음파</p><p><strong>추가:</strong> p2_07_axi_motor + motor_controller + JB 모터 출력</p><h3>핵심 원리·레지스터</h3><h3>UART 명령·정상 동작</h3><div class="tablewrap"><table><thead><tr><th>입력 + Enter</th><th>결과</th></tr></thead><tbody><tr><td>MOTOR FWD</td><td>센서 AUTO 활성·유효 거리·TRIP 해제 시 정회전 요청</td></tr><tr><td>MOTOR REV</td><td>위 조건 충족 시 역회전 요청, 주행 중이면 출력 OFF 대기 후 전환</td></tr><tr><td>MOTOR STOP</td><td>언제든 정지 요청, TRIP 해제(다음 FWD/REV는 별도 입력)</td></tr><tr><td>MOTOR STATUS</td><td>요청 방향, 실제 출력, 정지/위험/신선도 표시</td></tr><tr><td>SONIC ON</td><td>주기 측정 시작. 첫 유효 측정 전에 MOTOR는 시작 불가</td></tr><tr><td>SONIC OFF</td><td>주기 측정 중지 → 모터 즉시 차단, 구동 중이면 TRIP 기록</td></tr><tr><td>WARN 20</td><td>20 cm 이하를 위험으로 판정, 근접 정지 연계</td></tr><tr><td>WARN OFF</td><td>LED2 경고만 비활성화, 모터 보호는 그대로 적용</td></tr><tr><td>STATUS</td><td>01~06장 기존 상태 + 07장 MOTOR 필드 추가</td></tr></tbody></table></div><p><b>요청값과 실제 구동값은 다릅니다.</b> <code>OK MOTOR REQUESTED FWD</code>는 회전 확인이 아니라 AXI 명령 기록만 의미합니다. 실제 실행 여부는 <code>MOTOR STATUS</code>의 <code>MOTOR_ACT</code> 및 <code>MOTOR_EN</code>으로 판정합니다.</p>
+<h3>모터 제어 안전 규칙</h3><div class="grid"><div class="panel"><h3>모터 구동 허용</h3><p>SONIC AUTO ON(명령: <code>SONIC ON</code>), 최신 유효 완료값, 20cm 초과(기본), TRIP 해제가 모두 필요합니다.</p></div><div class="panel"><h3>즉시 차단 조건</h3><p>근접, 잘못된 거리, 센서 미응답, SONIC OFF, 샘플 250ms 초과 → ENA 낮음. 오류 중 발생한 구동 요청은 TRIP으로 기록됩니다.</p></div></div><div class="callout">L298N 출력 차단은 전기적 구동을 중단할 뿐, 회전체가 즉시 물리적으로 정지한다는 의미가 아닙니다. 비상정지·사람 보호장치로 사용하지 않습니다. 외부 전원·퓨즈·역기전력 보호·모터 데이터시트를 확인합니다.</div><div class="tablewrap"><table><thead><tr><th>시험 입력</th><th>기대 출력·상태</th></tr></thead><tbody><tr><td>부팅 직후</td><td>IN1=0, IN2=0, ENA=0</td></tr><tr><td>SONIC ON 직후 유효값 없음</td><td>구동 금지</td></tr><tr><td>정상 거리·MOTOR FWD</td><td>ENA=1, IN1=1, IN2=0</td></tr><tr><td>MOTOR REV 전환</td><td>양방향 IN1/IN2/ENA=0 구간을 둔 뒤 반전</td></tr><tr><td>근접 / 센서 오류 / 유효시간 만료</td><td>ENA=0, MOTOR_TRIP=1</td></tr><tr><td>거리 복귀 후 FWD 재입력</td><td>TRIP이 남아 있으면 BLOCKED</td></tr><tr><td>MOTOR STOP 후 안전 재확인, 새 FWD</td><td>재시작 가능</td></tr></tbody></table></div>
+<h3>Basys3–L298N 배선·전압 규칙</h3><div class="tablewrap"><table><thead><tr><th>Basys3 Pmod</th><th>FPGA PACKAGE_PIN</th><th>드라이버</th><th>주의</th></tr></thead><tbody><tr><td>JB1</td><td>A14</td><td>IN1</td><td>모터 방향 제어</td></tr><tr><td>JB2</td><td>A16</td><td>IN2</td><td>모터 방향 제어</td></tr><tr><td>JB3</td><td>B15</td><td>ENA</td><td>모듈 ENA 점퍼 제거, 외부 풀다운 추가</td></tr><tr><td>Pmod GND</td><td>–</td><td>GND</td><td>외부 드라이버와 FPGA의 신호 접지 공통</td></tr><tr><td>외부 DC 공급</td><td>–</td><td>Vs / motor power</td><td>모터 정격·드라이버 사양에 맞는 별도 전원</td></tr></tbody></table></div><p>기존 JA1 CdS, JA2 TRIG, JA3 ECHO, 내장 LED0~2, FND·방향 버튼·BTNC Reset·USB UART의 기존 연결은 변경하지 않습니다.</p><div class="callout"><b>접속 전:</b> L298N 드라이버의 ENA 점퍼 상태와 입력 논리 전압을 실제 모듈에서 확인하고, FPGA 미설정·리셋 중 ENA가 떠 있지 않도록 10kΩ 수준의 외부 풀다운을 검토합니다. HC-SR04 ECHO 5V는 반드시 3.3V로 변환합니다. 전원 OFF 상태에서 배선한 후 초기 확인은 모터를 분리한 상태로 합니다.</div>
+<h3>사용자 AXI4-Lite 레지스터 맵</h3><div class="tablewrap"><table><thead><tr><th>Byte Offset</th><th>레지스터</th><th>접근</th><th>의미</th></tr></thead><tbody><tr><td>0x00</td><td>CMD</td><td>RW</td><td>0 STOP, 1 FWD, 2 REV; STOP 쓰면 TRIP 해제</td></tr><tr><td>0x04</td><td>STATUS</td><td>RO</td><td>bit0 EN, 1 FWD, 2 REV, 3 TRIP, 4 DEADTIME, 5 SAFE, 6 FRESH, 7 AUTO, 8 REQ_NONZERO, 9 BLOCKED</td></tr><tr><td>0x08</td><td>ID</td><td>RO</td><td>0x00070001</td></tr><tr><td>0x0C</td><td>DEADTIME</td><td>RO</td><td>direction blanking clock cycles</td></tr><tr><td>0x10</td><td>FRESHNESS</td><td>RO</td><td>completed sonar sample maximum age clock cycles</td></tr><tr><td>0x14</td><td>CLK_HZ</td><td>RO</td><td>actual AXI clock frequency supplied to IP</td></tr></tbody></table></div><p><code>motor_in1</code>, <code>motor_in2</code>, <code>motor_ena</code>는 AXI 레지스터를 직접 연결한 GPIO가 아닙니다. <code>motor_controller</code>가 센서 조건과 TRIP·방향 전환 상태를 반영하여 출력합니다.</p><p>기본 파라미터: <code>CLK_HZ=100000000</code>, <code>DEADTIME_CYCLES=10000000</code>(100ms), <code>FRESH_CYCLES=25000000</code>(250ms). 실제 AXI 클록에 따라 재산정합니다.</p><p class="safety">FPGA가 모터에 직접 전력을 공급하지 않습니다. 외부 모터 전원, 공통 접지, 보호회로, 전원 OFF 배선 및 무부하 출력 점검 후 모터를 연결합니다.</p></section><section id="practice"><h2>5. Vivado·Vitis 따라하기</h2><ol class="practice"><li><strong>01. 장 독립 프로젝트 생성</strong><p>Vivado에서 06장 프로젝트 열기 → <code>File → Project → Save As</code> → 새 프로젝트 <code>soc_ip_design_07</code> 선택. 신규 프로젝트 XPR 위치 확인.</p><p class="check">확인: <code>~/soc/hw/soc_ip_design_07/soc_ip_design_07.xpr</code>와 신규 <code>.srcs</code>가 존재. 원본 06장 XPR 변경 없음.</p></li>
+<li><strong>02. 배선도 검토·전원 OFF 검사</strong><p><code>rtl/motor_jb_only.xdc</code>와 JB1~JB3 배정, 모터 드라이버 IN1/IN2/ENA 및 접지 확인. 전원 OFF 상태에서 배선.</p><p class="check">확인: ENA 점퍼 제거와 외부 풀다운 여부, 모터 외부 전원 분리, ECHO 레벨시프터 확인.</p></li>
+<li><strong>03. 장 AXI IP 마법사 실행</strong><p>Vivado → <code>Tools → Create and Package New IP</code> → <code>Create a new AXI4 peripheral</code>. 이름 <code>p2_07_axi_motor</code>, AXI4-Lite S00_AXI, Data Width 32, Number of Registers 6, Address Width 6 이상으로 생성.</p><p class="check">확인: 신규 IP 폴더에 AXI 슬레이브 파일과 최상위 IP가 생성. 생성 직후 자동 소스는 아직 07장 레지스터 규격이 아닙니다.</p></li>
+<li><strong>04. 전체 RTL 3개 파일 적용</strong><p>생성된 템플릿에 최상위 IP RTL 및 AXI Slave 전체 RTL을 적용하고 motor_controller.v를 추가.</p><p class="check">확인: IP Packager <code>File Groups</code>에 세 파일 포함, S00_AXI 버스 인터페이스가 연결됨.</p></li>
+<li><strong>05. 장 SONIC AXI 복제본에 안전 출력 추가</strong><p>07장 프로젝트 내부에 복제한 <code>reuse/p2_06/p2_06_axi_sonic_v1_0.v</code>와 <code>..._S00_AXI.v</code>를 적용하고 <code>sonic_auto_o</code>, <code>sonic_done_o</code>, <code>sonic_valid_o</code> 3개 출력을 패키지 포트로 노출합니다.</p><p class="check">확인: 기존 <code>sonic_unsafe_o</code>와 신규 3개가 IP에 표시됨. 06장 프로젝트 원본에는 영향 없음.</p></li>
+<li><strong>06. IP 업데이트·파일 그룹 확인</strong><p>각 IP의 <code>Review and Package → Re-Package IP</code>. <code>Package IP</code> 결과 파일 목록과 포트/파라미터를 확인.</p><p class="check">확인: 07장 AXI IP는 32비트 데이터/6비트 주소, 모터 출력 3개, 센서 입력 4개를 보유.</p></li>
+<li><strong>07. 독립 Motor Core RTL 테스트</strong><p>tb_motor_controller.v로 reset, 유효 측정 전 차단, 안전 주행, 주행 종료·방향 전환 deadtime, 근접 즉시 OFF, TRIP, STOP 재시작, stale timeout 검사.</p><p class="check">확인: reset, 유효 측정 전 차단, 안전 주행, deadtime, 근접 정지, TRIP 및 stale timeout의 신호가 기대값과 일치한다.</p></li>
+<li><strong>08. 독립 AXI Slave 시뮬레이션</strong><p>tb_p2_07_axi_motor.v로 AW 먼저/W 먼저, B/R 응답 보존, CMD 3 오류, RO 쓰기 거부, ID 읽기 검사.</p><p class="check">확인: BRESP=SLVERR(10)·RRESP=SLVERR(10) 등, 부적합 접근에서 장치 상태 불변 확인.</p></li>
+<li><strong>09. Block Design에 Motor IP 추가</strong><p><code>soc11_integration.bd</code> 열기 → Add IP → <code>p2_07_axi_motor</code> 배치 → <code>Run Connection Automation</code>을 통해 S00_AXI를 기존 MicroBlaze V AXI 경로에 연결.</p><p class="check">확인: 기존 CPU, BRAM, UART Lite, GPIO, Timer, INTC, FND, Button, PWM, CdS, SONIC IP 모두 남음.</p></li>
+<li><strong>10. SONIC 안전 신호 BD 내부 연결</strong><p>동일 AXI 클록 도메인에서 <code>sonic_auto_o→sonic_auto_i</code>, <code>sonic_done_o→sonic_done_i</code>, <code>sonic_valid_o→sonic_valid_i</code>, <code>sonic_unsafe_o→sonic_unsafe_i</code> 연결.</p><p class="check">확인: 각 신호 방향이 일치하고 연결 누락 없음. <code>sonic_alert_o</code>는 LED2만 담당; 모터 안전에는 사용 금지.</p></li>
+<li><strong>11. Clock/Reset/주파수 확인</strong><p>07장 AXI IP의 <code>s00_axi_aclk</code>·<code>s00_axi_aresetn</code>을 06장 SONIC의 동일 AXI 클록·리셋에 연결. <code>CLK_HZ</code>를 실제 클록에 맞게 설정.</p><p class="check">확인: <code>DEADTIME_CYCLES / CLK_HZ</code>는 0.1초, <code>FRESH_CYCLES / CLK_HZ</code>는 0.25초가 되도록 점검.</p></li>
+<li><strong>12. Address Editor 실제 BASEADDR 지정</strong><p><code>Address Editor</code>에서 모터 IP 영역 크기 64 byte 이상 설정, 이전 01~06장 주소와 중복되지 않는 새 BASEADDR 지정.</p><p class="check">확인: IP 전체 영역이 중복되지 않으며 매크로 <code>P2_07_MOTOR_BASEADDR</code>에 실제 XSA/BSP 값을 기록.</p></li>
+<li><strong>13. 모터 출력 3개만 BD 외부화</strong><p><code>motor_in1_o</code>, <code>motor_in2_o</code>, <code>motor_ena_o</code>를 각각 <code>motor_in1</code>, <code>motor_in2</code>, <code>motor_ena</code> 이름으로 외부화. <code>Validate Design</code>.</p><p class="check">확인: BD 외부 출력 3개, 기존 06장 외부 입력·출력 유지.</p></li>
+<li><strong>14. Vivado 관리 Wrapper 재생성</strong><p>BD <code>Generate Output Products</code> → <code>Create HDL Wrapper</code>에서 Vivado 관리 방식 사용. 실제 선언부에 세 신규 포트와 기존 포트가 있는지 검사.</p><p class="check">확인: <code>soc11_integration_wrapper.v</code>가 새 하드웨어 계층과 일치.</p></li>
+<li><strong>15. 사용자 Top 적용</strong><p>basys3_soc11_top_p2_07.v 내용을 07장 Top에 적용 후 Set as Top. 신규 Wrapper 포트 3개를 1:1 연결.</p><p class="check">확인: LED0~2, SONIC, CDS, FND, 버튼, UART 배선과 새 motor_in1/2/ena 출력 보존.</p></li>
+<li><strong>16. JB XDC 핀 설정</strong><p>motor_jb_only.xdc의 3개 제약을 07장 XDC에 적용. 기존 XDC의 동일 FPGA 핀 중복 여부 확인.</p><p class="check">확인: A14, A16, B15의 <code>LVCMOS33</code>. Clock 제약을 중복 추가하지 않음.</p></li>
+<li><strong>17. Synthesis·Implementation·Timing</strong><p><code>Run Synthesis → Run Implementation → Report Timing Summary → Report DRC → Generate Bitstream</code>. Clock/Reset 제약과 unused port 경고를 확인.</p><p class="check">확인: WNS/TNS, DRC, 사용 자원, RTL 최적화에 의해 모터 안전 신호가 누락되지 않았는지 점검.</p></li>
+<li><strong>18. 새 XSA 및 Vitis Application 생성</strong><p><code>File → Export → Export Hardware</code>(Bitstream 포함) → Vitis Platform 생성/갱신 → 07장 Application 생성. main_p2_07.c 및 p2_03~07 helper C/H 등록.</p><p class="check">확인: 07장 XSA와 BSP가 일치하고 07장 AXI 주소를 xparameters.h에서 확인. SDT/Classic IRQ 설정도 실제 값으로 대조.</p></li>
+<li><strong>19. 모터 분리 상태 UART 출력 실습</strong><p>모터·드라이버 전력을 아직 연결하지 않은 상태에서 3.3V GPIO 측정. <code>STATUS</code> → <code>SONIC ON</code> → 유효한 거리에서 <code>MOTOR FWD</code> → <code>MOTOR STATUS</code> → <code>MOTOR REV</code> → <code>MOTOR STOP</code>.</p><p class="check">확인: 모터 출력 논리는 3.3V이고 ENA는 허용 조건이 아닐 때 0. 센서 20cm 이내에서 MOTOR_EN=0, TRIP 기록.</p></li>
+<li><strong>20. 실물 모터 구동·오류 실습</strong><p>전원 OFF 확인 후 실제 모터와 드라이버 연결, 외부 전원만 별도 공급. 작은 부하로 FWD/REV/STOP 및 방향 전환 대기 확인. 물체 20cm 이내 접근/센서 분리/SONIC OFF/WARN OFF 각각 검사.</p><p class="check">확인: WARN OFF여도 근접 정지가 유지되는지, TRIP 후 STOP 없이 재가동 불가한지, 멈춘 축이 관성으로 돌 수 있음을 확인.</p></li>
+<li><strong>21. ~06장 기존 기능 확인</strong><p>LED ON/OFF, DISP 0050/OFF, 방향 버튼 SHORT/LONG/IRQ, PWM 0/50/100, AUTO ON/OFF, CDS READ/POL, SONIC READ/SHOT, WARN, LED14/15 Timer/UART 기능을 각각 확인.</p><p class="check">확인: LED·FND·버튼·PWM·CdS·초음파·모터 기능이 함께 유지된다.</p></li></ol></section><section id="tests"><h2>6. UART·보드 동작 확인</h2><ol><li>드라이버·모터 미연결 상태에서 JB 출력 확인</li><li>MOTOR STOP → FWD → STOP 순서 시험</li><li>MOTOR REV와 방향 전환 대기 확인</li><li>근접물체로 안전 정지 확인</li><li>센서 장애·유효 데이터 소실 시 안전 조건 확인</li></ol><p>버스 주소는 실제 Address Editor 및 BSP의 값으로 설정하고, 동작 확인 시 UART 응답·출력·안전 상태를 대조합니다.</p></section><section id="code"><h2>7. 전체 RTL·C 소스 및 테스트벤치</h2><p>각 소스의 원래 모듈명·함수명을 유지했습니다. XDC 전체 코드는 생략하며, 실제 핀 제약은 해당 실습 단계에서 확인합니다.</p><details open><summary>rtl/p2_07_axi_motor_v1_0.v — AXI IP와 모터 제어기 연결</summary><pre><code>// (학습 주석) AXI IP와 모터 제어기 연결
+`timescale 1ns/1ps
+// P2-07 packaged IP top: pure port mapping to AXI register block.
+module p2_07_axi_motor_v1_0 #(
+    parameter integer C_S00_AXI_DATA_WIDTH=32,
+    parameter integer C_S00_AXI_ADDR_WIDTH=6,
+    parameter integer CLK_HZ=100000000,
+    parameter integer DEADTIME_CYCLES=10000000,
+    parameter integer FRESH_CYCLES=25000000
+)(
+    input wire sonic_auto_i, input wire sonic_done_i,
+    input wire sonic_valid_i, input wire sonic_unsafe_i,
+    output wire motor_in1_o, output wire motor_in2_o, output wire motor_ena_o,
+    input wire s00_axi_aclk, input wire s00_axi_aresetn,
+    input wire [C_S00_AXI_ADDR_WIDTH-1:0] s00_axi_awaddr,
+    input wire [2:0] s00_axi_awprot, input wire s00_axi_awvalid,
+    output wire s00_axi_awready,
+    input wire [C_S00_AXI_DATA_WIDTH-1:0] s00_axi_wdata,
+    input wire [(C_S00_AXI_DATA_WIDTH/8)-1:0] s00_axi_wstrb,
+    input wire s00_axi_wvalid, output wire s00_axi_wready,
+    output wire [1:0] s00_axi_bresp, output wire s00_axi_bvalid,
+    input wire s00_axi_bready,
+    input wire [C_S00_AXI_ADDR_WIDTH-1:0] s00_axi_araddr,
+    input wire [2:0] s00_axi_arprot, input wire s00_axi_arvalid,
+    output wire s00_axi_arready,
+    output wire [C_S00_AXI_DATA_WIDTH-1:0] s00_axi_rdata,
+    output wire [1:0] s00_axi_rresp, output wire s00_axi_rvalid,
+    input wire s00_axi_rready
+);
+    p2_07_axi_motor_v1_0_S00_AXI #(
+       .C_S_AXI_DATA_WIDTH(C_S00_AXI_DATA_WIDTH),
+       .C_S_AXI_ADDR_WIDTH(C_S00_AXI_ADDR_WIDTH),
+       .CLK_HZ(CLK_HZ),.DEADTIME_CYCLES(DEADTIME_CYCLES),
+       .FRESH_CYCLES(FRESH_CYCLES)) u_axi (
+       .S_AXI_ACLK(s00_axi_aclk),.S_AXI_ARESETN(s00_axi_aresetn),
+       .S_AXI_AWADDR(s00_axi_awaddr),.S_AXI_AWPROT(s00_axi_awprot),
+       .S_AXI_AWVALID(s00_axi_awvalid),.S_AXI_AWREADY(s00_axi_awready),
+       .S_AXI_WDATA(s00_axi_wdata),.S_AXI_WSTRB(s00_axi_wstrb),
+       .S_AXI_WVALID(s00_axi_wvalid),.S_AXI_WREADY(s00_axi_wready),
+       .S_AXI_BRESP(s00_axi_bresp),.S_AXI_BVALID(s00_axi_bvalid),
+       .S_AXI_BREADY(s00_axi_bready),
+       .S_AXI_ARADDR(s00_axi_araddr),.S_AXI_ARPROT(s00_axi_arprot),
+       .S_AXI_ARVALID(s00_axi_arvalid),.S_AXI_ARREADY(s00_axi_arready),
+       .S_AXI_RDATA(s00_axi_rdata),.S_AXI_RRESP(s00_axi_rresp),
+       .S_AXI_RVALID(s00_axi_rvalid),.S_AXI_RREADY(s00_axi_rready),
+       .sonic_auto_i(sonic_auto_i),.sonic_done_i(sonic_done_i),
+       .sonic_valid_i(sonic_valid_i),.sonic_unsafe_i(sonic_unsafe_i),
+       .motor_in1_o(motor_in1_o),.motor_in2_o(motor_in2_o),
+       .motor_ena_o(motor_ena_o)
+    );
+endmodule
+</code></pre></details>
+<details open><summary>rtl/p2_07_axi_motor_v1_0_S00_AXI.v — 모터 명령·상태 레지스터</summary><pre><code>// (학습 주석) 모터 명령·상태 레지스터
+`timescale 1ns/1ps
+// P2-07 AXI4-Lite 32-bit motor register block, separate AW/W handshakes.
+// Register map: 0x00 CMD RW 0 STOP/1 FWD/2 REV;
+// 0x04 STATUS RO; 0x08 ID 0x00070001;
+// 0x0C DEADTIME_CYCLES RO; 0x10 FRESH_CYCLES RO; 0x14 CLK_HZ RO.
+module p2_07_axi_motor_v1_0_S00_AXI #(
+    parameter integer C_S_AXI_DATA_WIDTH=32,
+    parameter integer C_S_AXI_ADDR_WIDTH=6,
+    parameter integer CLK_HZ=100000000,
+    parameter integer DEADTIME_CYCLES=10000000,
+    parameter integer FRESH_CYCLES=25000000
+)(
+    input wire S_AXI_ACLK, input wire S_AXI_ARESETN,
+    input wire [C_S_AXI_ADDR_WIDTH-1:0] S_AXI_AWADDR,
+    input wire [2:0] S_AXI_AWPROT, input wire S_AXI_AWVALID,
+    output wire S_AXI_AWREADY,
+    input wire [C_S_AXI_DATA_WIDTH-1:0] S_AXI_WDATA,
+    input wire [(C_S_AXI_DATA_WIDTH/8)-1:0] S_AXI_WSTRB,
+    input wire S_AXI_WVALID, output wire S_AXI_WREADY,
+    output reg [1:0] S_AXI_BRESP, output reg S_AXI_BVALID,
+    input wire S_AXI_BREADY,
+    input wire [C_S_AXI_ADDR_WIDTH-1:0] S_AXI_ARADDR,
+    input wire [2:0] S_AXI_ARPROT, input wire S_AXI_ARVALID,
+    output wire S_AXI_ARREADY,
+    output reg [C_S_AXI_DATA_WIDTH-1:0] S_AXI_RDATA,
+    output reg [1:0] S_AXI_RRESP, output reg S_AXI_RVALID,
+    input wire S_AXI_RREADY,
+    input wire sonic_auto_i, input wire sonic_done_i,
+    input wire sonic_valid_i, input wire sonic_unsafe_i,
+    output wire motor_in1_o, output wire motor_in2_o, output wire motor_ena_o
+);
+    localparam [1:0] OKAY=2'b00, SLVERR=2'b10;
+    reg [1:0] requested_dir;
+    reg stop_clear;
+    wire [1:0] active_dir;
+    wire sensor_safe, fresh, trip, deadtime;
+    motor_controller #(.DEADTIME_CYCLES(DEADTIME_CYCLES),
+                       .FRESH_CYCLES(FRESH_CYCLES)) u_motor (
+        .clk(S_AXI_ACLK),.resetn(S_AXI_ARESETN),
+        .request_i(requested_dir),.stop_clear_i(stop_clear),
+        .sonic_auto_i(sonic_auto_i),.sonic_done_i(sonic_done_i),
+        .sonic_valid_i(sonic_valid_i),.sonic_unsafe_i(sonic_unsafe_i),
+        .motor_in1_o(motor_in1_o),.motor_in2_o(motor_in2_o),
+        .motor_ena_o(motor_ena_o),.active_dir_o(active_dir),
+        .sensor_safe_o(sensor_safe),.fresh_o(fresh),
+        .trip_latched_o(trip),.deadtime_o(deadtime)
+    );
+    wire blocked = (requested_dir != 2'd0) &amp;&amp; (!sensor_safe || trip);
+    wire [31:0] status_reg = {22'd0, blocked, (requested_dir != 2'd0),
+                             sonic_auto_i, fresh, sensor_safe, deadtime,
+                             trip, (active_dir == 2'd2),
+                             (active_dir == 2'd1), motor_ena_o};
+    reg aw_hold, w_hold;
+    reg [C_S_AXI_ADDR_WIDTH-1:0] awaddr_hold;
+    reg [31:0] wdata_hold;
+    reg [3:0] wstrb_hold;
+    reg [31:0] merged;
+    integer j;
+    assign S_AXI_AWREADY = S_AXI_ARESETN &amp;&amp; !aw_hold &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_WREADY  = S_AXI_ARESETN &amp;&amp; !w_hold &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_ARREADY = S_AXI_ARESETN &amp;&amp; !S_AXI_RVALID;
+
+    // (학습 주석) 클록 상승 에지에서 레지스터·상태를 갱신하는 순차회로.
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            requested_dir &lt;= 2'd0;
+            stop_clear &lt;= 1'b0;
+            aw_hold &lt;= 1'b0; w_hold &lt;= 1'b0;
+            awaddr_hold &lt;= {C_S_AXI_ADDR_WIDTH{1'b0}};
+            wdata_hold &lt;= 32'd0; wstrb_hold &lt;= 4'd0;
+            S_AXI_BRESP &lt;= OKAY;
+            S_AXI_BVALID &lt;= 1'b0;
+        end else begin
+            stop_clear &lt;= 1'b0;
+            if (S_AXI_AWVALID &amp;&amp; S_AXI_AWREADY) begin
+                aw_hold &lt;= 1'b1;
+                awaddr_hold &lt;= S_AXI_AWADDR;
+            end
+            if (S_AXI_WVALID &amp;&amp; S_AXI_WREADY) begin
+                w_hold &lt;= 1'b1;
+                wdata_hold &lt;= S_AXI_WDATA;
+                wstrb_hold &lt;= S_AXI_WSTRB;
+            end
+            if (S_AXI_BVALID &amp;&amp; S_AXI_BREADY) S_AXI_BVALID &lt;= 1'b0;
+            if (aw_hold &amp;&amp; w_hold &amp;&amp; !S_AXI_BVALID) begin
+                aw_hold &lt;= 1'b0; w_hold &lt;= 1'b0;
+                S_AXI_BVALID &lt;= 1'b1;
+                S_AXI_BRESP &lt;= OKAY;
+                if (awaddr_hold == 6'h00) begin
+                    merged = {30'd0,requested_dir};
+                    for (j=0;j&lt;4;j=j+1)
+                        if (wstrb_hold[j])
+                            merged[j*8 +: 8] = wdata_hold[j*8 +: 8];
+                    if (merged &gt; 32'd2) begin
+                        S_AXI_BRESP &lt;= SLVERR;
+                    end else if (wstrb_hold != 4'b0000) begin
+                        requested_dir &lt;= merged[1:0];
+                        if (merged == 32'd0) stop_clear &lt;= 1'b1;
+                    end
+                end else begin
+                    S_AXI_BRESP &lt;= SLVERR;
+                end
+            end
+        end
+    end
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            S_AXI_RVALID &lt;= 1'b0;
+            S_AXI_RDATA &lt;= 32'd0;
+            S_AXI_RRESP &lt;= OKAY;
+        end else begin
+            if (S_AXI_RVALID &amp;&amp; S_AXI_RREADY) S_AXI_RVALID &lt;= 1'b0;
+            if (S_AXI_ARVALID &amp;&amp; S_AXI_ARREADY) begin
+                S_AXI_RVALID &lt;= 1'b1;
+                S_AXI_RRESP &lt;= OKAY;
+                case (S_AXI_ARADDR)
+                6'h00: S_AXI_RDATA &lt;= {30'd0,requested_dir};
+                6'h04: S_AXI_RDATA &lt;= status_reg;
+                6'h08: S_AXI_RDATA &lt;= 32'h00070001;
+                6'h0C: S_AXI_RDATA &lt;= DEADTIME_CYCLES;
+                6'h10: S_AXI_RDATA &lt;= FRESH_CYCLES;
+                6'h14: S_AXI_RDATA &lt;= CLK_HZ;
+                default: begin
+                    S_AXI_RDATA &lt;= 32'd0;
+                    S_AXI_RRESP &lt;= SLVERR;
+                end
+                endcase
+            end
+        end
+    end
+endmodule
+</code></pre></details>
+<details open><summary>rtl/motor_controller.v — 방향 제어·위험 정지·전환 대기</summary><pre><code>// (학습 주석) 방향 제어·위험 정지·전환 대기
+`timescale 1ns/1ps
+// P2-07 reusable motor controller; no AXI or board-specific pins.
+// (추가) Valid, recent HC-SR04 data + AUTO must exist before any drive.
+// (추가) Near/fault/timeout immediately disables ENA via combinational gating.
+// (추가) Fault while commanded latches TRIP; MOTOR STOP clears, FWD/REV re-arms.
+module motor_controller #(
+    parameter integer DEADTIME_CYCLES = 10000000, // 100 ms at 100MHz
+    parameter integer FRESH_CYCLES    = 25000000  // 250 ms at 100MHz
+)(
+    input wire clk, input wire resetn,
+    input wire [1:0] request_i, // 0 STOP, 1 FWD, 2 REV
+    input wire stop_clear_i,   // One-clock pulse on MOTOR STOP write
+    input wire sonic_auto_i, input wire sonic_done_i,
+    input wire sonic_valid_i, input wire sonic_unsafe_i,
+    output wire motor_in1_o, output wire motor_in2_o, output wire motor_ena_o,
+    output wire [1:0] active_dir_o,
+    output wire sensor_safe_o, output wire fresh_o,
+    output reg trip_latched_o, output wire deadtime_o
+);
+    reg [31:0] fresh_count, dead_count;
+    reg [1:0] drive_dir;
+    // Always gate the physical outputs, even before the next clock edge.
+    assign fresh_o = (fresh_count != 32'd0);
+    assign sensor_safe_o = sonic_auto_i &amp;&amp; fresh_o &amp;&amp;
+                           sonic_valid_i &amp;&amp; !sonic_unsafe_i;
+    wire output_allowed = sensor_safe_o &amp;&amp; !trip_latched_o &amp;&amp;
+                          !stop_clear_i &amp;&amp; (request_i != 2'd0);
+    assign motor_in1_o = output_allowed &amp;&amp; (drive_dir == 2'd1);
+    assign motor_in2_o = output_allowed &amp;&amp; (drive_dir == 2'd2);
+    assign motor_ena_o = motor_in1_o || motor_in2_o;
+    assign active_dir_o = motor_ena_o ? drive_dir : 2'd0;
+    assign deadtime_o = (dead_count != 32'd0);
+
+    // (학습 주석) 클록 상승 에지에서 레지스터·상태를 갱신하는 순차회로.
+    always @(posedge clk) begin
+        if (!resetn) begin
+            fresh_count &lt;= 32'd0;
+            dead_count &lt;= 32'd0;
+            drive_dir &lt;= 2'd0;
+            trip_latched_o &lt;= 1'b0;
+        end else begin
+            // Stale/invalid/off -&gt; stop. Periodic successful DONE re-arms freshness.
+            if (!sonic_auto_i || !sonic_valid_i || sonic_unsafe_i)
+                fresh_count &lt;= 32'd0;
+            else if (sonic_done_i)
+                fresh_count &lt;= FRESH_CYCLES;
+            else if (fresh_count != 32'd0)
+                fresh_count &lt;= fresh_count - 32'd1;
+
+            if (stop_clear_i)
+                trip_latched_o &lt;= 1'b0;
+            else if (request_i != 2'd0 &amp;&amp; !sensor_safe_o)
+                trip_latched_o &lt;= 1'b1;
+
+            if (!sensor_safe_o || trip_latched_o || stop_clear_i ||
+                request_i == 2'd0 || request_i == 2'd3) begin
+                drive_dir &lt;= 2'd0;
+                // (변경) STOP after motion must not bypass reversal dead-time.
+                if (drive_dir != 2'd0)
+                    dead_count &lt;= DEADTIME_CYCLES;
+                else if (dead_count != 32'd0)
+                    dead_count &lt;= dead_count - 32'd1;
+            end else if (drive_dir != 2'd0 &amp;&amp; drive_dir != request_i) begin
+                // Disable bridge, then enforce a direction-change dead time.
+                drive_dir &lt;= 2'd0;
+                dead_count &lt;= DEADTIME_CYCLES;
+            end else if (drive_dir == 2'd0) begin
+                if (dead_count != 32'd0)
+                    dead_count &lt;= dead_count - 32'd1;
+                else
+                    drive_dir &lt;= request_i;
+            end
+        end
+    end
+endmodule
+</code></pre></details>
+<details open><summary>tests/tb_motor_controller.v — 테스트벤치</summary><pre><code>// (학습 주석) 테스트벤치
+`timescale 1ns/1ps
+// This testbench is supplied for user execution; no simulator bundled.
+module tb_motor_controller;
+    reg clk=0; always #5 clk=~clk;
+    reg resetn=0, stop_clear=0, sonar_auto=0, sonar_done=0;
+    reg sonar_valid=0, sonar_unsafe=1;
+    reg [1:0] req=0;
+    wire in1,in2,ena,safe,fresh,trip,dead;
+    wire [1:0] actual;
+    integer n;
+    motor_controller #(.DEADTIME_CYCLES(4),.FRESH_CYCLES(20)) dut (
+      .clk(clk),.resetn(resetn),.request_i(req),.stop_clear_i(stop_clear),
+      .sonic_auto_i(sonar_auto),.sonic_done_i(sonar_done),
+      .sonic_valid_i(sonar_valid),.sonic_unsafe_i(sonar_unsafe),
+      .motor_in1_o(in1),.motor_in2_o(in2),.motor_ena_o(ena),
+      .active_dir_o(actual),.sensor_safe_o(safe),.fresh_o(fresh),
+      .trip_latched_o(trip),.deadtime_o(dead)
+    );
+    task tick; begin @(posedge clk); #1; end endtask
+    task must_stop; begin
+      if(ena || in1 || in2 || actual!=0) $fatal(1,&quot;FAIL non-stop output&quot;);
+    end endtask
+    initial begin
+      tick(); tick(); resetn=1; tick(); must_stop();
+      req=1; tick(); must_stop();
+      if(!trip) $fatal(1,&quot;Missing unsafe latch&quot;);
+      // A STOP write clears fault; no implicit restart.
+      req=0; stop_clear=1; tick(); stop_clear=0; tick();
+      if(trip) $fatal(1,&quot;Trip not cleared by STOP&quot;);
+      sonar_auto=1; sonar_valid=1; sonar_unsafe=0; sonar_done=1;
+      tick(); sonar_done=0; tick();
+      if(!safe) $fatal(1,&quot;Valid completed reading not accepted&quot;);
+      req=1; tick(); tick();
+      if(!ena || !in1 || in2) $fatal(1,&quot;Forward failed&quot;);
+      // Change direction -&gt; dead-time with both outputs zero.
+      req=2; tick(); must_stop();
+      if(!dead) $fatal(1,&quot;Dead-time missing&quot;);
+      for(n=0;n&lt;3;n=n+1)begin tick(); must_stop();end
+      tick(); must_stop();tick();
+      if(!ena || in1 || !in2) $fatal(1,&quot;Reverse failed&quot;);
+      // (추가) STOP must not bypass dead-time before another direction.
+      sonar_done=1;tick();sonar_done=0; // Renew freshness for this boundary test.
+      req=0;tick();must_stop();
+      if(!dead)$fatal(1,&quot;STOP did not load minimum off-time&quot;);
+      req=1;tick();must_stop();
+      repeat(2) begin tick();must_stop();end
+      tick();must_stop();tick();
+      if(!ena || !in1 || in2) $fatal(1,&quot;STOP-&gt;FWD bypassed dead-time&quot;);
+      // Proximity gate is combinational: don't wait for a clock to drop ENA.
+      sonar_unsafe=1; #1; must_stop();
+      tick(); if(!trip) $fatal(1,&quot;Trip not latched&quot;);
+      sonar_unsafe=0; sonar_done=1; tick(); sonar_done=0;
+      tick(); must_stop();
+      req=0; stop_clear=1;tick();stop_clear=0;tick();
+      if(trip) $fatal(1,&quot;STOP failed to rearm&quot;);
+      req=1; tick();tick(); if(!ena) $fatal(1,&quot;Restart failed&quot;);
+      // Sensor stops reporting: age-out must stop and latch.
+      repeat(24)tick(); must_stop();
+      if(!trip) $fatal(1,&quot;Freshness timeout not latched&quot;);
+      // SONIC AUTO OFF -&gt; gate, even with previously valid last distance.
+      req=0;stop_clear=1;tick();stop_clear=0;tick();
+      sonar_auto=0;req=1;#1;must_stop();tick();
+      $display(&quot;P2_07_MOTOR_CORE_PASS&quot;);$finish;
+    end
+endmodule
+</code></pre></details>
+<details open><summary>tests/tb_p2_07_axi_motor.v — 테스트벤치</summary><pre><code>// (학습 주석) 테스트벤치
+`timescale 1ns/1ps
+// AXI tests cover AW/W independent arrivals, held responses, invalid values.
+module tb_p2_07_axi_motor;
+    reg clk=0;always #5 clk=~clk;
+    reg resetn=0;
+    reg [5:0] awaddr=0, araddr=0;
+    reg [2:0] awprot=0, arprot=0;
+    reg awvalid=0,wvalid=0,arvalid=0;
+    reg [31:0] wdata=0;
+    reg [3:0] wstrb=4'hf;
+    reg bready=0,rready=0;
+    wire awready,wready,arready,bvalid,rvalid;
+    wire [1:0] bresp,rresp;
+    wire [31:0] rdata;
+    reg sonar_auto=0,sonar_done=0,sonar_valid=0,sonar_unsafe=1;
+    wire in1,in2,ena;
+    p2_07_axi_motor_v1_0_S00_AXI #(.DEADTIME_CYCLES(3),.FRESH_CYCLES(30)) dut (
+      .S_AXI_ACLK(clk),.S_AXI_ARESETN(resetn),
+      .S_AXI_AWADDR(awaddr),.S_AXI_AWPROT(awprot),.S_AXI_AWVALID(awvalid),.S_AXI_AWREADY(awready),
+      .S_AXI_WDATA(wdata),.S_AXI_WSTRB(wstrb),.S_AXI_WVALID(wvalid),.S_AXI_WREADY(wready),
+      .S_AXI_BRESP(bresp),.S_AXI_BVALID(bvalid),.S_AXI_BREADY(bready),
+      .S_AXI_ARADDR(araddr),.S_AXI_ARPROT(arprot),.S_AXI_ARVALID(arvalid),.S_AXI_ARREADY(arready),
+      .S_AXI_RDATA(rdata),.S_AXI_RRESP(rresp),.S_AXI_RVALID(rvalid),.S_AXI_RREADY(rready),
+      .sonic_auto_i(sonar_auto),.sonic_done_i(sonar_done),.sonic_valid_i(sonar_valid),
+      .sonic_unsafe_i(sonar_unsafe),.motor_in1_o(in1),.motor_in2_o(in2),.motor_ena_o(ena)
+    );
+    task tick; begin @(posedge clk);#1;end endtask
+    task aw(input [5:0] addr);begin
+      @(negedge clk);awaddr=addr;awvalid=1;
+      while(!awready) @(negedge clk);
+      tick();
+      @(negedge clk);awvalid=0;
+    end endtask
+    task wd(input [31:0] data,input [3:0] strobe);begin
+      @(negedge clk);wdata=data;wstrb=strobe;wvalid=1;
+      while(!wready) @(negedge clk);
+      tick();
+      @(negedge clk);wvalid=0;
+    end endtask
+    task bcheck(input [1:0] expected);begin
+      while(!bvalid)tick();
+      if(bresp!=expected)$fatal(1,&quot;BRESP mismatch&quot;);
+      repeat(2) begin tick();if(!bvalid)$fatal(1,&quot;BVALID not held&quot;);end
+      @(negedge clk);bready=1;tick();@(negedge clk);bready=0;
+    end endtask
+    task read32(input [5:0] addr,input [1:0] expected);begin
+      @(negedge clk);araddr=addr;arvalid=1;
+      while(!arready) @(negedge clk);
+      tick();
+      @(negedge clk);arvalid=0;
+      while(!rvalid)tick();
+      if(rresp!=expected)$fatal(1,&quot;RRESP mismatch&quot;);
+      repeat(2)begin tick();if(!rvalid)$fatal(1,&quot;RVALID not held&quot;);end
+      @(negedge clk);rready=1;tick();@(negedge clk);rready=0;
+    end endtask
+    initial begin
+      tick();tick();resetn=1;tick();
+      read32(6'h08,2'b00);
+      // AW before W and W before AW, both legal.
+      aw(6'h00);repeat(2)tick();wd(32'd1,4'hf);bcheck(2'b00);
+      if(ena)$fatal(1,&quot;Unsafe motor enabled&quot;);
+      wd(32'd2,4'hf);repeat(2)tick();aw(6'h00);bcheck(2'b00);
+      aw(6'h00);wd(32'd3,4'hf);bcheck(2'b10);
+      aw(6'h0C);wd(32'd0,4'hf);bcheck(2'b10);
+      aw(6'h00);wd(32'd0,4'hf);bcheck(2'b00);
+      read32(6'h00,2'b00);
+      read32(6'h04,2'b00);
+      read32(6'h3c,2'b10);
+      $display(&quot;P2_07_AXI_BUS_PASS&quot;);$finish;
+    end
+endmodule
+</code></pre></details>
+<details open><summary>rtl/basys3_soc11_top_p2_07.v — JB 모터 핀 배선</summary><pre><code>// (학습 주석) JB 모터 핀 배선
+// P2-07 USER TOP: Shell/Wrapper ONLY. No always/FSM/policy expressions.
+// (유지) LED0 P2-01; LED1 P2-05 AUTO/PWM controller;
+// (변경) LED2 P2-06 sonic_alert, LED3~15 old GPIO.
+// WARNING: generated BD Wrapper MUST expose motor outputs before use.
+module basys3_soc11_top (
+    input wire clk, input wire btnC,
+    input wire btnU, input wire btnD, input wire btnL, input wire btnR,
+    input wire cds_digital, // JA1, J1 (P2-05)
+    output wire sonic_trig, // JA2, L2; see level-shifting note
+    input wire sonic_echo,  // JA3, J2; external 5V-&gt;3.3V conversion required
+    output wire motor_in1, output wire motor_in2, output wire motor_ena,
+    input wire [15:0] sw, output wire [15:0] led,
+    input wire RsRx, output wire RsTx,
+    output wire [6:0] seg, output wire [3:0] an, output wire dp
+);
+    wire [15:0] gpio_led;
+    wire p2_led0;
+    wire pwm_led1;
+    wire auto_enable, cds_dark, cds_valid;
+    wire light_led1;
+    wire sonic_alert, sonic_unsafe;
+    auto_light_controller u_light_controller (
+        .pwm_led_i(pwm_led1),.auto_enable_i(auto_enable),
+        .sensor_dark_i(cds_dark),.sensor_valid_i(cds_valid),
+        .led1_o(light_led1)
+    );
+    // (변경) Pure board-bit wiring; LED2 has exactly one source.
+    assign led = {gpio_led[15:3], sonic_alert, light_led1, p2_led0};
+    soc11_integration_wrapper u_soc11 (
+        .clk(clk),.btnC(btnC),
+        .btnU(btnU),.btnD(btnD),.btnL(btnL),.btnR(btnR),
+        .sw_tri_i(sw),.led_tri_o(gpio_led),
+        .UART_0_rxd(RsRx),.UART_0_txd(RsTx),
+        .p2_led_o(p2_led0),.pwm_led1(pwm_led1),
+        .fnd_seg(seg),.fnd_an(an),.fnd_dp(dp),
+        .cds_digital(cds_digital),
+        .cds_dark(cds_dark),.cds_valid(cds_valid),
+        .cds_auto_enable(auto_enable),
+        .sonic_trig(sonic_trig),.sonic_echo(sonic_echo),
+        .sonic_alert(sonic_alert),.sonic_unsafe(sonic_unsafe),
+        .motor_in1(motor_in1),.motor_in2(motor_in2),
+        .motor_ena(motor_ena)
+    );
+endmodule
+</code></pre></details>
+<details open><summary>sw/main_p2_07.c — UART 명령·기존 센서·모터 안전 처리</summary><pre><code>/* (학습 주석) UART 명령·기존 센서·모터 안전 처리; 주변장치 주소와 명령 처리 흐름을 함께 확인합니다. */
+/* P2-07: retain P2-01~06 and add motor command + hardware safety interlock.
+ * NOTE: Base addresses, Interrupt ID/Parent MUST be read from actual BSP.
+ * This source intentionally rejects unknown constants before target build.
+ */
+#include &quot;xparameters.h&quot;
+#include &quot;xil_types.h&quot;      /* u8, u32, UINTPTR */
+#include &quot;xil_io.h&quot;         /* Xil_In32, Xil_Out32 */
+#include &quot;xuartlite_l.h&quot;    /* UART Lite byte functions + FIFO empty check */
+#include &quot;xstatus.h&quot;
+#include &quot;xil_exception.h&quot;
+#ifdef SDT
+#include &quot;xinterrupt_wrap.h&quot; /* SDT interrupt API */
+#else
+#include &quot;xintc.h&quot;          /* Classic interrupt controller API */
+#endif
+#include &quot;p2_03_logic.h&quot;
+#include &quot;p2_04_pwm_logic.h&quot; // Reused 04 PWM parser / duty calculation
+#include &quot;p2_05_cds_logic.h&quot; // Existing AUTO/CDS command parser
+#include &quot;p2_06_sonic_logic.h&quot; // (유지) SONIC/WARN command parser
+#include &quot;p2_07_motor_logic.h&quot; // (추가) MOTOR FWD/REV/STOP/STATUS parser
+
+#ifndef P2_04_PWM_BASEADDR
+#define P2_04_PWM_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_04_PWM_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set P2_04_PWM_BASEADDR from CURRENT Vivado Address Editor/xparameters.h&quot;
+#endif
+// (추가) Never guess the fifth AXI IP base: use CURRENT generated BSP.
+#ifndef P2_05_CDS_BASEADDR
+#define P2_05_CDS_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_05_CDS_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set P2_05_CDS_BASEADDR from CURRENT Address Editor/xparameters.h&quot;
+#endif
+#ifndef P2_01_LED_BASEADDR
+#define P2_01_LED_BASEADDR 0xFFFFFFFFU
+#endif
+#ifndef P2_02_FND_BASEADDR
+#define P2_02_FND_BASEADDR 0xFFFFFFFFU
+#endif
+#ifndef P2_03_BTN_BASEADDR
+#define P2_03_BTN_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_01_LED_BASEADDR == 0xFFFFFFFFU || P2_02_FND_BASEADDR == 0xFFFFFFFFU || P2_03_BTN_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set all three AXI IP addresses from CURRENT Address Editor/xparameters.h&quot;
+#endif
+#if P2_01_LED_BASEADDR == P2_02_FND_BASEADDR || P2_01_LED_BASEADDR == P2_03_BTN_BASEADDR || P2_02_FND_BASEADDR == P2_03_BTN_BASEADDR
+#error &quot;Three user AXI IP base addresses must be unique&quot;
+#endif
+#ifndef P2_03_BTN_INTR_ID
+#error &quot;Fill P2_03_BTN_INTR_ID from CURRENT generated BSP interrupt map&quot;
+#endif
+#ifdef SDT
+#ifndef P2_03_BTN_INTR_PARENT
+#error &quot;Fill P2_03_BTN_INTR_PARENT (SDT encoded interrupt parent) from actual BSP&quot;
+#endif
+#else
+#ifndef P2_03_INTC_DEVICE_ID
+#error &quot;Fill P2_03_INTC_DEVICE_ID from Classic BSP&quot;
+#endif
+#endif
+
+#if defined(XPAR_XUARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_XUARTLITE_0_BASEADDR
+#elif defined(XPAR_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_UARTLITE_0_BASEADDR
+#elif defined(XPAR_AXI_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_AXI_UARTLITE_0_BASEADDR
+#else
+#error &quot;Check UART Lite base macro in the generated xparameters.h&quot;
+#endif
+
+#define FND_VAL_REG  0x00U
+#define FND_CTRL_REG 0x04U
+#define BTN_PENDING  0x00U
+#define BTN_ENABLE   0x04U
+#define BTN_PRESSED  0x08U
+#define BTN_ID       0x0CU
+#define BTN_COALESCED 0x10U
+// P2-04 register offsets: 32-bit, byte-addressed.
+#define PWM_PERIOD_CFG 0x00U
+#define PWM_DUTY_CFG   0x04U
+#define PWM_CTRL_CFG   0x08U
+#define PWM_APPLY      0x0CU
+#define PWM_STATUS     0x10U
+#define PWM_PERIOD_ACT 0x14U
+#define PWM_DUTY_ACT   0x18U
+#define PWM_ID         0x1CU
+#define PWM_IP_ID      0x00040001U
+#define PWM_PERIOD_TICKS 100000U // AXI Clock이 실제 100MHz일 때 1kHz.
+#if P2_04_PWM_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_04_PWM_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_04_PWM_BASEADDR == P2_03_BTN_BASEADDR
+#error &quot;New PWM IP base must differ from all prior IP addresses&quot;
+#endif
+// (추가) P2-05 digital CdS AXI register map (32-bit byte offsets).
+#define CDS_CTRL    0x00U
+#define CDS_STATUS  0x04U
+#define CDS_IP_ID   0x08U
+#define CDS_FILTER  0x0CU
+#define CDS_EXPECTED_ID 0x00050001U
+#ifndef P2_06_SONIC_BASEADDR
+#define P2_06_SONIC_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_06_SONIC_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set P2_06_SONIC_BASEADDR from CURRENT Address Editor and BSP&quot;
+#endif
+#if P2_05_CDS_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_05_CDS_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_05_CDS_BASEADDR == P2_03_BTN_BASEADDR || \
+    P2_05_CDS_BASEADDR == P2_04_PWM_BASEADDR
+#error &quot;P2-05 CdS IP base address must differ from P2-01~04&quot;
+#endif
+// (추가) P2-06 AXI4-Lite offsets; all byte offsets.
+#define SONIC_CTRL       0x00U
+#define SONIC_STATUS     0x04U
+#define SONIC_DIST_CM    0x08U
+#define SONIC_ECHO_US    0x0CU
+#define SONIC_WARN_CFG   0x10U
+#define SONIC_SEQ        0x14U
+#define SONIC_ID         0x18U
+#define SONIC_CLK_HZ     0x1CU
+#define SONIC_EXPECTED_ID 0x00060001U
+#if P2_06_SONIC_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_06_SONIC_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_06_SONIC_BASEADDR == P2_03_BTN_BASEADDR || \
+    P2_06_SONIC_BASEADDR == P2_04_PWM_BASEADDR || \
+    P2_06_SONIC_BASEADDR == P2_05_CDS_BASEADDR
+#error &quot;P2-06 SONIC AXI base must be distinct from all previous IPs&quot;
+#endif
+// (추가) All AXI motor addresses are BSP-derived; never invent a base.
+#ifndef P2_07_MOTOR_BASEADDR
+#define P2_07_MOTOR_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_07_MOTOR_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set P2_07_MOTOR_BASEADDR from CURRENT Vivado Address Editor/xparameters.h&quot;
+#endif
+#if P2_07_MOTOR_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_07_MOTOR_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_07_MOTOR_BASEADDR == P2_03_BTN_BASEADDR || \
+    P2_07_MOTOR_BASEADDR == P2_04_PWM_BASEADDR || \
+    P2_07_MOTOR_BASEADDR == P2_05_CDS_BASEADDR || \
+    P2_07_MOTOR_BASEADDR == P2_06_SONIC_BASEADDR
+#error &quot;P2-07 motor AXI base must be distinct from all other IPs&quot;
+#endif
+#define MOTOR_CMD_REG     0x00U
+#define MOTOR_STATUS_REG  0x04U
+#define MOTOR_ID_REG      0x08U
+#define MOTOR_DEADTIME    0x0CU
+#define MOTOR_FRESHNESS   0x10U
+#define MOTOR_CLK_HZ      0x14U
+#define MOTOR_EXPECTED_ID 0x00070001U
+#define LINE_CAP     32U
+
+static P2AppState app;
+static u8 pwm_requested_percent = 0U;
+// (추가) The C application owns control policy; RTL filters raw CdS signal.
+static u8 cds_auto_enabled = 0U;
+static u8 sonic_auto_enabled = 0U;
+static u8 sonic_warn_enabled = 1U;
+static u8 sonic_view = 0U; // 1: DIST(cm) FND view overrides VALUE/EVENTS.
+static u8 sonic_view_fresh = 0U; // Blank stale result until next completion after ON.
+static u32 sonic_seq_seen = 0U;
+static u8 cds_dark_when_low = 1U; // Start assumption; verify DO via CDS READ.
+
+static volatile u32 irq_counts[8]; // ISR writes monotonically; main reads.
+static u32 handled_counts[8];      // Main-only processed counts.
+#ifndef SDT
+static XIntc intc;
+#endif
+
+static void uart_puts(const char *s)
+{
+    while (*s) XUartLite_SendByte(UART_BASEADDR, (u8)*s++);
+}
+static void uart_hex32(u32 v)
+{
+    const char hex[] = &quot;0123456789ABCDEF&quot;;
+    int shift;
+    for (shift = 28; shift &gt;= 0; shift -= 4)
+        XUartLite_SendByte(UART_BASEADDR, (u8)hex[(v &gt;&gt; shift) &amp; 15U]);
+}
+static void uart_dec4(u32 value)
+{
+    int d;
+    u32 divisors[4] = {1000U, 100U, 10U, 1U};
+    for (d = 0; d &lt; 4; ++d) {
+        u32 n = (value / divisors[d]) % 10U;
+        XUartLite_SendByte(UART_BASEADDR, (u8)('0' + n));
+    }
+}
+
+// (추가) 0~4294967295를 선행 0 없이 UART에 출력.
+static void uart_dec_u32(u32 value)
+{
+    char tmp[10]; // u32 십진수 최대 10자리.
+    unsigned used = 0U;
+    do {
+        tmp[used++] = (char)('0' + (value % 10U));
+        value /= 10U;
+    } while (value != 0U);
+    while (used != 0U)
+        XUartLite_SendByte(UART_BASEADDR, (u8)tmp[--used]);
+}
+
+// (추가) 이전 설정이 반영 중이면 BUSY, 아니면 다음 주기 적용을 예약.
+static int pwm_queue_percent(u8 percent)
+{
+    u32 duty;
+    if ((Xil_In32(P2_04_PWM_BASEADDR + PWM_STATUS) &amp; 1U) != 0U)
+        return 0; // 기존 Pending 설정을 덮지 않는다.
+    duty = pwm_duty_for_percent(PWM_PERIOD_TICKS, percent);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_PERIOD_CFG, PWM_PERIOD_TICKS);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_DUTY_CFG, duty);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_CTRL_CFG, percent ? 1U : 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_APPLY, 1U);
+    pwm_requested_percent = percent;
+    return 1;
+}
+
+// (추가) Write configuration as one atomic 32-bit AXI register update.
+static void cds_commit_control(void)
+{
+    Xil_Out32(P2_05_CDS_BASEADDR + CDS_CTRL,
+              cds_control_word(cds_auto_enabled, cds_dark_when_low));
+}
+
+// (추가) Read sensor pins via AXI status, not by polling a physical GPIO.
+static void cds_print_reading(void)
+{
+    u32 bits = Xil_In32(P2_05_CDS_BASEADDR + CDS_STATUS);
+    uart_puts(&quot;CDS RAW=&quot;); uart_dec_u32(bits &amp; 1U);
+    uart_puts(&quot; DARK=&quot;); uart_dec_u32((bits &gt;&gt; 1) &amp; 1U);
+    uart_puts(&quot; VALID=&quot;); uart_dec_u32((bits &gt;&gt; 2) &amp; 1U);
+    uart_puts(&quot; GATE=&quot;); uart_dec_u32((bits &gt;&gt; 3) &amp; 1U);
+    uart_puts(&quot; AUTO=&quot;); uart_dec_u32((bits &gt;&gt; 4) &amp; 1U);
+    uart_puts(&quot; POL=&quot;); uart_puts((bits &amp; (1U &lt;&lt; 5)) ? &quot;LOW&quot; : &quot;HIGH&quot;);
+    uart_puts(&quot;\r\n&quot;);
+}
+
+// (추가) 06장 STATUS는 최근 완료된 샘플(VALID/TIMEOUT/RANGE)을 보존.
+// SEQ is a lightweight change marker; the HW has no atomic multiword latch.
+static void sonic_read_state(u32 *status, u32 *cm, u32 *seq)
+{
+    u32 a, b;
+    unsigned tries;
+    for (tries = 0; tries &lt; 3U; ++tries) {
+        a = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+        *status = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_STATUS);
+        *cm = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_DIST_CM);
+        b = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+        if (a == b) { *seq = b; return; }
+    }
+    *seq = b; // Contended snapshot: STATUS logs must not claim atomicity.
+}
+
+static void sonic_commit_ctrl(void)
+{
+    Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_CTRL,
+              (u32)sonic_auto_enabled | ((u32)sonic_warn_enabled &lt;&lt; 2));
+}
+
+static void sonic_print_reading(void)
+{
+    u32 st, cm, seq, echo_us;
+    sonic_read_state(&amp;st,&amp;cm,&amp;seq);
+    echo_us = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_ECHO_US);
+    uart_puts(&quot;SONIC CM=&quot;); uart_dec_u32(cm);
+    uart_puts(&quot; ECHO_US=&quot;); uart_dec_u32(echo_us);
+    uart_puts(&quot; VALID=&quot;); uart_dec_u32((st &gt;&gt; 1) &amp; 1U);
+    uart_puts(&quot; TIMEOUT=&quot;); uart_dec_u32((st &gt;&gt; 2) &amp; 1U);
+    uart_puts(&quot; RANGE_ERROR=&quot;); uart_dec_u32((st &gt;&gt; 3) &amp; 1U);
+    uart_puts(&quot; BUSY=&quot;); uart_dec_u32(st &amp; 1U);
+    uart_puts(&quot; ALERT=&quot;); uart_dec_u32((st &gt;&gt; 4) &amp; 1U);
+    uart_puts(&quot; UNSAFE=&quot;); uart_dec_u32((st &gt;&gt; 5) &amp; 1U);
+    uart_puts(&quot; SEQ=&quot;); uart_dec_u32(seq);
+    uart_puts(&quot; WARN_CM=&quot;); uart_dec_u32(
+        Xil_In32(P2_06_SONIC_BASEADDR + SONIC_WARN_CFG));
+    uart_puts(&quot;\r\n&quot;);
+}
+
+static void fnd_commit(void)
+{
+    if (sonic_view) {
+        u32 st, cm, seq;
+        uint16_t visible;
+        sonic_read_state(&amp;st,&amp;cm,&amp;seq);
+        visible = sonic_visible_cm(st,cm);
+        // (추가) D3..D0: decimal 0002..0400 cm; no unit/dot hardware.
+        // Invalid/timeout =&gt; FND blank, not a misleading '0000'.
+        Xil_Out32(P2_02_FND_BASEADDR + FND_VAL_REG, p2_to_bcd4(visible));
+        Xil_Out32(P2_02_FND_BASEADDR + FND_CTRL_REG,
+                  (sonic_view_fresh &amp;&amp; sonic_sample_valid(st,cm)) ? 1U : 0U);
+        return;
+    }
+    // (유지) P2-03 VALUE/EVENTS shown when SONIC OFF.
+    Xil_Out32(P2_02_FND_BASEADDR + FND_VAL_REG,
+              p2_to_bcd4(p2_visible_decimal(&amp;app)));
+    Xil_Out32(P2_02_FND_BASEADDR + FND_CTRL_REG, (u32)app.display_on);
+}
+
+static void service_sonic_display(void)
+{
+    u32 seq = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+    if (seq != sonic_seq_seen) {
+        sonic_seq_seen = seq;
+        if (sonic_view) { sonic_view_fresh = 1U; fnd_commit(); }
+    }
+}
+
+// Level interrupt: read PENDING, acknowledge W1C, count each asserted type.
+static void btn_irq_handler(void *unused)
+{
+    u32 pending;
+    unsigned i;
+    (void)unused;
+    pending = Xil_In32(P2_03_BTN_BASEADDR + BTN_PENDING) &amp; 0xFFU;
+    if (!pending) return;
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_PENDING, pending); // W1C
+    for (i = 0; i &lt; 8U; ++i)
+        if (pending &amp; (1U &lt;&lt; i)) irq_counts[i]++;
+}
+
+static int setup_button_interrupt(void)
+{
+    int status;
+#ifdef SDT
+    // The physical interrupt ID and parent are project-specific.
+    status = XSetupInterruptSystem(0, (void *)btn_irq_handler,
+        P2_03_BTN_INTR_ID, (UINTPTR)P2_03_BTN_INTR_PARENT,
+        XINTERRUPT_DEFAULT_PRIORITY);
+#else
+    status = XIntc_Initialize(&amp;intc, P2_03_INTC_DEVICE_ID);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Connect(&amp;intc, P2_03_BTN_INTR_ID,
+        (XInterruptHandler)btn_irq_handler, 0);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Start(&amp;intc, XIN_REAL_MODE);
+    if (status != XST_SUCCESS) return status;
+    XIntc_Enable(&amp;intc, P2_03_BTN_INTR_ID);
+    Xil_ExceptionInit();
+    Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT,
+        (Xil_ExceptionHandler)XIntc_InterruptHandler, &amp;intc);
+    Xil_ExceptionEnable();
+#endif
+    return status;
+}
+
+// (추가) Report command vs physical output separately. Command != rotation.
+static void motor_print_status(void)
+{
+    u32 cmd = Xil_In32(P2_07_MOTOR_BASEADDR + MOTOR_CMD_REG);
+    u32 st = Xil_In32(P2_07_MOTOR_BASEADDR + MOTOR_STATUS_REG);
+    uart_puts(&quot; MOTOR_REQ=&quot;); uart_puts(motor_direction_name(cmd));
+    uart_puts(&quot; MOTOR_ACT=&quot;);
+    uart_puts((st &amp; (1U &lt;&lt; 1)) ? &quot;FWD&quot; : ((st &amp; (1U &lt;&lt; 2)) ? &quot;REV&quot; : &quot;STOP&quot;));
+    uart_puts(&quot; MOTOR_EN=&quot;); uart_dec_u32(st &amp; 1U);
+    uart_puts(&quot; MOTOR_TRIP=&quot;); uart_dec_u32((st &gt;&gt; 3) &amp; 1U);
+    uart_puts(&quot; MOTOR_DEADTIME=&quot;); uart_dec_u32((st &gt;&gt; 4) &amp; 1U);
+    uart_puts(&quot; MOTOR_SAFE=&quot;); uart_dec_u32((st &gt;&gt; 5) &amp; 1U);
+    uart_puts(&quot; MOTOR_FRESH=&quot;); uart_dec_u32((st &gt;&gt; 6) &amp; 1U);
+    uart_puts(&quot; MOTOR_AUTO=&quot;); uart_dec_u32((st &gt;&gt; 7) &amp; 1U);
+    uart_puts(&quot; MOTOR_BLOCKED=&quot;); uart_dec_u32((st &gt;&gt; 9) &amp; 1U);
+}
+
+static void print_status(void)
+{
+    u32 led = Xil_In32(P2_01_LED_BASEADDR);
+    u32 fnd_bcd = Xil_In32(P2_02_FND_BASEADDR + FND_VAL_REG);
+    u32 fnd_ctrl = Xil_In32(P2_02_FND_BASEADDR + FND_CTRL_REG);
+    u32 pressed = Xil_In32(P2_03_BTN_BASEADDR + BTN_PRESSED);
+    u32 pending = Xil_In32(P2_03_BTN_BASEADDR + BTN_PENDING);
+    u32 lost = Xil_In32(P2_03_BTN_BASEADDR + BTN_COALESCED);
+    uart_puts(&quot;STATUS LED=&quot;); uart_puts((led &amp; 1U) ? &quot;ON&quot; : &quot;OFF&quot;);
+    uart_puts(&quot; REG0=0x&quot;); uart_hex32(led);
+    uart_puts(&quot; DISP=&quot;); uart_dec4(p2_visible_decimal(&amp;app));
+    uart_puts((fnd_ctrl &amp; 1U) ? &quot; ON&quot; : &quot; OFF&quot;);
+    uart_puts(&quot; MODE=&quot;); uart_puts(app.mode ? &quot;EVENTS&quot; : &quot;VALUE&quot;);
+    uart_puts(&quot; VALUE=&quot;); uart_dec4(app.value);
+    uart_puts(&quot; EVENTS=&quot;); uart_dec4(app.event_count);
+    uart_puts(&quot; FND_REG0=0x&quot;); uart_hex32(fnd_bcd);
+    uart_puts(&quot; BTN_PRESSED=0x&quot;); uart_hex32(pressed);
+    uart_puts(&quot; BTN_PENDING=0x&quot;); uart_hex32(pending);
+    uart_puts(&quot; COALESCED=0x&quot;); uart_hex32(lost);
+    // (추가) 03장 STATUS 전체를 유지하고 PWM 상태를 뒤에 추가.
+    {
+        u32 flags = Xil_In32(P2_04_PWM_BASEADDR + PWM_STATUS);
+        u32 p = Xil_In32(P2_04_PWM_BASEADDR + PWM_PERIOD_ACT);
+        u32 d = Xil_In32(P2_04_PWM_BASEADDR + PWM_DUTY_ACT);
+        u32 pct = p ? (u32)(((uint64_t)d * 100U) / p) : 0U;
+        uart_puts(&quot; PWM_SET=&quot;); uart_dec_u32(pwm_requested_percent);
+        uart_puts(&quot;% PWM_ACTIVE=&quot;); uart_dec_u32(pct);
+        uart_puts(&quot;% PWM_PENDING=&quot;); uart_puts((flags &amp; 1U) ? &quot;1&quot; : &quot;0&quot;);
+        uart_puts(&quot; PWM_ENABLE=&quot;); uart_puts((flags &amp; (1U &lt;&lt; 8)) ? &quot;1&quot; : &quot;0&quot;);
+        uart_puts(&quot; PWM_LED=1&quot;);
+    }
+    // (추가) Append CdS state without removing 04 status fields.
+    {
+        u32 bits = Xil_In32(P2_05_CDS_BASEADDR + CDS_STATUS);
+        uart_puts(&quot; CDS_RAW=&quot;); uart_dec_u32(bits &amp; 1U);
+        uart_puts(&quot; CDS_DARK=&quot;); uart_dec_u32((bits &gt;&gt; 1) &amp; 1U);
+        uart_puts(&quot; CDS_VALID=&quot;); uart_dec_u32((bits &gt;&gt; 2) &amp; 1U);
+        uart_puts(&quot; CDS_GATE=&quot;); uart_dec_u32((bits &gt;&gt; 3) &amp; 1U);
+        uart_puts(&quot; CDS_AUTO=&quot;); uart_dec_u32((bits &gt;&gt; 4) &amp; 1U);
+        uart_puts(&quot; CDS_POL=&quot;); uart_puts((bits &amp; (1U &lt;&lt; 5)) ? &quot;LOW&quot; : &quot;HIGH&quot;);
+    }
+    // (추가) Append 06 status fields; do not remove 01~05 fields.
+    {
+        u32 st, cm, seq;
+        sonic_read_state(&amp;st,&amp;cm,&amp;seq);
+        uart_puts(&quot; SONIC_VIEW=&quot;); uart_puts(sonic_view ? &quot;DIST&quot; : &quot;VALUE/EVENTS&quot;);
+        uart_puts(&quot; SONIC_CM=&quot;); uart_dec_u32(cm);
+        uart_puts(&quot; SONIC_VALID=&quot;); uart_dec_u32((st &gt;&gt; 1) &amp; 1U);
+        uart_puts(&quot; SONIC_TIMEOUT=&quot;); uart_dec_u32((st &gt;&gt; 2) &amp; 1U);
+        uart_puts(&quot; SONIC_RANGE=&quot;); uart_dec_u32((st &gt;&gt; 3) &amp; 1U);
+        uart_puts(&quot; SONIC_ALERT=&quot;); uart_dec_u32((st &gt;&gt; 4) &amp; 1U);
+        uart_puts(&quot; SONIC_UNSAFE=&quot;); uart_dec_u32((st &gt;&gt; 5) &amp; 1U);
+        uart_puts(&quot; SONIC_SEQ=&quot;); uart_dec_u32(seq);
+    }
+    // (추가) 07장 상태 필드; 01~06장 내용 삭제 금지.
+    motor_print_status();
+    uart_puts(&quot;\r\n&quot;);
+}
+
+static void handle_line(const char *line)
+{
+    uint16_t value = 0;
+    u8 pwm_percent = 0U;
+    MotorCommand motor_cmd = motor_parse_command(line);
+    if (motor_cmd != MOTOR_NOT_COMMAND) {
+        switch (motor_cmd) {
+        case MOTOR_STOP:
+            // (추가) STOP always accepted, even when sensor is unsafe.
+            // Also clears a latched trip; restart requires new FWD/REV.
+            Xil_Out32(P2_07_MOTOR_BASEADDR + MOTOR_CMD_REG, 0U);
+            uart_puts(&quot;OK MOTOR STOP REQUESTED\r\n&quot;);
+            break;
+        case MOTOR_FWD:
+        case MOTOR_REV: {
+            u32 st = Xil_In32(P2_07_MOTOR_BASEADDR + MOTOR_STATUS_REG);
+            if ((st &amp; (1U &lt;&lt; 5)) == 0U || (st &amp; (1U &lt;&lt; 3)) != 0U) {
+                uart_puts(&quot;BLOCKED: SONIC AUTO + fresh safe distance required; &quot;
+                          &quot;after TRIP use MOTOR STOP\r\n&quot;);
+            } else {
+                Xil_Out32(P2_07_MOTOR_BASEADDR + MOTOR_CMD_REG,
+                          motor_cmd == MOTOR_FWD ? 1U : 2U);
+                uart_puts(&quot;OK MOTOR REQUESTED &quot;);
+                uart_puts(motor_cmd == MOTOR_FWD ? &quot;FWD&quot; : &quot;REV&quot;);
+                uart_puts(&quot; (check MOTOR STATUS for physical output)\r\n&quot;);
+            }
+            break;
+        }
+        case MOTOR_STATUS:
+            uart_puts(&quot;MOTOR STATUS&quot;); motor_print_status(); uart_puts(&quot;\r\n&quot;);
+            break;
+        default:
+            uart_puts(&quot;ERROR: MOTOR FWD | MOTOR REV | MOTOR STOP | MOTOR STATUS\r\n&quot;);
+            break;
+        }
+        return;
+    }
+    // (추가) SONIC / WARN commands are parsed before legacy commands.
+    uint16_t warn_cm=0U;
+    SonicCommand sonic_cmd = sonic_parse_command(line,&amp;warn_cm);
+    CdsCommand cds_cmd = cds_parse_command(line);
+    PwmParseResult pwm_cmd = pwm_parse_command(line, &amp;pwm_percent);
+    P2Command cmd;
+    if (sonic_cmd != SONIC_NOT_COMMAND) {
+        switch (sonic_cmd) {
+        case SONIC_ON:
+            sonic_seq_seen = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+            sonic_view_fresh=0U; sonic_auto_enabled=1U; sonic_view=1U;
+            sonic_commit_ctrl(); fnd_commit();
+            uart_puts(&quot;OK SONIC ON (FND DIST cm)\r\n&quot;); break;
+        case SONIC_OFF:
+            sonic_auto_enabled=0U; sonic_view=0U; sonic_view_fresh=0U;
+            sonic_commit_ctrl(); fnd_commit();
+            uart_puts(&quot;OK SONIC OFF (FND VALUE/EVENTS restored)\r\n&quot;); break;
+        case SONIC_READ: sonic_print_reading(); break;
+        case SONIC_SHOT:
+            if (sonic_auto_enabled ||
+                ((Xil_In32(P2_06_SONIC_BASEADDR + SONIC_STATUS) &gt;&gt; 8) &amp; 1U)==0U) {
+                uart_puts(&quot;BUSY: SONIC SHOT unavailable; retry or SONIC OFF\r\n&quot;);
+            } else {
+                // W1P START bit1; preserve WARN_EN bit2, AUTO remains off.
+                Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_CTRL,
+                          ((u32)sonic_warn_enabled &lt;&lt; 2) | 2U);
+                uart_puts(&quot;OK SONIC SHOT QUEUED; use SONIC READ\r\n&quot;);
+            }
+            break;
+        case SONIC_WARN_CM:
+            Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_WARN_CFG, warn_cm);
+            sonic_warn_enabled=1U; sonic_commit_ctrl();
+            uart_puts(&quot;OK WARN &quot;);uart_dec_u32(warn_cm);uart_puts(&quot; CM\r\n&quot;); break;
+        case SONIC_WARN_OFF:
+            sonic_warn_enabled=0U; sonic_commit_ctrl();
+            uart_puts(&quot;OK WARN OFF (UNSAFE status remains active)\r\n&quot;); break;
+        default: uart_puts(&quot;ERROR: SONIC ON/OFF/READ/SHOT | WARN 1..400/OFF\r\n&quot;);
+        }
+        return;
+    }
+    if (cds_cmd != CDS_NOT_COMMAND) {
+        switch (cds_cmd) {
+        case CDS_AUTO_ON:
+            cds_auto_enabled=1U; cds_commit_control();
+            uart_puts(&quot;OK AUTO ON (PWM duty retained)\r\n&quot;); break;
+        case CDS_AUTO_OFF:
+            cds_auto_enabled=0U; cds_commit_control();
+            uart_puts(&quot;OK AUTO OFF (PWM manual)\r\n&quot;); break;
+        case CDS_POL_LOW:
+            cds_dark_when_low=1U; cds_commit_control();
+            uart_puts(&quot;OK CDS POL LOW\r\n&quot;); break;
+        case CDS_POL_HIGH:
+            cds_dark_when_low=0U; cds_commit_control();
+            uart_puts(&quot;OK CDS POL HIGH\r\n&quot;); break;
+        case CDS_READ:
+            cds_print_reading(); break;
+        default:
+            uart_puts(&quot;ERROR: AUTO ON | AUTO OFF | CDS READ | CDS POL LOW | CDS POL HIGH\r\n&quot;);
+            break;
+        }
+        return;
+    }
+    if (pwm_cmd != PWM_NOT_COMMAND) {
+        if (pwm_cmd == PWM_INVALID) {
+            uart_puts(&quot;ERROR: PWM 0..100 (decimal, no leading zeroes)\r\n&quot;);
+        } else if (!pwm_queue_percent(pwm_percent)) {
+            uart_puts(&quot;BUSY: previous PWM update pending; retry\r\n&quot;);
+        } else {
+            uart_puts(&quot;OK PWM &quot;); uart_dec_u32(pwm_percent);
+            uart_puts(&quot; QUEUED\r\n&quot;); // 실제 출력은 다음 주기 경계에서 반영됨.
+        }
+        return;
+    }
+    cmd = p2_parse_command(line, &amp;value);
+    switch (cmd) {
+    case P2_CMD_LED_ON:
+        Xil_Out32(P2_01_LED_BASEADDR, 1U);
+        uart_puts(&quot;OK LED ON\r\n&quot;); break;
+    case P2_CMD_LED_OFF:
+        Xil_Out32(P2_01_LED_BASEADDR, 0U);
+        uart_puts(&quot;OK LED OFF\r\n&quot;); break;
+    case P2_CMD_DISP_VALUE:
+        p2_set_disp(&amp;app, value); fnd_commit();
+        uart_puts(&quot;OK DISP &quot;); uart_dec4(value); uart_puts(&quot;\r\n&quot;); break;
+    case P2_CMD_DISP_OFF:
+        app.display_on = 0; fnd_commit(); uart_puts(&quot;OK DISP OFF\r\n&quot;); break;
+    case P2_CMD_STATUS:
+        print_status(); break;
+    default:
+        uart_puts(&quot;ERROR: MOTOR FWD/REV/STOP/STATUS | LED ON/OFF | DISP dddd/OFF | PWM 0..100 | AUTO ON/OFF | CDS READ/POL | SONIC ON/OFF/READ/SHOT | WARN 1..400/OFF | STATUS\r\n&quot;);
+    }
+}
+
+static void poll_uart(void)
+{
+    static char line[LINE_CAP];
+    static u32 used = 0;
+    static int invalid = 0;
+    static int overflow = 0;
+    u8 ch;
+    if (XUartLite_IsReceiveEmpty(UART_BASEADDR)) return;
+    ch = XUartLite_RecvByte(UART_BASEADDR);
+    if (ch == '\r' || ch == '\n') {
+        line[used] = '\0';
+        if (overflow) uart_puts(&quot;ERROR: line too long\r\n&quot;);
+        else if (invalid) uart_puts(&quot;ERROR: invalid ASCII\r\n&quot;);
+        else if (used) handle_line(line);
+        used = 0; overflow = 0; invalid = 0;
+        return; // CRLF second terminator is ignored.
+    }
+    if (ch &lt; 0x20U || ch &gt; 0x7EU) { invalid = 1; return; }
+    if (used &lt; LINE_CAP-1U) line[used++] = (char)ch;
+    else overflow = 1;
+}
+
+static void service_button_events(void)
+{
+    unsigned i;
+    for (i = 0; i &lt; 8U; ++i) {
+        // Each 32-bit read is atomic on the target 32-bit CPU. ISR only increments.
+        u32 seen = irq_counts[i];
+        while (handled_counts[i] != seen) {
+            handled_counts[i]++;
+            p2_apply_button(&amp;app, i);
+            fnd_commit();
+        }
+    }
+}
+
+/* (학습 주석) 주변장치 초기화 후 UART 명령 및 센서 이벤트를 처리합니다. */
+int main(void)
+{
+    int status;
+    unsigned i;
+    p2_init(&amp;app);
+    for (i=0; i&lt;8U; ++i) { irq_counts[i]=0U; handled_counts[i]=0U; }
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_ENABLE, 0U); // Mask IRQ while setting up.
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_PENDING, 0xFFU); // Clear stale events.
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_COALESCED, 0xFFU); // Clear stale loss flags.
+    if (Xil_In32(P2_03_BTN_BASEADDR + BTN_ID) != 0x00030001U) {
+        uart_puts(&quot;ERROR: button IP identity mismatch\r\n&quot;); return XST_FAILURE;
+    }
+    // (추가) P2-05 identity check BEFORE enabling automatic operation.
+    if (Xil_In32(P2_05_CDS_BASEADDR + CDS_IP_ID) != CDS_EXPECTED_ID) {
+        uart_puts(&quot;ERROR: CdS IP identity mismatch\r\n&quot;);
+        return XST_FAILURE;
+    }
+    cds_auto_enabled = 0U; cds_dark_when_low = 1U;
+    cds_commit_control(); // Power-on always begins in manual bypass mode.
+    // (추가) Motor hardware boot state: STOP before configuring other devices.
+    if (Xil_In32(P2_07_MOTOR_BASEADDR + MOTOR_ID_REG) != MOTOR_EXPECTED_ID) {
+        uart_puts(&quot;ERROR: motor IP identity mismatch\r\n&quot;);
+        return XST_FAILURE;
+    }
+    Xil_Out32(P2_07_MOTOR_BASEADDR + MOTOR_CMD_REG, 0U);
+    // (추가) Validate 06 IP before enabling a continuous trigger.
+    if (Xil_In32(P2_06_SONIC_BASEADDR + SONIC_ID) != SONIC_EXPECTED_ID) {
+        uart_puts(&quot;ERROR: HC-SR04 IP identity mismatch\r\n&quot;);
+        return XST_FAILURE;
+    }
+    sonic_auto_enabled=0U; sonic_warn_enabled=1U; sonic_view=0U; sonic_view_fresh=0U;
+    Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_WARN_CFG, 20U);
+    sonic_commit_ctrl();
+    sonic_seq_seen=Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+    // (추가) IP ID를 확인하고 시작할 때 PWM OFF를 예약.
+    if (Xil_In32(P2_04_PWM_BASEADDR + PWM_ID) != PWM_IP_ID) {
+        uart_puts(&quot;ERROR: PWM IP identity mismatch\r\n&quot;);
+        return XST_FAILURE;
+    }
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_PERIOD_CFG, PWM_PERIOD_TICKS);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_DUTY_CFG, 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_CTRL_CFG, 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_APPLY, 1U);
+    fnd_commit();
+    status = setup_button_interrupt();
+    if (status != XST_SUCCESS) {
+        uart_puts(&quot;ERROR: interrupt initialization failed\r\n&quot;);
+        return XST_FAILURE;
+    }
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_ENABLE, 0xFFU);
+    uart_puts(&quot;P2-07: DC motor HW interlock + sonar freshness; P2-01..06 retained\r\n&quot;);
+    uart_puts(&quot;UART: MOTOR FWD/REV/STOP/STATUS | SONIC ON/OFF/READ/SHOT | WARN 1..400/OFF | LED ON/OFF | DISP 1234/OFF | PWM 0..100 | AUTO ON/OFF | CDS READ/POL LOW/HIGH | STATUS\r\n&quot;);
+    while (1) {
+        poll_uart(); // Non-blocking: do not starve event processing.
+        service_button_events();
+        service_sonic_display(); // (추가) Refresh FND once per completed sample.
+    }
+}
+</code></pre></details></section><footer class="foot">Basys3 + MicroBlaze V SoC · 제2부 07장</footer></main></body></html>

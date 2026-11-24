@@ -1,0 +1,10 @@
+flowchart LR
+    START["main(): IRQ 등록 · BTN_ENABLE"] --> LOOP["main(): 반복"]
+    LOOP --> UART["poll_uart(): 문자 누적 · Enter"]
+    UART -->|한 줄 완성| CMD["handle_line(): LED/DISP/STATUS"]
+    LOOP --> EVENT["service_button_events(): irq_counts 확인"]
+    ISR["btn_irq_handler(): PENDING 읽기 → W1C → irq_counts 증가"] --> EVENT
+    EVENT -->|미처리 이벤트 있음| APPLY["p2_apply_button(): VALUE / EVENTS / ON"]
+    APPLY --> FND["fnd_commit(): FND REG0/REG1"]
+    FND --> LOOP
+    CMD --> LOOP

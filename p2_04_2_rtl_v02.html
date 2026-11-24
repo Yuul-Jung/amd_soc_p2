@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 04.2장 · RTL · AXI 풀이">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 04.2장 · RTL · AXI 풀이 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-04-2">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 04.2장 <span class="vbadge">v02</span></p>
+    <h1>제2부 04.2장 · RTL · AXI 풀이</h1>
+    <p>CPU 명령과 독립적인 PWM Core, AXI4-Lite 동작, 주기 경계 원자적 갱신과 LED1 출력 분리를 실제 소스로 설명합니다.</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+ <section class="section" id="overview">
+<h2><span class="num">00</span>이 장의 목표</h2>
+<p>CPU 명령과 독립적인 PWM Core, AXI4-Lite 동작, 주기 경계 원자적 갱신과 LED1 출력 분리를 실제 소스로 설명합니다.</p>
+<ul aria-label="핵심 용어" class="chips"><li>pwm_core</li><li>AXI4-Lite</li><li>WSTRB</li><li>AW/W 분리</li><li>실제 코드명 일치</li></ul>
+</section>
+<section class="section" id="overview">
+<h2><span class="num">01</span>pwm_core · AXI Register Bank · IP Wrapper</h2>
+<div>A · 구조</div><figure class="fig"><img alt="PWM Core와 AXI Slave를 분리한 구조" class="zoom" loading="lazy" src="diagrams/p2_04_architecture.svg"/></figure><p><code>pwm_core.v</code>는 AXI를 모르며, Clock·Reset·설정값·APPLY·PWM 출력만 사용합니다. <code>p2_04_axi_pwm_v1_0_S00_AXI.v</code>는 CPU의 레지스터 접근을 담당합니다. <code>p2_04_axi_pwm_v1_0.v</code>는 Vivado IP Packager에서 인식시키는 최상위 인터페이스입니다.</p>
+</section>
+<section class="section" id="boundary">
+<h2><span class="num">02</span>설정 Shadow와 출력 Active를 분리</h2>
+<div>A · 타이밍</div><p>CPU가 CONFIG를 여러 번 쓰는 중에도 PWM 파형이 변경되어서는 안 됩니다. 0x0C APPLY 이후 <code>pending</code>이 설정되고, <code>counter</code>가 마지막 카운트에 도달할 때에만 <code>active_period</code>와 <code>active_duty</code>가 변경됩니다.</p><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>if (boundary) begin
+    counter &lt;= 32'd0;
+    if (pending) begin
+        active_period &lt;= shadow_period;
+        active_duty   &lt;= shadow_duty;
+        pending       &lt;= 1'b0;
+    end
+end</code></pre></div><div><b>안전 경계:</b> 본 구조는 LED 밝기 실습용입니다. 모터 등의 긴급 정지 회로에는 주기 경계 지연을 기다리지 않는 별도의 즉시 차단 경로가 필요합니다.</div>
+</section>
+<section class="section" id="handshake">
+<h2><span class="num">03</span>AXI4-Lite AW/W/B/AR/R 핸드셰이크</h2>
+<div>A · AXI 기초</div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>채널</th><th>이름</th><th>이번 RTL이 지키는 규칙</th></tr></thead><tbody><tr><td>AW</td><td>Write Address</td><td>AWVALID과 AWREADY가 동시에 참일 때 주소를 별도 버퍼에 저장</td></tr><tr><td>W</td><td>Write Data</td><td>WVALID과 WREADY가 동시에 참일 때 데이터·WSTRB 저장</td></tr><tr><td>B</td><td>Write Response</td><td>주소·데이터가 모두 들어온 후 BRESP·BVALID. BREADY가 올 때까지 유지</td></tr><tr><td>AR</td><td>Read Address</td><td>ARVALID과 ARREADY가 동시에 참일 때 주소 선택</td></tr><tr><td>R</td><td>Read Data</td><td>RVALID 동안 RDATA·RRESP를 RREADY까지 보존</td></tr></tbody></table></div><p>AW와 W는 <b>어느 쪽이 먼저 도착해도 동작해야</b> 합니다. 테스트벤치에서 양쪽 순서를 검사하도록 작성했습니다. 한 번에 하나의 쓰기 응답을 발행하는 단순 교육용 슬레이브입니다.</p>
+</section>
+<section class="section" id="wstrb">
+<h2><span class="num">04</span>WSTRB와 슬레이브 오류 처리</h2>
+<div>B · 레지스터 접근</div><p><code>WSTRB[3:0]</code>는 데이터 32비트 중 어느 바이트를 실제로 기록할지 결정합니다. 예를 들어 <code>WSTRB=4'b0001</code>이면 하위 8비트만 갱신합니다.</p><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>for (byte_i=0;byte_i&lt;4;byte_i=byte_i+1)
+    if (wstrb_hold[byte_i])
+        data_merged[8*byte_i +: 8] = wdata_hold[8*byte_i +: 8];</code></pre></div><p>알 수 없는 레지스터 주소 또는 <code>PERIOD &lt; 2</code>, <code>DUTY &gt; PERIOD</code> 상태의 APPLY는 <code>SLVERR(2'b10)</code>로 응답합니다.</p>
+</section>
+<section class="section" id="top">
+<h2><span class="num">05</span>LED1 단독 PWM 연결</h2>
+<div>B · Top 분리</div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>wire [15:0] gpio_led;
+wire p2_led0;
+wire pwm_led1;
+assign led = {gpio_led[15:2], pwm_led1, p2_led0};</code></pre></div><p>LED0은 제1장, LED1은 제4장 PWM, LED2~15는 기존 GPIO로 분리합니다. 사용자 Top은 이 연결 외에 PWM 비교·연산·상태 우선순위를 구현하지 않습니다.</p>
+</section>
+<section class="section" id="src-pwm-core">
+<h2><span class="num">06</span>독립 PWM Core 전체</h2>
+<div>C · 전체 소스</div><p><a href="#f-part02_1_ch04_rtl_pwm_core_v">실제 파일 열기</a> · 73줄</p><div class="codeblock" id="f-part02_1_ch04_rtl_pwm_core_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-04: 보드와 무관한 단일 채널 범용 PWM 코어.
+// (추가) period와 duty는 클록 횟수 단위. 0%/100%는 지속 LOW/HIGH.
+// (추가) 설정은 주기 마지막 경계에서만 활성값으로 반영.
+module pwm_core #(
+    parameter [31:0] RESET_PERIOD = 32'd100000
+)(
+    input  wire        clk,
+    input  wire        resetn,
+    input  wire        cfg_apply,
+    input  wire [31:0] cfg_period,
+    input  wire [31:0] cfg_duty,
+    input  wire        cfg_enable,
+    input  wire        cfg_polarity,
+    output wire        pwm_out,
+    output reg         pending,
+    output reg [31:0] active_period,
+    output reg [31:0] active_duty,
+    output reg         active_enable,
+    output reg         active_polarity
+);
+    reg [31:0] counter;
+    reg [31:0] shadow_period;
+    reg [31:0] shadow_duty;
+    reg        shadow_enable;
+    reg        shadow_polarity;
+
+    wire boundary = (counter &gt;= active_period - 32'd1);
+    wire duty_high = (counter &lt; active_duty);
+
+    // (주의) enable=0이면 polarity와 관계없이 LOW로 차단.
+    // (설명) 기본 polarity에서 active_duty=0이면 항상 LOW,
+    //         active_duty=active_period이면 항상 HIGH.
+    assign pwm_out = resetn &amp;&amp; active_enable &amp;&amp;
+                     (active_polarity ? !duty_high : duty_high);
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            counter         &lt;= 32'd0;
+            active_period   &lt;= RESET_PERIOD;
+            active_duty     &lt;= 32'd0;
+            active_enable   &lt;= 1'b0;
+            active_polarity &lt;= 1'b0;
+            shadow_period   &lt;= RESET_PERIOD;
+            shadow_duty     &lt;= 32'd0;
+            shadow_enable   &lt;= 1'b0;
+            shadow_polarity &lt;= 1'b0;
+            pending         &lt;= 1'b0;
+        end else begin
+            if (boundary) begin
+                counter &lt;= 32'd0;
+                if (pending) begin
+                    active_period   &lt;= shadow_period;
+                    active_duty     &lt;= shadow_duty;
+                    active_enable   &lt;= shadow_enable;
+                    active_polarity &lt;= shadow_polarity;
+                    pending         &lt;= 1'b0;
+                end
+            end else begin
+                counter &lt;= counter + 32'd1;
+            end
+            // (추가) 경계와 APPLY가 겹치면 새 값은 다음 경계에 적용.
+            // 여러 APPLY가 겹치면 최종 요청값을 우선하는 단일 Shadow 구조.
+            if (cfg_apply) begin
+                shadow_period   &lt;= cfg_period;
+                shadow_duty     &lt;= cfg_duty;
+                shadow_enable   &lt;= cfg_enable;
+                shadow_polarity &lt;= cfg_polarity;
+                pending         &lt;= 1'b1;
+            end
+        end
+    end
+endmodule
+</code></pre></div>
+</section>
+<section class="section" id="src-p2-04-axi-pwm-v1-0-S00-AXI">
+<h2><span class="num">07</span>AXI4-Lite Slave 전체</h2>
+<div>C · 전체 소스</div><p><a href="#f-part02_1_ch04_rtl_p2_04_axi_pwm_v1_0_S00_AXI_v">실제 파일 열기</a> · 154줄</p><div class="codeblock" id="f-part02_1_ch04_rtl_p2_04_axi_pwm_v1_0_S00_AXI_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-04 AXI4-Lite 슬레이브: AW/W 주소·데이터 핸드셰이크를 독립 처리.
+// AW와 W 각각 1개 버퍼, B/R 각각 1개 미완료 응답만 처리.
+// WRITE 0x00 PERIOD_CFG, 0x04 DUTY_CFG, 0x08 CONTROL_CFG, 0x0C APPLY
+// READ  0x10 STATUS, 0x14 ACTIVE_PERIOD, 0x18 ACTIVE_DUTY, 0x1C ID
+// STATUS bit0 pending, bit8 active_enable, bit9 active_polarity.
+module p2_04_axi_pwm_v1_0_S00_AXI #(
+    parameter integer C_S_AXI_DATA_WIDTH = 32,
+    parameter integer C_S_AXI_ADDR_WIDTH = 6
+)(
+    input wire S_AXI_ACLK, input wire S_AXI_ARESETN,
+    input wire [C_S_AXI_ADDR_WIDTH-1:0] S_AXI_AWADDR,
+    input wire [2:0] S_AXI_AWPROT, input wire S_AXI_AWVALID,
+    output wire S_AXI_AWREADY,
+    input wire [C_S_AXI_DATA_WIDTH-1:0] S_AXI_WDATA,
+    input wire [(C_S_AXI_DATA_WIDTH/8)-1:0] S_AXI_WSTRB,
+    input wire S_AXI_WVALID, output wire S_AXI_WREADY,
+    output reg [1:0] S_AXI_BRESP, output reg S_AXI_BVALID,
+    input wire S_AXI_BREADY,
+    input wire [C_S_AXI_ADDR_WIDTH-1:0] S_AXI_ARADDR,
+    input wire [2:0] S_AXI_ARPROT, input wire S_AXI_ARVALID,
+    output wire S_AXI_ARREADY,
+    output reg [C_S_AXI_DATA_WIDTH-1:0] S_AXI_RDATA,
+    output reg [1:0] S_AXI_RRESP, output reg S_AXI_RVALID,
+    input wire S_AXI_RREADY,
+    output wire pwm_out
+);
+    // (주의) 교육용 레지스터는 32비트, 4바이트 정렬.
+    // IP Packager에서 Data Width=32, Address Width&gt;=6 적용.
+    localparam [1:0] OKAY = 2'b00, SLVERR = 2'b10;
+    localparam [31:0] RESET_PERIOD = 32'd100000;
+    localparam [31:0] IP_ID = 32'h00040001;
+    reg [31:0] period_cfg, duty_cfg, control_cfg;
+    reg apply_strobe;
+    wire pending;
+    wire [31:0] active_period, active_duty;
+    wire active_enable, active_polarity;
+    reg aw_hold, w_hold;
+    reg [C_S_AXI_ADDR_WIDTH-1:0] awaddr_hold;
+    reg [31:0] wdata_hold;
+    reg [3:0] wstrb_hold;
+    integer byte_i;
+    reg [31:0] data_merged;
+
+    pwm_core #(.RESET_PERIOD(RESET_PERIOD)) u_pwm_core (
+        .clk(S_AXI_ACLK), .resetn(S_AXI_ARESETN),
+        .cfg_apply(apply_strobe),
+        .cfg_period(period_cfg), .cfg_duty(duty_cfg),
+        .cfg_enable(control_cfg[0]), .cfg_polarity(control_cfg[1]),
+        .pwm_out(pwm_out), .pending(pending),
+        .active_period(active_period), .active_duty(active_duty),
+        .active_enable(active_enable), .active_polarity(active_polarity)
+    );
+
+    assign S_AXI_AWREADY = S_AXI_ARESETN &amp;&amp; !aw_hold &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_WREADY  = S_AXI_ARESETN &amp;&amp; !w_hold &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_ARREADY = S_AXI_ARESETN &amp;&amp; !S_AXI_RVALID;
+
+    // (추가) AXI 쓰기: AW/W 모두 수신 후 WSTRB 적용, BRESP 유지.
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            period_cfg   &lt;= RESET_PERIOD;
+            duty_cfg     &lt;= 32'd0;
+            control_cfg  &lt;= 32'd0;
+            apply_strobe &lt;= 1'b0;
+            aw_hold      &lt;= 1'b0;
+            w_hold       &lt;= 1'b0;
+            awaddr_hold  &lt;= {C_S_AXI_ADDR_WIDTH{1'b0}};
+            wdata_hold   &lt;= 32'd0;
+            wstrb_hold   &lt;= 4'b0;
+            S_AXI_BVALID &lt;= 1'b0;
+            S_AXI_BRESP  &lt;= OKAY;
+        end else begin
+            apply_strobe &lt;= 1'b0;
+            if (S_AXI_AWVALID &amp;&amp; S_AXI_AWREADY) begin
+                awaddr_hold &lt;= S_AXI_AWADDR;
+                aw_hold &lt;= 1'b1;
+            end
+            if (S_AXI_WVALID &amp;&amp; S_AXI_WREADY) begin
+                wdata_hold &lt;= S_AXI_WDATA;
+                wstrb_hold &lt;= S_AXI_WSTRB;
+                w_hold &lt;= 1'b1;
+            end
+            if (S_AXI_BVALID &amp;&amp; S_AXI_BREADY)
+                S_AXI_BVALID &lt;= 1'b0;
+            if (aw_hold &amp;&amp; w_hold &amp;&amp; !S_AXI_BVALID) begin
+                aw_hold      &lt;= 1'b0;
+                w_hold       &lt;= 1'b0;
+                S_AXI_BVALID &lt;= 1'b1;
+                S_AXI_BRESP  &lt;= OKAY;
+                // (주의) 미정의/비정렬 주소는 저장하지 않고 SLVERR 응답.
+                case (awaddr_hold)
+                6'h00: begin
+                    data_merged = period_cfg;
+                    for (byte_i=0;byte_i&lt;4;byte_i=byte_i+1)
+                        if (wstrb_hold[byte_i])
+                            data_merged[8*byte_i +: 8] = wdata_hold[8*byte_i +: 8];
+                    period_cfg &lt;= data_merged;
+                end
+                6'h04: begin
+                    data_merged = duty_cfg;
+                    for (byte_i=0;byte_i&lt;4;byte_i=byte_i+1)
+                        if (wstrb_hold[byte_i])
+                            data_merged[8*byte_i +: 8] = wdata_hold[8*byte_i +: 8];
+                    duty_cfg &lt;= data_merged;
+                end
+                6'h08: begin
+                    data_merged = control_cfg;
+                    for (byte_i=0;byte_i&lt;4;byte_i=byte_i+1)
+                        if (wstrb_hold[byte_i])
+                            data_merged[8*byte_i +: 8] = wdata_hold[8*byte_i +: 8];
+                    control_cfg &lt;= data_merged &amp; 32'h00000003;
+                end
+                6'h0C: begin
+                    if (wstrb_hold[0] &amp;&amp; wdata_hold[0]) begin
+                        if (period_cfg &lt; 32'd2 || duty_cfg &gt; period_cfg)
+                            S_AXI_BRESP &lt;= SLVERR;
+                        else
+                            apply_strobe &lt;= 1'b1;
+                    end
+                end
+                default: S_AXI_BRESP &lt;= SLVERR;
+                endcase
+            end
+        end
+    end
+
+    // (추가) AXI 읽기: AR 별도 수신, RREADY 전까지 RDATA 유지.
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            S_AXI_RVALID &lt;= 1'b0;
+            S_AXI_RRESP  &lt;= OKAY;
+            S_AXI_RDATA  &lt;= 32'd0;
+        end else begin
+            if (S_AXI_RVALID &amp;&amp; S_AXI_RREADY)
+                S_AXI_RVALID &lt;= 1'b0;
+            if (S_AXI_ARVALID &amp;&amp; S_AXI_ARREADY) begin
+                S_AXI_RVALID &lt;= 1'b1;
+                S_AXI_RRESP  &lt;= OKAY;
+                case (S_AXI_ARADDR)
+                6'h00: S_AXI_RDATA &lt;= period_cfg;
+                6'h04: S_AXI_RDATA &lt;= duty_cfg;
+                6'h08: S_AXI_RDATA &lt;= control_cfg;
+                6'h0C: S_AXI_RDATA &lt;= 32'd0; // APPLY는 쓰기 명령; 읽으면 0.
+                6'h10: S_AXI_RDATA &lt;= {22'd0,active_polarity,active_enable,7'd0,pending};
+                6'h14: S_AXI_RDATA &lt;= active_period;
+                6'h18: S_AXI_RDATA &lt;= active_duty;
+                6'h1C: S_AXI_RDATA &lt;= IP_ID;
+                default: begin S_AXI_RDATA &lt;= 32'd0; S_AXI_RRESP &lt;= SLVERR; end
+                endcase
+            end
+        end
+    end
+endmodule
+</code></pre></div>
+</section>
+<section class="section" id="src-p2-04-axi-pwm-v1-0">
+<h2><span class="num">08</span>사용자 IP Top 전체</h2>
+<div>C · 전체 소스</div><p><a href="#f-part02_1_ch04_rtl_p2_04_axi_pwm_v1_0_v">실제 파일 열기</a> · 41줄</p><div class="codeblock" id="f-part02_1_ch04_rtl_p2_04_axi_pwm_v1_0_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// User-IP boundary: one PWM channel + standard AXI4-Lite slave.
+module p2_04_axi_pwm_v1_0 #(
+    parameter integer C_S00_AXI_DATA_WIDTH = 32,
+    parameter integer C_S00_AXI_ADDR_WIDTH = 6
+)(
+    output wire pwm_led_o,
+    input wire s00_axi_aclk, input wire s00_axi_aresetn,
+    input wire [C_S00_AXI_ADDR_WIDTH-1:0] s00_axi_awaddr,
+    input wire [2:0] s00_axi_awprot, input wire s00_axi_awvalid,
+    output wire s00_axi_awready,
+    input wire [C_S00_AXI_DATA_WIDTH-1:0] s00_axi_wdata,
+    input wire [(C_S00_AXI_DATA_WIDTH/8)-1:0] s00_axi_wstrb,
+    input wire s00_axi_wvalid, output wire s00_axi_wready,
+    output wire [1:0] s00_axi_bresp, output wire s00_axi_bvalid,
+    input wire s00_axi_bready,
+    input wire [C_S00_AXI_ADDR_WIDTH-1:0] s00_axi_araddr,
+    input wire [2:0] s00_axi_arprot, input wire s00_axi_arvalid,
+    output wire s00_axi_arready,
+    output wire [C_S00_AXI_DATA_WIDTH-1:0] s00_axi_rdata,
+    output wire [1:0] s00_axi_rresp, output wire s00_axi_rvalid,
+    input wire s00_axi_rready
+);
+    p2_04_axi_pwm_v1_0_S00_AXI #(
+        .C_S_AXI_DATA_WIDTH(C_S00_AXI_DATA_WIDTH),
+        .C_S_AXI_ADDR_WIDTH(C_S00_AXI_ADDR_WIDTH)
+    ) u_axi (
+        .S_AXI_ACLK(s00_axi_aclk), .S_AXI_ARESETN(s00_axi_aresetn),
+        .S_AXI_AWADDR(s00_axi_awaddr), .S_AXI_AWPROT(s00_axi_awprot),
+        .S_AXI_AWVALID(s00_axi_awvalid), .S_AXI_AWREADY(s00_axi_awready),
+        .S_AXI_WDATA(s00_axi_wdata), .S_AXI_WSTRB(s00_axi_wstrb),
+        .S_AXI_WVALID(s00_axi_wvalid), .S_AXI_WREADY(s00_axi_wready),
+        .S_AXI_BRESP(s00_axi_bresp), .S_AXI_BVALID(s00_axi_bvalid),
+        .S_AXI_BREADY(s00_axi_bready),
+        .S_AXI_ARADDR(s00_axi_araddr), .S_AXI_ARPROT(s00_axi_arprot),
+        .S_AXI_ARVALID(s00_axi_arvalid), .S_AXI_ARREADY(s00_axi_arready),
+        .S_AXI_RDATA(s00_axi_rdata), .S_AXI_RRESP(s00_axi_rresp),
+        .S_AXI_RVALID(s00_axi_rvalid), .S_AXI_RREADY(s00_axi_rready),
+        .pwm_out(pwm_led_o)
+    );
+endmodule
+</code></pre></div>
+</section>
+<section class="section" id="src-basys3-soc11-top-p2-04">
+<h2><span class="num">09</span>Basys3 사용자 Shell 전체</h2>
+<div>C · 전체 소스</div><p><a href="#f-part02_1_ch04_rtl_basys3_soc11_top_p2_04_v">실제 파일 열기</a> · 28줄</p><div class="codeblock" id="f-part02_1_ch04_rtl_basys3_soc11_top_p2_04_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>// P2-04 Top은 보드 연결만 담당. PWM 계산 및 always 기능 로직 금지.
+// (유지) LED0은 01장 IP, LED14/15는 기존 GPIO UART/Timer.
+// (추가) LED1(E19)은 PWM 전용으로 분리하며 GPIO bit1은 외부핀에서 제외.
+// (유지) FND는 02장, 방향버튼은 03장, BTNC는 Reset.
+module basys3_soc11_top (
+    input wire clk, input wire btnC,
+    input wire btnU, input wire btnD, input wire btnL, input wire btnR,
+    input wire [15:0] sw, output wire [15:0] led,
+    input wire RsRx, output wire RsTx,
+    output wire [6:0] seg, output wire [3:0] an, output wire dp
+);
+    wire [15:0] gpio_led;
+    wire p2_led0;
+    wire pwm_led1;
+
+    // 단순 연결: [15:2] GPIO, bit1 PWM, bit0 LED IP.
+    assign led = {gpio_led[15:2], pwm_led1, p2_led0};
+
+    // BD에 pwm_led1 외부 포트를 만든 후에 Wrapper를 재생성해야 한다.
+    soc11_integration_wrapper u_soc11 (
+        .clk(clk), .btnC(btnC),
+        .btnU(btnU), .btnD(btnD), .btnL(btnL), .btnR(btnR),
+        .sw_tri_i(sw), .led_tri_o(gpio_led),
+        .UART_0_rxd(RsRx), .UART_0_txd(RsTx),
+        .p2_led_o(p2_led0), .pwm_led1(pwm_led1),
+        .fnd_seg(seg), .fnd_an(an), .fnd_dp(dp)
+    );
+endmodule
+</code></pre></div>
+</section>
+<section class="section" id="src-tb-pwm-core">
+<h2><span class="num">10</span>PWM Core 테스트벤치 전체</h2>
+<div>C · 전체 소스</div><p> · 64줄</p><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+module tb_pwm_core;
+  reg clk = 0;
+  always #5 clk = ~clk;
+  reg resetn = 0, cfg_apply = 0, cfg_enable = 0, cfg_polarity = 0;
+  reg [31:0] cfg_period = 10, cfg_duty = 0;
+  wire pwm_out, pending;
+  wire [31:0] active_period, active_duty;
+  wire active_enable, active_polarity;
+  integer high, i;
+  pwm_core #(.RESET_PERIOD(10)) dut (
+    .clk(clk), .resetn(resetn), .cfg_apply(cfg_apply),
+    .cfg_period(cfg_period), .cfg_duty(cfg_duty),
+    .cfg_enable(cfg_enable), .cfg_polarity(cfg_polarity),
+    .pwm_out(pwm_out), .pending(pending),
+    .active_period(active_period), .active_duty(active_duty),
+    .active_enable(active_enable), .active_polarity(active_polarity)
+  );
+  task apply_cfg;
+    input [31:0] p,d;
+    input en,pol;
+    begin
+      @(negedge clk);
+      cfg_period=p; cfg_duty=d; cfg_enable=en; cfg_polarity=pol;
+      cfg_apply=1;
+      @(negedge clk); cfg_apply=0;
+    end
+  endtask
+  task count_two_periods;
+    input integer expected;
+    begin
+      // Wait for pending request to reach the active registers.
+      wait (pending == 0);
+      @(negedge clk);
+      if (active_period !== 10) $fatal(1,"wrong period");
+      high=0;
+      for (i=0;i&lt;20;i=i+1) begin
+        if (pwm_out) high=high+1;
+        @(negedge clk);
+      end
+      if (high !== expected) $fatal(1,"high count actual=%0d expected=%0d",high,expected);
+    end
+  endtask
+  initial begin
+    repeat(3) @(negedge clk);
+    if (pwm_out !== 1'b0) $fatal(1,"reset output not low");
+    resetn=1;
+    apply_cfg(10,0,1,0); count_two_periods(0);
+    apply_cfg(10,5,1,0);
+    if (pending &amp;&amp; active_duty !== 0) $fatal(1,"mid-cycle glitch / duty early update");
+    count_two_periods(10);
+    apply_cfg(10,10,1,0); count_two_periods(20);
+    apply_cfg(10,0,0,0); count_two_periods(0);
+    apply_cfg(10,5,1,1); count_two_periods(10);
+    apply_cfg(10,0,0,1); count_two_periods(0); // disable dominates polarity
+    resetn=0;
+    repeat(2) @(negedge clk);
+    if (pwm_out !== 0 || pending !== 0 || active_duty !== 0)
+      $fatal(1,"reset failed");
+    $display("RTL_SIM_pwm_core PASS (0/50/100%%, polarity, enable, reset, boundary)");
+    $finish;
+  end
+  initial begin #100000; $fatal(1,"TIMEOUT"); end
+endmodule
+</code></pre></div>
+</section>
+<section class="section" id="src-tb-p2-04-axi-pwm">
+<h2><span class="num">11</span>AXI·PWM 테스트벤치 전체</h2>
+<div>C · 전체 소스</div><p> · 120줄</p><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+module tb_p2_04_axi_pwm;
+  reg clk = 0;
+  always #5 clk = ~clk;
+  reg resetn=0;
+  reg [5:0] awaddr=0, araddr=0;
+  reg [2:0] awprot=0, arprot=0;
+  reg awvalid=0, wvalid=0, bready=0, arvalid=0, rready=0;
+  reg [31:0] wdata=0;
+  reg [3:0] wstrb=4'hF;
+  wire awready,wready,bvalid,arready,rvalid,pwm_led_o;
+  wire [1:0] bresp,rresp;
+  wire [31:0] rdata;
+  reg [31:0] read_value;
+  integer high, i;
+  p2_04_axi_pwm_v1_0 #(.C_S00_AXI_ADDR_WIDTH(6)) dut (
+    .pwm_led_o(pwm_led_o), .s00_axi_aclk(clk), .s00_axi_aresetn(resetn),
+    .s00_axi_awaddr(awaddr), .s00_axi_awprot(awprot),
+    .s00_axi_awvalid(awvalid), .s00_axi_awready(awready),
+    .s00_axi_wdata(wdata), .s00_axi_wstrb(wstrb),
+    .s00_axi_wvalid(wvalid), .s00_axi_wready(wready),
+    .s00_axi_bresp(bresp), .s00_axi_bvalid(bvalid), .s00_axi_bready(bready),
+    .s00_axi_araddr(araddr), .s00_axi_arprot(arprot),
+    .s00_axi_arvalid(arvalid), .s00_axi_arready(arready),
+    .s00_axi_rdata(rdata), .s00_axi_rresp(rresp),
+    .s00_axi_rvalid(rvalid), .s00_axi_rready(rready)
+  );
+  task axi_write;
+    input [5:0] a;
+    input [31:0] d;
+    input [3:0] strb;
+    input integer w_first;
+    input [1:0] expected_resp;
+    begin
+      // Separate AW/W by several cycles, test each arrival order.
+      @(negedge clk);
+      if (w_first) begin
+        wdata=d; wstrb=strb; wvalid=1;
+        do @(posedge clk); while (!wready);
+        @(negedge clk); wvalid=0;
+        repeat(3) @(negedge clk);
+        awaddr=a; awvalid=1;
+        do @(posedge clk); while (!awready);
+        @(negedge clk); awvalid=0;
+      end else begin
+        awaddr=a; awvalid=1;
+        do @(posedge clk); while (!awready);
+        @(negedge clk); awvalid=0;
+        repeat(3) @(negedge clk);
+        wdata=d; wstrb=strb; wvalid=1;
+        do @(posedge clk); while (!wready);
+        @(negedge clk); wvalid=0;
+      end
+      wait(bvalid);
+      repeat(2) @(negedge clk);
+      if (bvalid !== 1 || bresp !== expected_resp) $fatal(1,"write response");
+      bready=1;
+      @(negedge clk); bready=0;
+    end
+  endtask
+  task axi_read;
+    input [5:0] a;
+    input [1:0] expected_resp;
+    begin
+      @(negedge clk); araddr=a; arvalid=1;
+      do @(posedge clk); while (!arready);
+      @(negedge clk); arvalid=0;
+      wait(rvalid);
+      repeat(2) @(negedge clk);
+      if (rvalid !== 1 || rresp !== expected_resp) $fatal(1,"read response");
+      read_value=rdata;
+      rready=1;
+      @(negedge clk); rready=0;
+    end
+  endtask
+  initial begin
+    repeat(3) @(negedge clk); resetn=1;
+    axi_read(6'h1C,2'b00);
+    if(read_value!==32'h00040001) $fatal(1,"IP ID mismatch");
+    axi_write(6'h00,32'd10,4'hF,1,2'b00); // W first
+    axi_write(6'h04,32'd5,4'hF,0,2'b00);  // AW first
+    axi_write(6'h08,32'd1,4'hF,1,2'b00);
+    // WSTRB[3] must not overwrite lowest control byte.
+    axi_write(6'h08,32'h00000000,4'h8,0,2'b00);
+    axi_read(6'h08,2'b00);
+    if(read_value!==32'd1) $fatal(1,"WSTRB failed");
+    axi_write(6'h0C,32'd1,4'h1,0,2'b00);
+    // 최초 활성 주기는 RESET_PERIOD=100000이다. APPLY는 현재 주기 경계에서
+    // 반영되므로 그 경계를 지난 뒤 ACTIVE 값을 읽는다.
+    repeat(100010) @(negedge clk);
+    axi_read(6'h14,2'b00); if(read_value!==10) $fatal(1,"active period");
+    axi_read(6'h18,2'b00); if(read_value!==5) $fatal(1,"active duty");
+    high=0;
+    for (i=0;i&lt;20;i=i+1) begin
+      @(negedge clk); if(pwm_led_o) high=high+1;
+    end
+    if(high!==10) $fatal(1,"PWM duty 50%%: high=%0d",high);
+    // Duty must not exceed period: APPLY yields SLVERR.
+    axi_write(6'h04,32'd11,4'hF,0,2'b00);
+    axi_write(6'h0C,32'd1,4'h1,0,2'b10);
+    axi_read(6'h18,2'b00); if(read_value!==5) $fatal(1,"invalid apply altered duty");
+    axi_read(6'h3C,2'b10);
+    axi_write(6'h3C,32'd0,4'hF,0,2'b10);
+    // Restore duty=100% and then duty=0%; output should be DC high/low.
+    axi_write(6'h04,32'd10,4'hF,0,2'b00);
+    axi_write(6'h0C,32'd1,4'hF,0,2'b00);
+    repeat(20) @(negedge clk);
+    for(i=0;i&lt;20;i=i+1) begin
+      @(negedge clk); if(pwm_led_o!==1) $fatal(1,"100 percent DC");
+    end
+    axi_write(6'h04,32'd0,4'hF,0,2'b00);
+    axi_write(6'h0C,32'd1,4'hF,0,2'b00);
+    repeat(20) @(negedge clk);
+    for(i=0;i&lt;20;i=i+1) begin
+      @(negedge clk); if(pwm_led_o!==0) $fatal(1,"0 percent DC");
+    end
+    $display("RTL_SIM_p2_04_axi_pwm PASS (AW/W order, WSTRB, B/R backpressure, errors, PWM)");
+    $finish;
+  end
+  initial begin #2000000; $fatal(1,"TIMEOUT"); end
+endmodule
+</code></pre></div>
+</section>
+<section class="section" id="src-pwm-led1-only">
+<h2><span class="num">12</span>LED1 핀 중복방지 참고</h2>
+<div>C · 전체 소스</div><p><a href="#f-part02_1_ch04_rtl_pwm_led1_only_xdc">실제 파일 열기</a> · 5줄</p><div class="codeblock" id="f-part02_1_ch04_rtl_pwm_led1_only_xdc"><div class="codebar"><span>XDC</span></div><pre tabindex="0"><code># P2-04: LED1 already constrained in the original 16-LED XDC.
+# DO NOT add this pair again if led[1] is already assigned.
+# Reference only: Digilent Basys-3-Master.xdc
+# set_property PACKAGE_PIN E19 [get_ports {led[1]}]
+# set_property IOSTANDARD LVCMOS33 [get_ports {led[1]}]
+</code></pre></div>
+</section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

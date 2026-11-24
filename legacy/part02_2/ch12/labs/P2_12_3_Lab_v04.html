@@ -1,0 +1,90 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>제2부 12.3 스테핑 모터 실물 정·역회전 검증</title><style>:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#f4f7fb;color:#1d3044;font:16px/1.85 system-ui,-apple-system,"Noto Sans KR",sans-serif}header{background:#184b70;color:white;padding:37px max(22px,calc((100vw - 1100px)/2))}header h1{font-size:clamp(24px,3vw,35px);line-height:1.35;margin:5px 0}header p{color:#d3e5ee;margin:8px 0 0}main{max-width:1100px;margin:24px auto;padding:0 22px 65px}section{border:1px solid #d9e4eb;border-radius:12px;background:white;padding:23px 29px;margin:18px 0}h2{font-size:22px;color:#175678;margin:0 0 13px;border-bottom:2px solid #e7eef5;padding-bottom:7px}h3{font-size:18px;color:#226280}table{width:100%;border-collapse:collapse}th,td{border:1px solid #d1dde6;padding:8px 11px;text-align:left;vertical-align:top}th{background:#e8f1f7}pre{padding:16px;border-radius:8px;background:#182a3c;color:#e5f3ff;overflow:auto;font:13px/1.6 Consolas,monospace}code{font-family:Consolas,monospace}td code,li code,p code{background:#eaf1f7;padding:1px 5px;color:#14517a;border-radius:4px}.warn{background:#fff8eb;border-left:4px solid #b88b36;padding:12px 15px}.note{background:#edf8f4;border-left:4px solid #388776;padding:12px 15px}details{border:1px solid #d1e1ef;border-radius:8px;padding:10px;margin:11px 0}summary{font-weight:bold;cursor:pointer;color:#175776}a{color:#145c89}svg{width:100%;height:auto}footer{text-align:center;color:#627c93;padding:25px}@media(max-width:640px){section{padding:14px}table{font-size:13px}}</style></head><body><header><div style="letter-spacing:2px;font-weight:bold">BASYS3 · MICROBLAZE V · PART 02</div><h1>실습 12.3 · 스테핑 모터 실물 정·역회전 검증</h1><p>Vitis C 스모크 테스트 · 스텝 수 · 회전각 · 상태 검증</p></header><main><section><h2>1. 개요</h2><p>실제 Basys3 + ULN2003 + 28BYJ-48에서 정회전·역회전·스텝 수와 실제 출력축 각도를 확인한다. 12.1~12.2 연결 및 전원 검사를 통과한 뒤 진행한다.</p><p class="warn"><strong>현재 상태: NOT_RUN.</strong> GitHub는 FPGA 보드와 실제 모터에 연결되어 있지 않다. 아래 Vitis C 코드는 실행을 위한 샘플이며 보드 동작 성공을 보고하지 않는다.</p></section><section><h2>2. Vitis 프로젝트 준비</h2><ol><li>12.1에서 생성한 실제 Bitstream 및 XSA로 Vitis Platform을 준비한다.</li><li>새로운 스모크 테스트 애플리케이션에 <code>12_3_board_smoke.c</code>, <code>stepper_logic.c/.h</code>, <code>stepper_axi.c/.h</code>를 추가한다.</li><li>기존 제2부 10장 <code>main.c</code>와 동시에 활성화하지 않는다. 중복 <code>main()</code>은 Link 오류를 일으킨다.</li><li>실제 BSP의 UART Lite 주소, 스테핑 IP 주소와 실제 AXI 클록을 읽어 세 매크로 <code>P2_12_UART_BASEADDR</code>, <code>P2_12_STEPPER_BASEADDR</code>, <code>P2_12_AXI_CLOCK_HZ</code>를 빌드 설정에서 지정한다.</li><li>컴파일 완료 후 ELF를 다운로드하고 UART 터미널의 설정을 기존 제1·2부 UART 장치 설정과 맞춘다.</li><li>첫 화면에서 읽은 신규 IP ID가 <code>0x000C0001</code>인지 확인하고, 틀리면 전원 및 출력 시험을 중단한다.</li></ol></section><section><h2>3. 실제 명령 시퀀스</h2><table><tr><th>입력 키</th><th>실행 동작</th><th>기대 결과</th></tr><tr><td>1</td><td>Half/FWD 8 steps, 10ms</td><td>정방향으로 아주 조금 회전</td></tr><tr><td>2</td><td>Half/REV 8 steps, 10ms</td><td>반대 방향으로 동작</td></tr><tr><td>3</td><td>Full/FWD 8 steps, 10ms</td><td>2상 여자 단계 확인</td></tr><tr><td>4</td><td>Full/REV 8 steps, 10ms</td><td>역방향 2상 여자 확인</td></tr><tr><td>5</td><td>Half/FWD 128 steps, 5ms</td><td>다단계 진행, 기구각 표시</td></tr><tr><td>6</td><td>Half/REV 128 steps, 5ms</td><td>원래 방향으로 복귀하는지 비교</td></tr><tr><td>s</td><td>STOP</td><td>명령 중단·코일 모두 OFF</td></tr><tr><td>p</td><td>STATUS / STEPS_DONE</td><td>Busy/Done/Error 비트와 스텝 수</td></tr><tr><td>q</td><td>STOP 및 종료</td><td>명령 종료</td></tr></table><p>STOP은 코일 출력 차단 명령이며 실제 회전 중인 축의 관성 정지·위치 보존까지 보증하지 않는다.</p></section><section><h2>4. 실제 Vitis 코드 — 전체</h2><p>실행 파일: <a href="12_3_board_smoke.c"><code>labs/12_3_board_smoke.c</code></a>. 표준 P2-12 C 라이브러리의 구성 함수를 재사용한다.</p><pre><code>// P2-12.3: 독립 Vitis 보드 스모크 테스트.
+// 이 파일은 기존 P2-10 main.c와 함께 컴파일/링크하지 않는다.
+// 아래 세 매크로는 실제 XSA/BSP/Block Design을 확인해 사용자가 지정한다.
+#include &lt;stdint.h&gt;
+#include "xparameters.h"
+#include "xil_io.h"
+#include "xil_printf.h"
+#include "xuartlite_l.h"
+#include "../sw/stepper_logic.h"
+#include "../sw/stepper_axi.h"
+
+#ifndef P2_12_STEPPER_BASEADDR
+#error "Define P2_12_STEPPER_BASEADDR from the actual Address Editor/XSA BSP"
+#endif
+#ifndef P2_12_UART_BASEADDR
+#error "Define P2_12_UART_BASEADDR from the actual BSP"
+#endif
+#ifndef P2_12_AXI_CLOCK_HZ
+#error "Define P2_12_AXI_CLOCK_HZ from actual Block Design Clock"
+#endif
+
+#define STP_STATUS 0x10u
+#define STP_DONE   0x14u
+#define STP_ID     0x18u
+#define STP_MIN    0x1Cu
+
+static int perform_step(uint32_t steps, uint32_t interval_ms,
+                        int reverse, int half_step)
+{
+    stepper_cfg_t config;
+    uint32_t base = (uint32_t)P2_12_STEPPER_BASEADDR;
+    uint32_t min_ticks = Xil_In32(base + STP_MIN);
+    uint32_t status = Xil_In32(base + STP_STATUS);
+    if (status &amp; 1u) { xil_printf("ERR busy\r\n"); return -1; }
+    if (stepper_make_config(P2_12_AXI_CLOCK_HZ, steps, interval_ms,
+                            reverse, half_step, &amp;config) != 0 ||
+        config.period_ticks &lt; min_ticks) {
+        xil_printf("ERR invalid config\r\n"); return -1;
+    }
+    // AXI Xil_Out32는 BRESP 오류를 직접 돌려주지 않는다.
+    // 명령 전 STATUS/하드웨어 최소 주기 확인은 필수다.
+    if (stepper_axi_start(base, &amp;config) != 0) {
+        xil_printf("ERR start\r\n"); return -1;
+    }
+    xil_printf("START steps=%lu ms=%lu direction=%s mode=%s\r\n",
+               (unsigned long)steps, (unsigned long)interval_ms,
+               reverse ? "REV" : "FWD", half_step ? "HALF" : "FULL");
+    return 0;
+}
+
+int main(void)
+{
+    const uint32_t base = (uint32_t)P2_12_STEPPER_BASEADDR;
+    uint8_t cmd;
+    if (Xil_In32(base + STP_ID) != 0x000C0001u) {
+        xil_printf("ERR IP ID does not match P2-12\r\n");
+        return 1;
+    }
+    stepper_axi_stop(base);
+    xil_printf("\r\nP2-12 28BYJ-48 BOARD TEST\r\n");
+    xil_printf("1 HALF FWD 8 steps, 2 HALF REV 8 steps\r\n");
+    xil_printf("3 FULL FWD 8 steps, 4 FULL REV 8 steps\r\n");
+    xil_printf("5 HALF FWD 128 steps, 6 HALF REV 128 steps\r\n");
+    xil_printf("s STOP, p STATUS, q STOP/quit\r\n");
+    while (1) {
+        cmd = XUartLite_RecvByte(P2_12_UART_BASEADDR);
+        switch (cmd) {
+        case '1': perform_step(8u, 10u, 0, 1); break;
+        case '2': perform_step(8u, 10u, 1, 1); break;
+        case '3': perform_step(8u, 10u, 0, 0); break;
+        case '4': perform_step(8u, 10u, 1, 0); break;
+        case '5': perform_step(128u, 5u, 0, 1); break;
+        case '6': perform_step(128u, 5u, 1, 1); break;
+        case 's': stepper_axi_stop(base); xil_printf("STOP\r\n"); break;
+        case 'p':
+            xil_printf("STATUS=0x%08lx STEPS=%lu\r\n",
+                       (unsigned long)Xil_In32(base + STP_STATUS),
+                       (unsigned long)Xil_In32(base + STP_DONE));
+            break;
+        case 'q':
+            stepper_axi_stop(base);
+            xil_printf("QUIT\r\n");
+            return 0;
+        default:
+            // 개행 문자 등은 무시한다.
+            break;
+        }
+    }
+}
+</code></pre></section><section><h2>5. 스텝 수와 회전각 비교</h2><p>기본 28BYJ-48의 교육용 참고치: 감속기 출력축 약 4096 Half-step 또는 약 2048 Full-step당 1회전. 제조·감속비 차이로 절대각은 다를 수 있으므로 실제 축 위치에 표시선을 붙여 계측한다.</p><table><tr><th>설정</th><th>참고 예상각</th><th>실측각</th><th>회전방향/특이사항</th></tr><tr><td>Half-step 8</td><td>약 0.70°</td><td>________</td><td>________</td></tr><tr><td>Full-step 8</td><td>약 1.41°</td><td>________</td><td>________</td></tr><tr><td>Half-step 128</td><td>약 11.25°</td><td>________</td><td>________</td></tr><tr><td>Half-step 4096</td><td>약 360°</td><td>________</td><td>검증 전 무리한 연속 운전 금지</td></tr></table><p>정확한 1회전 시험은 먼저 저속·소스·전원 안정성이 입증된 후 진행한다. 실제 회전량과 <code>STEPS_DONE</code>은 각각 별도의 값이다.</p></section><section><h2>6. 오류 판단 및 보드 검증</h2><table><tr><th>현상</th><th>우선 의심 사항</th></tr><tr><td>ULN2003 LED 점등 없고 회전 없음</td><td>XDC 핀 배정, 출력 PWM/코일 신호, FPGA 비트스트림, GND</td></tr><tr><td>LED는 순차 점등되나 축이 떨림</td><td>IN1~IN4 순서, 모터 전류 부족, 너무 짧은 스텝 주기</td></tr><tr><td>한 방향으로만 움직임</td><td>역방향 설정 래치, 출력 순서, 드라이버 입력</td></tr><tr><td>스텝 수는 증가하지만 실제 각도 부족</td><td>탈조, 부하·감속기 백래시, 전원 강하</td></tr><tr><td>초기 UART 응답 없음</td><td>UART 포트/속도, ELF, 실제 BSP 주소, 프로그램 충돌</td></tr></table><p><strong>판정:</strong> BOARD_PASS는 실제 사진·파형·UART 로그·측정한 회전값이 일치할 때만 기록한다.</p></section><section><h2>7. 다음</h2><p><a href="P2_12_4_Lab_v04.html">12.4 가감속 RTL 확장으로 이동</a></p><p><a href="../../P2_11_Lesson/P2_11_Study_Guide.html">11장 서보 모터</a> · <a href="../P2_12_Study_Guide.html">12장 기본과제</a> · <a href="../../../docs/P2_12_SIM_VERIFICATION_20261111.md">12장 RTL·AXI 시뮬레이션 기록</a></p></section></main><footer>제2부 실습 12.3 · 검증 결과는 게이트별로 분리 기록</footer></body></html>

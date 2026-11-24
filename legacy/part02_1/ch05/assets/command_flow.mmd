@@ -1,0 +1,13 @@
+flowchart LR
+    A["poll_uart() · Enter"] --> B{"cds_parse_command()"}
+    B -->|AUTO ON / OFF| C["cds_commit_control()"]
+    B -->|CDS POL LOW / HIGH| D["cds_commit_control()"]
+    B -->|CDS READ| E["cds_print_reading()"]
+    B -->|그 외| F{"pwm_parse_command()"}
+    F -->|PWM 0..100| G["pwm_queue_percent()"]
+    F -->|그 외| H["p2_parse_command(): LED / DISP / STATUS"]
+    C --> I["UART 응답"]
+    D --> I
+    E --> I
+    G --> I
+    H --> I

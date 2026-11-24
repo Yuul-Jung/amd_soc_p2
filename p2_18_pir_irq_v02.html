@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 18장 · HC-SR501 PIR 인터럽트">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 18장 · HC-SR501 PIR 인터럽트 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-18">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 18장 <span class="vbadge">v02</span></p>
+    <h1>제2부 18장 · HC-SR501 PIR 인터럽트</h1>
+    <p>입력 동기화 → 이벤트 래치 → AXI IRQ</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+    <section class="section" id="overview">
+      <h2><span class="num">00</span>이 장의 목표</h2>
+      <p>입력 동기화 → 이벤트 래치 → AXI IRQ</p>
+    </section>
+    <section class="section" id="s00">
+      <h2><span class="num">01</span>과제 개요</h2>
+<p>HC-SR501 PIR(Passive Infrared, 피아이알, 수동형 적외선) 센서 모듈은 주변 적외선 변화로 움직임을 감지하면 디지털 출력 <code>OUT</code>을 HIGH로 만든다. FPGA는 이 신호를 <strong>단순 GPIO 상태</strong>로 읽는 것에서 나아가 <strong>비동기 입력 동기화 → 상승 이벤트 검출 → CPU 인터럽트 발생 → ACK 해제</strong>로 확장한다.</p><p>기본 과제는 센서 초기 안정화, 입력 안정화 필터, 이벤트 횟수 및 인터럽트 Pending 등록이다. 응용 단계에서는 신규 AXI4-Lite 슬레이브 IP를 통해 ARM, IRQ_ENABLE, STATUS, EVENT_COUNT를 제어한다.</p>
+    </section>
+    <section class="section" id="s01">
+      <h2><span class="num">02</span>전체 계층 구조</h2>
+<svg aria-label="HC-SR501 센서에서 AXI4-Lite 인터럽트와 CPU까지 계층형 구조" role="img" viewbox="0 0 1040 332" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar" markerheight="8" markerwidth="8" orient="auto" refx="7" refy="3.5"><path d="M0 0L7 3.5L0 7z" fill="#407f9c"></path></marker></defs><rect fill="#f8fafc" height="305" rx="12" stroke="#b8d4e2" stroke-width="2" width="1014" x="13" y="12"></rect>
+<g fill="#193f59" text-anchor="middle">
+<rect fill="#f4dfb8" height="94" rx="9" stroke="#c49b59" width="186" x="31" y="52"></rect><text font-size="19" x="124" y="90">HC-SR501</text><text font-size="13" x="124" y="117">OUT · 비동기 출력</text>
+<rect fill="#d0e9e0" height="94" rx="9" stroke="#66a995" width="224" x="279" y="52"></rect><text font-size="18" x="391" y="83">pir_irq_controller</text><text font-size="13" x="391" y="109">동기화 · Filter · Edge</text><text font-size="12" x="391" y="130">Pending · Count</text>
+<rect fill="#dceaf7" height="94" rx="9" stroke="#78a3bc" width="205" x="558" y="52"></rect><text font-size="18" x="660" y="85">AXI4-Lite Slave</text><text font-size="13" x="660" y="109">CTRL / CMD / STATUS</text><text font-size="12" x="660" y="130">p2_18_axi_pir_irq_v1_0</text>
+<rect fill="#e8e6f6" height="94" rx="9" stroke="#a6a0c8" width="181" x="829" y="52"></rect><text font-size="18" x="919" y="90">MicroBlaze V</text><text font-size="12" x="919" y="113">실제 IRQ 통합 보류</text>
+<path d="M217 97H279M503 97H558M763 97H829" fill="none" marker-end="url(#ar)" stroke="#407f9c" stroke-width="3"></path>
+<rect fill="#e2f1f2" height="64" rx="9" stroke="#86b3b4" width="485" x="275" y="226"></rect><text font-size="16" x="518" y="250">irq = irq_enable &amp; event_pending</text><text font-size="13" x="518" y="273">ACK는 Pending 삭제 / Event Count는 별도</text>
+<path d="M503 146V194H518V226" fill="none" marker-end="url(#ar)" stroke="#407f9c" stroke-width="2"></path></g></svg><p><strong>각 RTL 명칭은 실제 모듈과 일치한다.</strong> 이전 단계의 GPIO/AXI IP를 덮어쓰지 않고, 독립 PIR IRQ IP를 추가한다. 사용자 Top은 보드 핀·Wire·IP 연결만 담당한다.</p>
+    </section>
+    <section class="section" id="s02">
+      <h2><span class="num">03</span>센서 모듈의 출력과 측정 특성</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><tr><th>구분</th><th>HC-SR501의 일반적인 동작</th><th>설계 적용</th></tr><tr><td>VCC</td><td>판매 모듈에 따라 일반적으로 5~20V DC</td><td>센서 전원과 FPGA OUT 입력을 분리</td></tr><tr><td>OUT</td><td>움직임 감지 시 약 3.3V HIGH</td><td>FPGA 3.3V 입력 가능 여부 현물 확인</td></tr><tr><td>전원 직후</td><td>약 1분 안정화 중 오감지 가능</td><td>60초 Warm-up Mask 기본값</td></tr><tr><td>트리거 모드</td><td>H 반복 / L 비반복 방식 선택</td><td>출력 상승 에지에서만 이벤트 카운트</td></tr><tr><td>지연 조절</td><td>감지 후 HIGH 유지 시간을 가변저항으로 조절</td><td>HIGH 유지 중 중복 IRQ 금지</td></tr></table></div><p>모듈마다 표시·회로·시간이 다를 수 있으므로 특정 조절 범위를 한 가지 수치로 확정하지 않는다. 전원과 실제 OUT 전압은 실물 확인 시 측정해야 한다. <a href="https://www.taydaelectronics.com/datasheets/files/A-4432.pdf">HC-SR501 모듈 자료</a>.</p>
+    </section>
+    <section class="section" id="s03">
+      <h2><span class="num">04</span>PIR 입력 동기화와 이벤트 처리</h2>
+<div class="codeblock"><div class="codebar"><span>실습 명령 · Bash / 실행 예시</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>pir_in_async
+    ↓ 2-stage FF Synchronizer
+pir_sync
+    ↓ FILTER_CYCLES 동안 새 입력 유지
+pir_level
+    ↓ 0 → 1 전환 + ARM + WARMUP_READY
+motion_pulse (1 clock)
+    ├── event_count 증가 (포화)
+    └── event_pending=1 (sticky)
+          ↓ irq_enable=1
+        irq=1 (CPU 레벨 인터럽트)
+          ↓ CPU가 STATUS 읽고 원인 처리
+        CMD.ACK_EVENT=1
+          ↓ event_pending=0 → irq=0</code></pre></div></div><p>센서 출력이 10초 동안 계속 HIGH라고 해도 이 설계에서는 <strong>한 번의 상승 전환을 1회</strong>로 기록한다. 반대로 센서가 LOW로 돌아왔다가 다시 HIGH가 되면 새로운 이벤트로 등록할 수 있다. <strong>event_count는 사람 수를 측정하는 값이 아니다.</strong></p>
+<p>ACK를 쓰는 바로 그 클록에 새로운 PIR 상승 에지가 들어오면 새로운 이벤트가 우선하며 Pending이 유지된다. CPU가 IRQ를 껐다 켜도 Pending은 그대로 남아 있을 수 있다.</p>
+    </section>
+    <section class="section" id="s04">
+      <h2><span class="num">05</span>IP 제어용 AXI Register Map</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><tr><th>Offset</th><th>Register</th><th>R/W</th><th>설명</th></tr><tr><td>0x00</td><td>CTRL</td><td>R/W</td><td>bit0 ARM, bit1 IRQ_ENABLE, 리셋 후 0</td></tr><tr><td>0x04</td><td>CMD</td><td>Write only</td><td>bit0 ACK_EVENT, bit1 CLEAR_COUNT — W1P</td></tr><tr><td>0x08</td><td>STATUS</td><td>Read only</td><td>bit0 READY, bit1 PIR_LEVEL, bit2 PENDING, bit3 IRQ</td></tr><tr><td>0x0C</td><td>EVENT_COUNT</td><td>Read only</td><td>0에서 시작하는 32비트 누적 상승 이벤트 수</td></tr><tr><td>0x10</td><td>ID</td><td>Read only</td><td><code>0x00180001</code></td></tr></table></div>
+<p>W1P(Write One Pulse, 1을 쓸 때 1회 명령 발생)는 CMD의 비트를 1로 쓰면 한 클록 펄스가 발생하고 자동으로 해제되는 방식이다. WSTRB(쓰기 바이트 유효 비트)를 적용하고, 주소/데이터가 서로 다른 클록에 도착하는 AXI AW/W 채널도 처리한다. 금지·비정렬 주소는 SLVERR 응답을 반환한다.</p>
+<p><strong>실제 BaseAddr는 아직 정하지 않는다.</strong> 향후 Vivado Address Editor에서 기존 GPIO·UART·타이머·모터 IP와 중복되지 않는 주소를 할당하고 XSA/BSP를 확인한다.</p>
+    </section>
+    <section class="section" id="s05">
+      <h2><span class="num">06</span>CPU 인터럽트 처리 흐름</h2>
+<div class="codeblock"><div class="codebar"><span>실습 명령 · Bash / 실행 예시</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>MicroBlaze V 설정 (향후 실물 통합)
+  → AXI PIR IP의 CTRL.ARM = 1
+  → CTRL.IRQ_ENABLE = 1
+  → CPU Interrupt Controller(레벨 HIGH) 활성화
+  → HC-SR501에서 새로운 HIGH 감지
+  → STATUS.PENDING = 1, irq = 1
+  → ISR(Interrupt Service Routine: 인터럽트 서비스 루틴)
+      ① STATUS와 EVENT_COUNT를 읽는다
+      ② 필요한 제어·알림 처리를 수행한다
+      ③ CMD.ACK_EVENT = 1 을 쓴다
+      ④ STATUS.PENDING 재확인
+      ⑤ 필요하면 남은 이벤트 처리
+  → CPU의 Interrupt Controller 서비스 종료</code></pre></div></div>
+<p>CPU 인터럽트 처리 순서는 <strong>인터페이스 계약</strong>이며, 실제 Vitis BSP·인터럽트 핸들러·AXI Interrupt Controller 연결은 후속 실습에서 확인한다.</p>
+    </section>
+    <section class="section" id="s06">
+      <h2><span class="num">07</span>전체 RTL과 자가확인 테스트벤치</h2>
+<p>기본 Controller와 AXI Wrapper, 두 개의 독립 테스트벤치를 한 곳에 모았다. 기존 성공 Verilog RTL은 수정하지 않는다.</p><details><summary>rtl/pir_irq_controller.v — 전체 코드 보기</summary><div class="codeblock"><div class="codebar"><span>rtl/pir_irq_controller.v · VERILOG · 소스</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-18 HC-SR501 PIR event controller (board-independent).
+// pir_in_async -&gt; 2-FF synchronizer -&gt; stable filter -&gt; rising event.
+// Warm-up masks initial module transients. Pending is sticky until ACK;
+// if ACK and new event coincide, NEW EVENT WINS (no lost interrupt).
+// IRQ is level-sensitive: irq_enable &amp; event_pending.
+// This RTL does NOT implement a physical AXI-Lite bus / CPU interrupt controller.
+module pir_irq_controller #(
+    parameter [63:0] WARMUP_CYCLES = 64'd6000000000, // 60 sec @100 MHz
+    parameter integer FILTER_CYCLES = 3
+)(
+    input wire clk,
+    input wire resetn,
+    input wire pir_in_async,
+    input wire arm,
+    input wire irq_enable,
+    input wire irq_ack_pulse,
+    input wire count_clear_pulse,
+    output wire irq,
+    output reg warmup_ready,
+    output reg pir_level,
+    output reg motion_pulse,
+    output reg event_pending,
+    output reg [31:0] event_count
+);
+    // Wide enough for 60s * 100MHz, no 32-bit overflow.
+    reg [63:0] warmup_count;
+    reg [31:0] filter_count;
+    reg pir_meta, pir_sync;
+    wire change_pending = (pir_sync != pir_level);
+    wire qualified_rise = warmup_ready &amp;&amp; arm &amp;&amp; !pir_level &amp;&amp;
+        pir_sync &amp;&amp; change_pending &amp;&amp; (filter_count &gt;= FILTER_CYCLES-1);
+    assign irq = irq_enable &amp;&amp; event_pending;
+
+    always @(posedge clk) begin
+        if(!resetn) begin
+            pir_meta&lt;=0; pir_sync&lt;=0; pir_level&lt;=0;
+            filter_count&lt;=0; warmup_count&lt;=0; warmup_ready&lt;=0;
+            motion_pulse&lt;=0; event_pending&lt;=0; event_count&lt;=0;
+        end else begin
+            // (추가) Async PIR input synchronizer.
+            pir_meta&lt;=pir_in_async;
+            pir_sync&lt;=pir_meta;
+            if(!warmup_ready) begin
+                if(warmup_count &gt;= WARMUP_CYCLES-1)
+                    warmup_ready&lt;=1;
+                else warmup_count&lt;=warmup_count+1;
+            end
+
+            // (추가) Reject glitches shorter than FILTER_CYCLES.
+            if(!change_pending) filter_count&lt;=0;
+            else if(filter_count &gt;= FILTER_CYCLES-1) begin
+                pir_level&lt;=pir_sync;
+                filter_count&lt;=0;
+            end else filter_count&lt;=filter_count+1;
+
+            // Sticky event; simultaneous ACK cannot erase a new edge.
+            motion_pulse&lt;=qualified_rise;
+            if(qualified_rise)
+                event_pending&lt;=1;
+            else if(irq_ack_pulse)
+                event_pending&lt;=0;
+
+            // Saturating number of qualified rising edges. This is NOT
+            // a direct count of humans or motion events behind one long
+            // HC-SR501 HIGH interval.
+            if(count_clear_pulse) event_count&lt;=qualified_rise ? 1 : 0;
+            else if(qualified_rise &amp;&amp; event_count!=32'hffffffff)
+                event_count&lt;=event_count+1;
+        end
+    end
+endmodule
+</code></pre></div></div></details>
+<details><summary>rtl/p2_18_axi_pir_irq_v1_0.v — 전체 코드 보기</summary><div class="codeblock"><div class="codebar"><span>rtl/p2_18_axi_pir_irq_v1_0.v · VERILOG · 소스</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-18: 32-bit AXI4-Lite register block around pir_irq_controller.
+// Register offsets:
+// 0x00 CTRL R/W: bit0 ARM, bit1 IRQ_ENABLE
+// 0x04 CMD  W: bit0 ACK pending, bit1 CLEAR event_count (W1P)
+// 0x08 STATUS R: bit0 warmup_ready, bit1 pir_level,
+//                bit2 event_pending, bit3 irq
+// 0x0C EVENT_COUNT R
+// 0x10 ID R=0x00180001
+// AXI WSTRB honored. Illegal/misaligned/unmapped access -&gt; SLVERR.
+// GPIO input asynchronous. CPU IRQ is LEVEL (not a one-clock pulse).
+module p2_18_axi_pir_irq_v1_0 #(
+    parameter [63:0] WARMUP_CYCLES=64'd6000000000,
+    parameter integer FILTER_CYCLES=3
+)(
+    input wire S_AXI_ACLK,input wire S_AXI_ARESETN,
+    input wire [5:0] S_AXI_AWADDR,
+    input wire [2:0] S_AXI_AWPROT,
+    input wire S_AXI_AWVALID,output wire S_AXI_AWREADY,
+    input wire [31:0] S_AXI_WDATA,
+    input wire [3:0] S_AXI_WSTRB,
+    input wire S_AXI_WVALID,output wire S_AXI_WREADY,
+    output reg [1:0] S_AXI_BRESP,
+    output reg S_AXI_BVALID,input wire S_AXI_BREADY,
+    input wire [5:0] S_AXI_ARADDR,
+    input wire [2:0] S_AXI_ARPROT,
+    input wire S_AXI_ARVALID,output wire S_AXI_ARREADY,
+    output reg [31:0] S_AXI_RDATA,
+    output reg [1:0] S_AXI_RRESP,
+    output reg S_AXI_RVALID,input wire S_AXI_RREADY,
+    input wire pir_in_async,output wire irq
+);
+    localparam [1:0] OKAY=2'b00, SLVERR=2'b10;
+    reg arm,irq_enable,ack_strobe,clear_strobe;
+    wire ready,level,pulse,pending;
+    wire [31:0] count;
+    reg aw_hold,w_hold;
+    reg [5:0] saved_addr;
+    reg [31:0] saved_data;
+    reg [3:0] saved_strb;
+    pir_irq_controller #(
+        .WARMUP_CYCLES(WARMUP_CYCLES),.FILTER_CYCLES(FILTER_CYCLES)
+    ) u_core(
+        .clk(S_AXI_ACLK),.resetn(S_AXI_ARESETN),
+        .pir_in_async(pir_in_async),.arm(arm),
+        .irq_enable(irq_enable),
+        .irq_ack_pulse(ack_strobe),.count_clear_pulse(clear_strobe),
+        .irq(irq),.warmup_ready(ready),
+        .pir_level(level),.motion_pulse(pulse),
+        .event_pending(pending),.event_count(count)
+    );
+    assign S_AXI_AWREADY=S_AXI_ARESETN &amp;&amp; !aw_hold &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_WREADY =S_AXI_ARESETN &amp;&amp; !w_hold &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_ARREADY=S_AXI_ARESETN &amp;&amp; !S_AXI_RVALID;
+    always @(posedge S_AXI_ACLK)begin
+        if(!S_AXI_ARESETN)begin
+            arm&lt;=0;irq_enable&lt;=0;ack_strobe&lt;=0;clear_strobe&lt;=0;
+            aw_hold&lt;=0;w_hold&lt;=0;saved_addr&lt;=0;saved_data&lt;=0;
+            saved_strb&lt;=0;S_AXI_BRESP&lt;=OKAY;S_AXI_BVALID&lt;=0;
+            S_AXI_RRESP&lt;=OKAY;S_AXI_RVALID&lt;=0;S_AXI_RDATA&lt;=0;
+        end else begin
+            ack_strobe&lt;=0;clear_strobe&lt;=0;
+            if(S_AXI_AWVALID &amp;&amp; S_AXI_AWREADY)begin
+                saved_addr&lt;=S_AXI_AWADDR;aw_hold&lt;=1;
+            end
+            if(S_AXI_WVALID &amp;&amp; S_AXI_WREADY)begin
+                saved_data&lt;=S_AXI_WDATA;saved_strb&lt;=S_AXI_WSTRB;
+                w_hold&lt;=1;
+            end
+            if(S_AXI_BVALID &amp;&amp; S_AXI_BREADY)S_AXI_BVALID&lt;=0;
+            if(aw_hold &amp;&amp; w_hold &amp;&amp; !S_AXI_BVALID)begin
+                aw_hold&lt;=0;w_hold&lt;=0;S_AXI_BVALID&lt;=1;
+                S_AXI_BRESP&lt;=OKAY;
+                case(saved_addr)
+                6'h00:if(saved_strb[0])begin
+                    arm&lt;=saved_data[0];irq_enable&lt;=saved_data[1];
+                end
+                6'h04:if(saved_strb[0])begin
+                    ack_strobe&lt;=saved_data[0];
+                    clear_strobe&lt;=saved_data[1];
+                end
+                default:S_AXI_BRESP&lt;=SLVERR;
+                endcase
+            end
+            if(S_AXI_RVALID &amp;&amp; S_AXI_RREADY)S_AXI_RVALID&lt;=0;
+            if(S_AXI_ARVALID &amp;&amp; S_AXI_ARREADY)begin
+                S_AXI_RVALID&lt;=1;S_AXI_RRESP&lt;=OKAY;
+                case(S_AXI_ARADDR)
+                6'h00:S_AXI_RDATA&lt;={30'b0,irq_enable,arm};
+                6'h08:S_AXI_RDATA&lt;={28'b0,irq,pending,level,ready};
+                6'h0c:S_AXI_RDATA&lt;=count;
+                6'h10:S_AXI_RDATA&lt;=32'h00180001;
+                default:begin S_AXI_RRESP&lt;=SLVERR;S_AXI_RDATA&lt;=0;end
+                endcase
+            end
+        end
+    end
+endmodule
+</code></pre></div></div></details>
+<details><summary>tests/tb_pir_irq_controller.v — 전체 코드 보기</summary><div class="codeblock"><div class="codebar"><span>tests/tb_pir_irq_controller.v · VERILOG · 소스</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+module tb_pir_irq_controller;
+    reg clk=0; always #5 clk=~clk;
+    reg resetn=0, pir=0, arm=1, enable=1, ack=0, clear=0;
+    wire irq,ready,level,pulse,pending;
+    wire [31:0] count;
+    integer pulses=0;
+    pir_irq_controller #(
+        .WARMUP_CYCLES(64'd20), .FILTER_CYCLES(3)
+    ) dut (
+        .clk(clk),.resetn(resetn),.pir_in_async(pir),
+        .arm(arm),.irq_enable(enable),
+        .irq_ack_pulse(ack),.count_clear_pulse(clear),
+        .irq(irq),.warmup_ready(ready),.pir_level(level),
+        .motion_pulse(pulse),.event_pending(pending),.event_count(count)
+    );
+    always @(posedge clk) if (pulse) pulses=pulses+1;
+    task advance;
+        input integer cycles;
+        integer k;
+        begin for(k=0;k&lt;cycles;k=k+1) @(negedge clk); end
+    endtask
+    task set_pir;
+        input value;
+        begin @(negedge clk);pir=value; end
+    endtask
+    task do_ack;
+        begin @(negedge clk);ack=1;@(negedge clk);ack=0;end
+    endtask
+    initial begin
+        advance(4);resetn=1;
+        set_pir(1);advance(9);
+        if(ready || count!=0 || pending || irq)
+            $fatal(1,"warmup early event");
+        advance(20);
+        if(!ready || !level || pending || count!=0)
+            $fatal(1,"warmup high should be baseline, not event");
+        $display("P2_18_PIR_WARMUP_MASK_PASS");
+
+        set_pir(0);advance(9);
+        if(level!==0) $fatal(1,"falling edge not synchronized");
+        // 1-cycle glitch is shorter than FILTER_CYCLES, ignore.
+        set_pir(1);advance(1);set_pir(0);advance(9);
+        if(level || count || pending) $fatal(1,"glitch counted");
+        $display("P2_18_PIR_GLITCH_FILTER_PASS");
+
+        set_pir(1);advance(11);
+        if(!level || !pending || !irq || count!=1 || pulses!=1)
+            $fatal(1,"rising event count=%0d pulses=%0d",count,pulses);
+        advance(30);
+        if(count!=1 || pulses!=1) $fatal(1,"stuck HIGH duplicate event");
+        $display("P2_18_PIR_RISE_ONLY_STICKY_IRQ_PASS");
+
+        // Mask IRQ without clearing pending; re-enable reveals pending.
+        @(negedge clk);enable=0;
+        #1;
+        if(irq || !pending) $fatal(1,"enable mask failure");
+        @(negedge clk);enable=1;
+        #1;
+        if(!irq) $fatal(1,"unmask pending failure");
+        do_ack();advance(2);
+        if(irq || pending || count!=1)
+            $fatal(1,"ack failed or counter lost");
+        $display("P2_18_PIR_IRQ_ENABLE_ACK_PASS");
+
+        // Returning LOW and then HIGH creates another event.
+        set_pir(0);advance(9);
+        set_pir(1);advance(10);
+        if(count!=2 || !irq || pulses!=2)
+            $fatal(1,"second motion not counted");
+        do_ack();
+        $display("P2_18_PIR_RETRIGGER_PASS");
+
+        // Disable ARM, next high does not create event;
+        // enabling ARM while sensor stays high also does not.
+        set_pir(0);advance(10);
+        @(negedge clk);arm=0;
+        set_pir(1);advance(10);
+        if(count!=2 || pending || irq)
+            $fatal(1,"arm gate failed");
+        @(negedge clk);arm=1;advance(7);
+        if(count!=2 || pending) $fatal(1,"arm caused fake rise");
+        $display("P2_18_PIR_ARM_GATE_PASS");
+
+        set_pir(0);advance(10);
+        // ACK coincides with new event: event MUST win.
+        set_pir(1);
+        wait(dut.qualified_rise);
+        @(negedge clk);ack=1;
+        @(negedge clk);ack=0;
+        advance(4);
+        if(count!=3 || !pending || !irq || pulses!=3)
+            $fatal(1,"simultaneous ACK erased event");
+        $display("P2_18_PIR_ACK_EVENT_PRIORITY_PASS");
+
+        // Clear counter, but not the independent pending bit.
+        @(negedge clk);clear=1;
+        @(negedge clk);clear=0;
+        advance(2);
+        if(count!=0 || !pending) $fatal(1,"counter clear affected pending");
+        do_ack();
+        if(pending || irq || count!=0)
+            $fatal(1,"final ACK failed");
+        $display("P2_18_PIR_COUNT_CLEAR_PASS");
+        $display("P2_18_PIR_IRQ_CONTROLLER_RTL PASS");
+        $finish;
+    end
+    initial begin #200000; $fatal(1,"TIMEOUT");end
+endmodule
+</code></pre></div></div></details>
+<details><summary>tests/tb_p2_18_axi_pir_irq.v — 전체 코드 보기</summary><div class="codeblock"><div class="codebar"><span>tests/tb_p2_18_axi_pir_irq.v · VERILOG · 소스</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+module tb_p2_18_axi_pir_irq;
+    reg clk=0;always #5 clk=~clk;
+    reg resetn=0,pir=0;
+    reg [5:0] awaddr=0,araddr=0;
+    reg awvalid=0,wvalid=0,arvalid=0;
+    reg [31:0] wdata=0;
+    reg [3:0] wstrb=4'hf;
+    reg bready=0,rready=0;
+    wire awready,wready,bvalid,arready,rvalid,irq;
+    wire [31:0] rdata;
+    wire [1:0] bresp,rresp;
+    reg [31:0] result;
+    p2_18_axi_pir_irq_v1_0 #(
+        .WARMUP_CYCLES(64'd12),.FILTER_CYCLES(3)
+    ) dut (
+        .S_AXI_ACLK(clk),.S_AXI_ARESETN(resetn),
+        .S_AXI_AWADDR(awaddr),.S_AXI_AWPROT(3'b0),
+        .S_AXI_AWVALID(awvalid),.S_AXI_AWREADY(awready),
+        .S_AXI_WDATA(wdata),.S_AXI_WSTRB(wstrb),
+        .S_AXI_WVALID(wvalid),.S_AXI_WREADY(wready),
+        .S_AXI_BRESP(bresp),.S_AXI_BVALID(bvalid),
+        .S_AXI_BREADY(bready),.S_AXI_ARADDR(araddr),
+        .S_AXI_ARPROT(3'b0),.S_AXI_ARVALID(arvalid),
+        .S_AXI_ARREADY(arready),.S_AXI_RDATA(rdata),
+        .S_AXI_RRESP(rresp),.S_AXI_RVALID(rvalid),
+        .S_AXI_RREADY(rready),.pir_in_async(pir),.irq(irq)
+    );
+    task write_reg;
+        input [5:0] address;
+        input [31:0] data;
+        input [3:0] strb;
+        input [1:0] expect_resp;
+        begin
+            // AW then W deliberately arrive on separate cycles.
+            @(negedge clk);awaddr=address;awvalid=1;
+            @(posedge clk);if(!awready)$fatal(1,"AW not ready");
+            @(negedge clk);awvalid=0;wdata=data;wstrb=strb;wvalid=1;
+            @(posedge clk);if(!wready)$fatal(1,"W not ready");
+            @(negedge clk);wvalid=0;
+            wait(bvalid);#1;
+            if(bresp!==expect_resp)
+                $fatal(1,"BRESP address=%h expected=%h got=%h",
+                    address,expect_resp,bresp);
+            @(negedge clk);bready=1;
+            @(negedge clk);bready=0;
+        end
+    endtask
+    task read_reg;
+        input [5:0] address;
+        input [1:0] expect_resp;
+        begin
+            @(negedge clk);araddr=address;arvalid=1;
+            @(posedge clk);if(!arready)$fatal(1,"AR not ready");
+            @(negedge clk);arvalid=0;
+            wait(rvalid);#1;
+            result=rdata;
+            if(rresp!==expect_resp)
+                $fatal(1,"RRESP address=%h expected=%h got=%h",
+                     address,expect_resp,rresp);
+            @(negedge clk);rready=1;
+            @(negedge clk);rready=0;
+        end
+    endtask
+    task advance;
+        input integer cycles;
+        integer i;
+        begin for(i=0;i&lt;cycles;i=i+1)@(negedge clk);end
+    endtask
+    initial begin
+        advance(4);resetn=1;advance(17);
+        read_reg(6'h10,2'b00);
+        if(result!==32'h00180001) $fatal(1,"IP ID");
+        read_reg(6'h00,2'b00);
+        if(result!==0 || irq) $fatal(1,"default CTRL not safe");
+        $display("P2_18_AXI_ID_RESET_PASS");
+
+        // A zero write-strobe must not change CTRL.
+        write_reg(6'h00,32'h3,4'h0,2'b00);
+        read_reg(6'h00,2'b00);
+        if(result!==0) $fatal(1,"WSTRB ignored");
+        write_reg(6'h00,32'h3,4'h1,2'b00);
+        read_reg(6'h00,2'b00);
+        if(result!==3) $fatal(1,"CTRL write failed");
+        $display("P2_18_AXI_WSTRB_CTRL_PASS");
+
+        @(negedge clk);pir=1;advance(12);
+        if(!irq)$fatal(1,"IRQ not asserted");
+        read_reg(6'h08,2'b00);
+        if(result[3:0]!==4'b1111)$fatal(1,"STATUS incorrect %h",result);
+        read_reg(6'h0c,2'b00);
+        if(result!==1) $fatal(1,"count missing");
+        $display("P2_18_AXI_IRQ_STATUS_COUNT_PASS");
+
+        write_reg(6'h00,32'h1,4'h1,2'b00);
+        advance(3);if(irq!==0) $fatal(1,"mask ineffective");
+        read_reg(6'h08,2'b00);
+        if(result[2]!==1) $fatal(1,"mask erased pending");
+        write_reg(6'h00,32'h3,4'h1,2'b00);
+        advance(2);if(!irq) $fatal(1,"unmask lost pending");
+        write_reg(6'h04,32'h1,4'h1,2'b00);advance(3);
+        if(irq!==0) $fatal(1,"ACK failed");
+        read_reg(6'h0c,2'b00);
+        if(result!==1) $fatal(1,"ACK cleared counter");
+        $display("P2_18_AXI_IRQ_MASK_ACK_PASS");
+
+        write_reg(6'h04,32'h2,4'h1,2'b00);advance(3);
+        read_reg(6'h0c,2'b00);
+        if(result!==0) $fatal(1,"COUNT_CLEAR failed");
+        write_reg(6'h0c,32'hffff,4'hf,2'b10);
+        read_reg(6'h04,2'b10);
+        read_reg(6'h15,2'b10);
+        $display("P2_18_AXI_ERROR_RESP_PASS");
+        $display("P2_18_AXI_PIR_IRQ_PASS");
+        $finish;
+    end
+    initial begin #250000;$fatal(1,"TIMEOUT");end
+endmodule
+</code></pre></div></div></details>
+<h3>Ubuntu 시뮬레이션 명령</h3><div class="codeblock"><div class="codebar"><span>실습 명령 · Bash / 실행 예시</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code># 1. 패키지 목록 갱신
+sudo apt update
+
+# 2. 최초 1회 Icarus Verilog 설치
+sudo apt install -y iverilog
+
+# 3. 저장소 루트에서 PIR Core + AXI Slave 테스트
+bash part02/chapters/P2_18_Lesson/tests/run_rtl_tests.sh</code></pre></div></div>
+<p>첫 명령은 Ubuntu 패키지 색인을 갱신하며, 두 번째는 Icarus Verilog(베릴로그 시뮬레이터)와 vvp(실행기)를 설치한다. 마지막 명령은 Core 및 AXI 시뮬레이션을 차례로 실행해 정상·오류를 자동 판정한다.</p>
+    </section>
+    <section class="section" id="s08">
+      <h2><span class="num">08</span>실습 확장 테크트리</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><tr><th>단계</th><th>실습</th></tr><tr><td>18.1</td><td>비동기 PIR 입력 2-FF 동기화 및 Stable Filter</td></tr><tr><td>18.2</td><td>HIGH 상승 이벤트·Sticky IRQ·ACK·재감지</td></tr><tr><td>18.3</td><td>AXI4-Lite Register Map, IRQ Enable/Mask, Count</td></tr><tr><td>18.4</td><td>실제 MicroBlaze V 인터럽트 컨트롤러 연결·Vitis ISR·감지 LED</td></tr></table></div>
+<p>다음 장은 여러 센서 값을 누적 결합하는 <strong>제19장 복합 환경 제어 시스템</strong>이다. 기존 14장 LCD, 15장 DS18B20, 16장 RTC, 17장 DHT22, 18장 PIR 모듈을 인터페이스별로 분리하고 각 센서의 확인 Gate를 독립 관리한다.</p>
+<p><a href="https://github.com/Yuul-Jung/amd_soc/blob/work/part02-second-half-20261110/part02/chapters/P2_18_Lesson/README.md">18장 소스 및 확인 목차</a> · <a href="p2_17_dht22_v02.html">17장 DHT22</a> · </p><nav aria-label="이전·다음 장" id="chapter-links"></nav>
+    </section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

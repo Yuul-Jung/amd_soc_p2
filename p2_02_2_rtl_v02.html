@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 02.2장 · RTL · AXI 풀이">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 02.2장 · RTL · AXI 풀이 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-02-2">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 02.2장 <span class="vbadge">v02</span></p>
+    <h1>제2부 02.2장 · RTL · AXI 풀이</h1>
+    <p>모듈 분리, 레지스터, 타이밍, 포트·핀 연결과 전체 코드를 대조합니다.</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+ <section class="section" id="overview">
+<h2><span class="num">00</span>이 장의 목표</h2>
+<p>모듈 분리, 레지스터, 타이밍, 포트·핀 연결과 전체 코드를 대조합니다.</p>
+</section>
+<section class="section" id="scan">
+<h2><span class="num">01</span>FND 스캔 코어</h2>
+<div>RTL / AXI</div><p><code>fnd_scan_controller</code>는 AXI나 보드명을 모르는 독립 모듈입니다. <code>display_bcd</code>의 4개 니블을 <code>scan_index</code>에 맞춰 디코딩합니다. Basys3의 AN과 SEG는 모두 0일 때 활성입니다.</p><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>신호</th><th>의미</th></tr></thead><tbody><tr><td><code>display_bcd[15:0]</code></td><td>상위 4비트 = 왼쪽 끝, 하위 4비트 = 오른쪽 끝</td></tr><tr><td><code>scan_index</code></td><td>0→1→2→3→0, 오른쪽부터 하나씩 선택</td></tr><tr><td><code>frame_bcd</code></td><td>네 자리 값은 프레임 경계에서 한 번에 갱신</td></tr><tr><td><code>frame_enable</code></td><td>0이면 <code>an=1111</code>, <code>seg=1111111</code></td></tr><tr><td><code>TICKS_PER_DIGIT</code></td><td>AXI 클록 주파수에 따라 결정되는 스캔 분주값</td></tr></tbody></table></div><p><a href="#f-part02_1_ch02_rtl_fnd_scan_controller_v">RTL</a></p><div class="codeblock" id="f-part02_1_ch02_rtl_fnd_scan_controller_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns / 1ps
+// P2-02: Basys3 four-digit seven-segment scanning controller.
+// This module has no AXI or board pin names; it is reusable.
+module fnd_scan_controller #(
+    parameter integer TICKS_PER_DIGIT = 100000
+)(
+    input  wire        clk,
+    input  wire        resetn,
+    input  wire [15:0] display_bcd,    // [15:12] leftmost .. [3:0] rightmost
+    input  wire        display_enable,
+    output wire [6:0]  seg,            // {g,f,e,d,c,b,a}, active low
+    output wire [3:0]  an,             // an[0] rightmost, active low
+    output wire        dp              // decimal point off, active low
+);
+    localparam integer COUNT_WIDTH = (TICKS_PER_DIGIT &gt; 1) ?
+        $clog2(TICKS_PER_DIGIT) : 1;
+
+    reg [COUNT_WIDTH-1:0] divider_count;
+    reg [1:0] scan_index;
+    reg [15:0] frame_bcd;
+    reg frame_enable;
+    reg [3:0] current_digit;
+    reg [6:0] seg_mux;
+    reg [3:0] an_mux;
+
+    assign dp = 1'b1; // decimal point is always off
+    // 첫 리셋 클록 전에도 외부 핀에 X가 노출되지 않게 즉시 소등한다.
+    assign seg = resetn ? seg_mux : 7'b1111111;
+    assign an  = resetn ? an_mux  : 4'b1111;
+
+    // Latch all four digits only at a scan-frame boundary.
+    // One write to REG0 can never tear individual digits within a frame.
+    always @(posedge clk) begin
+        if (!resetn) begin
+            divider_count &lt;= {COUNT_WIDTH{1'b0}};
+            scan_index    &lt;= 2'd0;
+            frame_bcd     &lt;= 16'h0000;
+            frame_enable  &lt;= 1'b0;
+        end else if (divider_count == TICKS_PER_DIGIT - 1) begin
+            divider_count &lt;= {COUNT_WIDTH{1'b0}};
+            scan_index &lt;= scan_index + 2'd1;
+            if (scan_index == 2'd3) begin
+                frame_bcd &lt;= display_bcd;
+                frame_enable &lt;= display_enable;
+            end
+        end else begin
+            divider_count &lt;= divider_count + 1'b1;
+        end
+    end
+
+    // Basys3 AN0 is the rightmost digit; AN3 is the leftmost.
+    always @(*) begin
+        case (scan_index)
+            2'd0: current_digit = frame_bcd[3:0];
+            2'd1: current_digit = frame_bcd[7:4];
+            2'd2: current_digit = frame_bcd[11:8];
+            default: current_digit = frame_bcd[15:12];
+        endcase
+
+        // seg[0] is segment 'a'; 0 lights a segment.
+        case (current_digit)
+            4'd0: seg_mux = 7'b1000000;
+            4'd1: seg_mux = 7'b1111001;
+            4'd2: seg_mux = 7'b0100100;
+            4'd3: seg_mux = 7'b0110000;
+            4'd4: seg_mux = 7'b0011001;
+            4'd5: seg_mux = 7'b0010010;
+            4'd6: seg_mux = 7'b0000010;
+            4'd7: seg_mux = 7'b1111000;
+            4'd8: seg_mux = 7'b0000000;
+            4'd9: seg_mux = 7'b0010000;
+            default: seg_mux = 7'b1111111; // invalid BCD nibble -&gt; blank
+        endcase
+
+        if (!frame_enable) begin
+            an_mux = 4'b1111; // OFF: disable all digits
+            seg_mux = 7'b1111111;
+        end else begin
+            case (scan_index)
+                2'd0: an_mux = 4'b1110;
+                2'd1: an_mux = 4'b1101;
+                2'd2: an_mux = 4'b1011;
+                default: an_mux = 4'b0111;
+            endcase
+        end
+    end
+endmodule
+</code></pre></div>
+</section>
+<section class="section" id="axi">
+<h2><span class="num">02</span>AXI4-Lite Slave 레지스터 로직</h2>
+<div>RTL / AXI</div><p><code>AW</code>(주소)와 <code>W</code>(쓰기 데이터)는 서로 다른 시점에 들어올 수 있습니다. <code>aw_captured</code>·<code>w_captured</code>가 각각을 보관하고 두 입력이 모두 수신되면 쓰기 완료 응답(<code>BVALID</code>)을 보냅니다. 동시에 한 건만 처리하는 단순 설계입니다.</p>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>인터페이스</th><th>핵심 의미</th></tr></thead><tbody><tr><td>AWREADY/WREADY</td><td>주소·데이터를 각각 수락할 수 있는지</td></tr><tr><td>WSTRB</td><td>활성화된 바이트만 레지스터에 반영</td></tr><tr><td>BRESP/BVALID/BREADY</td><td>쓰기 결과를 전달하고 CPU 수신까지 보관</td></tr><tr><td>ARREADY</td><td>읽기 주소 수락 가능 여부</td></tr><tr><td>RDATA/RRESP/RVALID/RREADY</td><td>읽기 결과·상태를 CPU가 받을 때까지 고정</td></tr><tr><td>ARESETN</td><td>0일 때 하드웨어 레지스터와 응답 상태 초기화</td></tr></tbody></table></div><p>이 코드는 실제 Vivado Wizard 출력물을 직접 대조하지 않은 독립 소스입니다. 패키징 메타데이터와 포트의 일치 여부는 실제 Vivado에서 확인해야 합니다.</p><p><a href="#f-part02_1_ch02_rtl_p2_02_axi_fnd_v1_0_S00_AXI_v">RTL</a></p><div class="codeblock" id="f-part02_1_ch02_rtl_p2_02_axi_fnd_v1_0_S00_AXI_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns / 1ps
+// P2-02: a single-outstanding AXI4-Lite slave with independent AW/W capture.
+// REG0 0x00: DISP_VALUE (16-bit packed BCD), reset 0x0000.
+// REG1 0x04: DISP_CTRL bit0 (enable), reset 0.
+// REG2 0x08 and REG3 0x0C: reserved, reads return zero, writes SLVERR.
+module p2_02_axi_fnd_v1_0_S00_AXI #(
+    parameter integer C_S_AXI_DATA_WIDTH = 32,
+    parameter integer C_S_AXI_ADDR_WIDTH = 6
+)(
+    input  wire                              S_AXI_ACLK,
+    input  wire                              S_AXI_ARESETN,
+    input  wire [C_S_AXI_ADDR_WIDTH-1:0]     S_AXI_AWADDR,
+    input  wire [2:0]                        S_AXI_AWPROT,
+    input  wire                              S_AXI_AWVALID,
+    output wire                              S_AXI_AWREADY,
+    input  wire [C_S_AXI_DATA_WIDTH-1:0]     S_AXI_WDATA,
+    input  wire [(C_S_AXI_DATA_WIDTH/8)-1:0] S_AXI_WSTRB,
+    input  wire                              S_AXI_WVALID,
+    output wire                              S_AXI_WREADY,
+    output reg  [1:0]                        S_AXI_BRESP,
+    output reg                               S_AXI_BVALID,
+    input  wire                              S_AXI_BREADY,
+    input  wire [C_S_AXI_ADDR_WIDTH-1:0]     S_AXI_ARADDR,
+    input  wire [2:0]                        S_AXI_ARPROT,
+    input  wire                              S_AXI_ARVALID,
+    output wire                              S_AXI_ARREADY,
+    output reg  [C_S_AXI_DATA_WIDTH-1:0]     S_AXI_RDATA,
+    output reg  [1:0]                        S_AXI_RRESP,
+    output reg                               S_AXI_RVALID,
+    input  wire                              S_AXI_RREADY,
+    output reg  [15:0]                       reg_disp_bcd,
+    output reg                               reg_disp_enable
+);
+    reg                                  aw_captured;
+    reg                                  w_captured;
+    reg [C_S_AXI_ADDR_WIDTH-1:0]         held_awaddr;
+    reg [C_S_AXI_DATA_WIDTH-1:0]         held_wdata;
+    reg [(C_S_AXI_DATA_WIDTH/8)-1:0]     held_wstrb;
+
+    // Do not accept a second write until the response was consumed.
+    // AW and W may arrive in either order (or in the same cycle).
+    assign S_AXI_AWREADY = S_AXI_ARESETN &amp;&amp; !aw_captured &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_WREADY  = S_AXI_ARESETN &amp;&amp; !w_captured  &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_ARREADY = S_AXI_ARESETN &amp;&amp; !S_AXI_RVALID;
+
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            aw_captured     &lt;= 1'b0;
+            w_captured      &lt;= 1'b0;
+            held_awaddr     &lt;= {C_S_AXI_ADDR_WIDTH{1'b0}};
+            held_wdata      &lt;= {C_S_AXI_DATA_WIDTH{1'b0}};
+            held_wstrb      &lt;= {(C_S_AXI_DATA_WIDTH/8){1'b0}};
+            S_AXI_BRESP     &lt;= 2'b00;
+            S_AXI_BVALID    &lt;= 1'b0;
+            S_AXI_RDATA     &lt;= {C_S_AXI_DATA_WIDTH{1'b0}};
+            S_AXI_RRESP     &lt;= 2'b00;
+            S_AXI_RVALID    &lt;= 1'b0;
+            reg_disp_bcd    &lt;= 16'h0000;
+            reg_disp_enable &lt;= 1'b0;
+        end else begin
+            if (S_AXI_AWVALID &amp;&amp; S_AXI_AWREADY) begin
+                aw_captured &lt;= 1'b1;
+                held_awaddr &lt;= S_AXI_AWADDR;
+            end
+            if (S_AXI_WVALID &amp;&amp; S_AXI_WREADY) begin
+                w_captured &lt;= 1'b1;
+                held_wdata &lt;= S_AXI_WDATA;
+                held_wstrb &lt;= S_AXI_WSTRB;
+            end
+            if (aw_captured &amp;&amp; w_captured &amp;&amp; !S_AXI_BVALID) begin
+                S_AXI_BRESP  &lt;= 2'b00; // OKAY
+                S_AXI_BVALID &lt;= 1'b1;
+                aw_captured  &lt;= 1'b0;
+                w_captured   &lt;= 1'b0;
+                case (held_awaddr)
+                    0: begin
+                        if (held_wstrb[0]) reg_disp_bcd[7:0]  &lt;= held_wdata[7:0];
+                        if (held_wstrb[1]) reg_disp_bcd[15:8] &lt;= held_wdata[15:8];
+                    end
+                    4: begin
+                        if (held_wstrb[0]) reg_disp_enable &lt;= held_wdata[0];
+                    end
+                    default: S_AXI_BRESP &lt;= 2'b10; // SLVERR
+                endcase
+            end
+            if (S_AXI_BVALID &amp;&amp; S_AXI_BREADY) begin
+                S_AXI_BVALID &lt;= 1'b0;
+            end
+
+            // RDATA and RRESP remain stable while RVALID &amp;&amp; !RREADY.
+            if (S_AXI_ARVALID &amp;&amp; S_AXI_ARREADY) begin
+                S_AXI_RVALID &lt;= 1'b1;
+                S_AXI_RRESP  &lt;= 2'b00;
+                S_AXI_RDATA  &lt;= {C_S_AXI_DATA_WIDTH{1'b0}};
+                case (S_AXI_ARADDR)
+                    0: S_AXI_RDATA &lt;= {{(C_S_AXI_DATA_WIDTH-16){1'b0}}, reg_disp_bcd};
+                    4: S_AXI_RDATA &lt;= {{(C_S_AXI_DATA_WIDTH-1){1'b0}}, reg_disp_enable};
+                    8: S_AXI_RDATA &lt;= {C_S_AXI_DATA_WIDTH{1'b0}}; // reserved
+                    12: S_AXI_RDATA &lt;= {C_S_AXI_DATA_WIDTH{1'b0}}; // reserved
+                    default: S_AXI_RRESP &lt;= 2'b10; // SLVERR
+                endcase
+            end
+            if (S_AXI_RVALID &amp;&amp; S_AXI_RREADY) begin
+                S_AXI_RVALID &lt;= 1'b0;
+            end
+        end
+    end
+
+    // AWPROT/ARPROT are intentionally ignored in this simple standalone IP.
+    // Not a security boundary: do not expose to untrusted bus masters.
+endmodule</code></pre></div>
+</section>
+<section class="section" id="iptop">
+<h2><span class="num">03</span>AXI IP Top</h2>
+<div>RTL / AXI</div><p><code>p2_02_axi_fnd_v1_0</code>은 AXI Slave와 FND Core를 같은 <code>s00_axi_aclk</code>/<code>s00_axi_aresetn</code>에 연결합니다. 독립 클록 교차가 없으며 FND 출력만 외부 포트로 공개합니다.</p><p><a href="#f-part02_1_ch02_rtl_p2_02_axi_fnd_v1_0_v">RTL</a></p><div class="codeblock" id="f-part02_1_ch02_rtl_p2_02_axi_fnd_v1_0_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns / 1ps
+// P2-02: packaged AXI4-Lite IP shell; slave and board-independent FND core.
+module p2_02_axi_fnd_v1_0 #(
+    parameter integer C_S00_AXI_DATA_WIDTH = 32,
+    parameter integer C_S00_AXI_ADDR_WIDTH = 6,
+    parameter integer FND_SCAN_TICKS = 100000
+)(
+    input  wire                                  s00_axi_aclk,
+    input  wire                                  s00_axi_aresetn,
+    input  wire [C_S00_AXI_ADDR_WIDTH-1:0]       s00_axi_awaddr,
+    input  wire [2:0]                            s00_axi_awprot,
+    input  wire                                  s00_axi_awvalid,
+    output wire                                  s00_axi_awready,
+    input  wire [C_S00_AXI_DATA_WIDTH-1:0]       s00_axi_wdata,
+    input  wire [(C_S00_AXI_DATA_WIDTH/8)-1:0]   s00_axi_wstrb,
+    input  wire                                  s00_axi_wvalid,
+    output wire                                  s00_axi_wready,
+    output wire [1:0]                            s00_axi_bresp,
+    output wire                                  s00_axi_bvalid,
+    input  wire                                  s00_axi_bready,
+    input  wire [C_S00_AXI_ADDR_WIDTH-1:0]       s00_axi_araddr,
+    input  wire [2:0]                            s00_axi_arprot,
+    input  wire                                  s00_axi_arvalid,
+    output wire                                  s00_axi_arready,
+    output wire [C_S00_AXI_DATA_WIDTH-1:0]       s00_axi_rdata,
+    output wire [1:0]                            s00_axi_rresp,
+    output wire                                  s00_axi_rvalid,
+    input  wire                                  s00_axi_rready,
+    output wire [6:0]                            fnd_seg,
+    output wire [3:0]                            fnd_an,
+    output wire                                  fnd_dp
+);
+    wire [15:0] display_bcd;
+    wire display_enable;
+
+    p2_02_axi_fnd_v1_0_S00_AXI #(
+        .C_S_AXI_DATA_WIDTH(C_S00_AXI_DATA_WIDTH),
+        .C_S_AXI_ADDR_WIDTH(C_S00_AXI_ADDR_WIDTH)
+    ) u_axi (
+        .S_AXI_ACLK(s00_axi_aclk), .S_AXI_ARESETN(s00_axi_aresetn),
+        .S_AXI_AWADDR(s00_axi_awaddr), .S_AXI_AWPROT(s00_axi_awprot),
+        .S_AXI_AWVALID(s00_axi_awvalid), .S_AXI_AWREADY(s00_axi_awready),
+        .S_AXI_WDATA(s00_axi_wdata), .S_AXI_WSTRB(s00_axi_wstrb),
+        .S_AXI_WVALID(s00_axi_wvalid), .S_AXI_WREADY(s00_axi_wready),
+        .S_AXI_BRESP(s00_axi_bresp), .S_AXI_BVALID(s00_axi_bvalid),
+        .S_AXI_BREADY(s00_axi_bready),
+        .S_AXI_ARADDR(s00_axi_araddr), .S_AXI_ARPROT(s00_axi_arprot),
+        .S_AXI_ARVALID(s00_axi_arvalid), .S_AXI_ARREADY(s00_axi_arready),
+        .S_AXI_RDATA(s00_axi_rdata), .S_AXI_RRESP(s00_axi_rresp),
+        .S_AXI_RVALID(s00_axi_rvalid), .S_AXI_RREADY(s00_axi_rready),
+        .reg_disp_bcd(display_bcd), .reg_disp_enable(display_enable)
+    );
+
+    // Same AXI clock/reset domain; no unsynchronized clock crossing.
+    fnd_scan_controller #(
+        .TICKS_PER_DIGIT(FND_SCAN_TICKS)
+    ) u_fnd (
+        .clk(s00_axi_aclk), .resetn(s00_axi_aresetn),
+        .display_bcd(display_bcd), .display_enable(display_enable),
+        .seg(fnd_seg), .an(fnd_an), .dp(fnd_dp)
+    );
+endmodule</code></pre></div>
+</section>
+<section class="section" id="top">
+<h2><span class="num">04</span>Basys3 사용자 Top·XDC</h2>
+<div>RTL / AXI</div><p>사용자 Top은 <strong>배선 연결만</strong> 담당합니다. LED0은 P2-01 IP, LED1~15는 기존 GPIO 출력입니다. <code>seg/an/dp</code>는 Wrapper를 통해 신규 FND IP에서 전달합니다.</p><p><a href="#f-part02_1_ch02_rtl_basys3_soc11_top_p2_02_v">전체 Top</a></p><div class="codeblock" id="f-part02_1_ch02_rtl_basys3_soc11_top_p2_02_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>// P2-02: top shell (use in copied soc_ip_design_02 project only).
+// (유지) P2-01 LED0 is from user AXI LED IP; LED1..15 from old GPIO.
+// (추가) Built-in four-digit FND pin connections; no functional logic here.
+module basys3_soc11_top (
+    input  wire        clk,     // W5: original system clock
+    input  wire        btnC,    // U18: original system reset
+    input  wire [15:0] sw,
+    output wire [15:0] led,
+    input  wire        RsRx,
+    output wire        RsTx,
+    output wire [6:0]  seg,
+    output wire [3:0]  an,
+    output wire        dp
+);
+    wire [15:0] gpio_led;
+    wire ip_led0;
+
+    // (유지) Top permits only simple wiring / bit selection.
+    assign led = {gpio_led[15:1], ip_led0};
+
+    // Generated Wrapper must already expose all these exact ports.
+    soc11_integration_wrapper u_soc11 (
+        .clk(clk), .btnC(btnC),
+        .sw_tri_i(sw), .led_tri_o(gpio_led),
+        .UART_0_rxd(RsRx), .UART_0_txd(RsTx),
+        .p2_led_o(ip_led0),
+        .fnd_seg(seg), .fnd_an(an), .fnd_dp(dp)
+    );
+endmodule</code></pre></div><h3>FND 추가 XDC</h3><p>기존 핀은 변경하지 않고 추가 핀만 제공합니다.</p><div class="codeblock"><div class="codebar"><span>XDC</span></div><pre tabindex="0"><code># P2-02 additions only: do not alter the P1-11/P2-01 XDC.
+# Verified against official Digilent Basys3 Master XDC.
+# SEG and AN are ACTIVE LOW.
+set_property PACKAGE_PIN W7 [get_ports {seg[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seg[0]}]
+set_property PACKAGE_PIN W6 [get_ports {seg[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seg[1]}]
+set_property PACKAGE_PIN U8 [get_ports {seg[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seg[2]}]
+set_property PACKAGE_PIN V8 [get_ports {seg[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seg[3]}]
+set_property PACKAGE_PIN U5 [get_ports {seg[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seg[4]}]
+set_property PACKAGE_PIN V5 [get_ports {seg[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seg[5]}]
+set_property PACKAGE_PIN U7 [get_ports {seg[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seg[6]}]
+set_property PACKAGE_PIN V7 [get_ports {dp}]
+set_property IOSTANDARD LVCMOS33 [get_ports {dp}]
+set_property PACKAGE_PIN U2 [get_ports {an[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {an[0]}]
+set_property PACKAGE_PIN U4 [get_ports {an[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {an[1]}]
+set_property PACKAGE_PIN V4 [get_ports {an[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {an[2]}]
+set_property PACKAGE_PIN W4 [get_ports {an[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {an[3]}]</code></pre></div>
+</section>
+<section class="section" id="test">
+<h2><span class="num">05</span>독립 RTL 테스트벤치</h2>
+<div>RTL / AXI</div><p>두 테스트벤치를 시뮬레이터에서 실행하고 단언과 파형을 확인합니다.</p>
+</section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

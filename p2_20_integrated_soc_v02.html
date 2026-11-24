@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 20장 · 종합 통합 · 안전 인터록">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 20장 · 종합 통합 · 안전 인터록 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-20">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 20장 <span class="vbadge">v02</span></p>
+    <h1>제2부 20장 · 종합 통합 · 안전 인터록</h1>
+    <p>기존 PIR·환경·모터 RTL 재사용 → 인터록 → 통합 시뮬레이션</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+    <section class="section" id="overview">
+      <h2><span class="num">00</span>이 장의 목표</h2>
+      <p>기존 PIR·환경·모터 RTL 재사용 → 인터록 → 통합 시뮬레이션</p>
+    </section>
+    <section class="section" id="s00">
+      <h2><span class="num">01</span>과제 개요와 완료 기준</h2>
+<p>제20장은 제2부 11~19장의 개별 RTL 기능을 결합하여 독립 기능 제어에서 <strong>시스템 단위 이벤트·표시·구동 제어</strong>로 확장하는 종합 과제다. 기존 성공 프로젝트·RTL을 변경하지 않고, 이미 만든 모듈을 상위에서 연결하는 방식으로 진행한다.</p><p>이번 실습은 실제 12.4장 스테핑 모터, 18장 PIR 입력/IRQ, 19장 환경 정책 RTL 파일을 그대로 컴파일하고 새 <code>soc20_safety_supervisor.v</code>를 연결해 종합 동작을 확인한다.</p>
+    </section>
+    <section class="section" id="s01">
+      <h2><span class="num">02</span>계층별 복합 SoC 구조도</h2>
+<svg aria-label="P2-20 모의 상류 센서와 실제 PIR/환경/모터/안전 RTL 통합 계층 구조" role="img" viewbox="0 0 1070 548" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arr" markerheight="8" markerwidth="8" orient="auto" refx="9" refy="5" viewbox="0 0 10 10"><path d="M0 0L10 5L0 10Z" fill="#3f7d9e"></path></marker></defs><rect fill="#f8fafc" height="523" rx="12" stroke="#b9d2e1" stroke-width="2" width="1046" x="12" y="12"></rect>
+<g fill="#19445c" text-anchor="middle">
+<rect fill="#e0ebf7" height="74" rx="10" stroke="#709cbe" width="246" x="27" y="53"></rect><text font-size="17" x="150" y="83">기존 센서 정상 샘플</text><text font-size="12" x="150" y="105">DHT22·DS18B20·BME280·RTC</text>
+<rect fill="#f3dfb6" height="74" rx="10" stroke="#c79c58" width="190" x="313" y="53"></rect><text font-size="18" x="408" y="83">HC-SR501 OUT</text><text font-size="12" x="408" y="105">비동기 PIR 입력</text>
+<rect fill="#dceafa" height="74" rx="10" stroke="#72a2bc" width="208" x="539" y="53"></rect><text font-size="18" x="643" y="83">P2-18 원본 RTL</text><text font-size="12" x="643" y="105">pir_irq_controller</text>
+<rect fill="#ede8f5" height="74" rx="10" stroke="#b2a1c8" width="242" x="783" y="53"></rect><text font-size="17" x="904" y="83">MicroBlaze V / AXI</text><text font-size="12" x="904" y="105">실제 SoC 연결 미검증</text>
+<rect fill="#c9e7de" height="86" rx="10" stroke="#67a994" stroke-width="2" width="370" x="120" y="190"></rect><text font-size="18" x="305" y="222">P2-19 원본 환경 Policy</text><text font-size="13" x="305" y="246">environment_policy · alarm / display</text>
+<rect fill="#c9e7de" height="86" rx="10" stroke="#67a994" stroke-width="2" width="370" x="579" y="190"></rect><text font-size="18" x="764" y="222">P2-20 신규 Safety Supervisor</text><text font-size="13" x="764" y="246">fresh / fault_latched / actuator_permit</text>
+<rect fill="#e5e9f6" height="87" rx="10" stroke="#a5afd1" width="365" x="122" y="342"></rect><text font-size="18" x="304" y="372">FND / LCD / UART 상태 표시</text><text font-size="13" x="304" y="399">출력 규약만 정의 · 물리 연결 미구현</text>
+<rect fill="#c9e7de" height="87" rx="10" stroke="#67a994" stroke-width="2" width="367" x="580" y="342"></rect><text font-size="18" x="763" y="371">P2-12.4 원본 Stepper RTL</text><text font-size="13" x="763" y="398">stepper_ramp_core → motor_coil[3:0]</text>
+<rect fill="#f4dfba" height="48" rx="9" stroke="#c7a069" width="367" x="580" y="466"></rect><text font-size="15" x="763" y="495">ULN2003 · 28BYJ-48 실물 연결 보류</text>
+<path d="M150 127V164H305V190" fill="none" marker-end="url(#arr)" stroke="#3f7d9e" stroke-width="2.5"></path>
+<path d="M503 89H539" fill="none" marker-end="url(#arr)" stroke="#3f7d9e" stroke-width="2.5"></path>
+<path d="M643 127V161H447V190" fill="none" marker-end="url(#arr)" stroke="#3f7d9e" stroke-width="2.5"></path>
+<path d="M643 161H764V190" fill="none" marker-end="url(#arr)" stroke="#3f7d9e" stroke-width="2.5"></path>
+<path d="M490 233H579" fill="none" marker-end="url(#arr)" stroke="#3f7d9e" stroke-width="2.5"></path>
+<path d="M305 276V342" fill="none" marker-end="url(#arr)" stroke="#3f7d9e" stroke-width="2.5"></path>
+<path d="M764 276V342" fill="none" marker-end="url(#arr)" stroke="#3f7d9e" stroke-width="2.5"></path>
+<path d="M763 429V466" fill="none" marker-end="url(#arr)" stroke="#3f7d9e" stroke-width="2.5"></path></g>
+<text fill="#4c6e83" font-size="13" font-weight="700" x="29" y="31">파란색·보라색은 외부 계약/미통합, 녹색은 실제 시뮬레이션한 RTL 인스턴스</text></svg>
+<p>그림의 <code>environment_policy</code>, <code>pir_irq_controller</code>, <code>stepper_ramp_core</code>는 각각 기존 19장·18장·12.4장의 RTL 기존이며, <code>soc20_integrated_core</code>가 이를 한 클록 도메인에서 직접 결합한다.</p>
+    </section>
+    <section class="section" id="s02">
+      <h2><span class="num">03</span>기존 장별 실제 재사용과 미연결 구분</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><tr><th>장</th><th>기능</th></tr>
+<tr><td>11</td><td>SG90 Servo PWM</td></tr>
+<tr><td>12.4</td><td>28BYJ-48 가감속 스테핑 모터</td></tr>
+<tr><td>13</td><td>MFRC522 SPI RFID</td></tr>
+<tr><td>14</td><td>PCF8574 I²C LCD</td></tr>
+<tr><td>15</td><td>DS18B20 온도</td></tr>
+<tr><td>16</td><td>DS3231 RTC</td></tr>
+<tr><td>17</td><td>DHT22 온습도</td></tr>
+<tr><td>18</td><td>PIR 입력/IRQ</td></tr>
+<tr><td>19</td><td>환경 Policy·BME280</td></tr>
+<tr><td>20</td><td>종합 안전 인터록</td></tr></table></div>
+<p>하위 기능의 <strong>실제 RTL 컴파일·인스턴스</strong>와 논리적 입력 계약만 연결한 모듈을 명확히 구분한다. 따라서 제20장 테스트만으로 RFID/LCD/RTC가 모두 보드에서 함께 동작한다고 판단하면 안 된다.</p>
+    </section>
+    <section class="section" id="s03">
+      <h2><span class="num">04</span>종합 Controller 핵심 I/O와 동작 계약</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><tr><th>핵심 신호</th><th>의미·단위</th></tr>
+<tr><td><code>dht_valid / ds_valid / bme_valid</code></td><td>상위에서 CRC/Checksum·품질을 순간 유효 샘플 펄스</td></tr>
+<tr><td><code>rtc_valid / rtc_hour / rtc_minute</code></td><td>유효 시각 입력, 24시간제 시·분</td></tr>
+<tr><td><code>pir_in_async / pir_ack</code></td><td>HC-SR501 비동기 감지 입력, CPU 인터럽트 ACK</td></tr>
+<tr><td><code>alarm_reason / pir_irq</code></td><td>PIR→고온→고습 경보 우선순위, Level-high IRQ</td></tr>
+<tr><td><code>display_page / display_value / display_source</code></td><td>LCD/FND 상위 표시 계약(ASCII/자리별 표시 실제 구현 제외)</td></tr>
+<tr><td><code>actuator_arm / actuator_disarm</code></td><td>사용자의 출력 허용·차단 명령</td></tr>
+<tr><td><code>sensor_fresh</code></td><td>정해진 시간 이내 유효 센서값 갱신됨</td></tr>
+<tr><td><code>fault_latched / fault_clear</code></td><td>이전 오류 보존 및 명시적 수동 해제</td></tr>
+<tr><td><code>actuator_permit</code></td><td>유효 샘플·경보 없음·ARM·Fault 없음이 모두 만족된 경우만 1</td></tr>
+<tr><td><code>motor_coil[3:0] / motor_busy</code></td><td>기존 12.4장 Stepper 출력과 진행 상태</td></tr></table></div>
+    </section>
+    <section class="section" id="s04">
+      <h2><span class="num">05</span>데이터 유효기간·인터록 안전 흐름</h2>
+<div class="codeblock"><div class="codebar"><span>실습 명령 · Bash / 실행 예시</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>Reset → ActuatorPermit = 0
+      ↓ 정상 센서 데이터 *_valid
+Fresh = 1  ← 매번 유효 센서 갱신 시 Age 리셋
+      ↓ CPU/User Arm(명시적)
+ActuatorPermit = 1 → Stepper Start 허용
+      ├ PIR Pending HIGH
+      ├ High Temperature (&gt;= 30.0°C)
+      ├ High Humidity (&gt;= 80.0%RH)
+      └ Sensor sample age 만료
+                  ↓
+           Permit 즉시 0
+                  ↓
+          Motor STOP + Coil 0
+                  ↓
+           fault_latched = 1
+                  ↓
+   알람/센서 오류 해제만으로 자동 재시작 금지
+                  ↓
+       Fault Clear → Manual Arm → Motor Start</code></pre></div></div>
+<p><strong>Sample Age</strong>는 정상 센서 갱신 사이의 시간이며, 상위 유효 데이터가 들어오지 않으면 `MAX_AGE_CYCLES` 기준으로 만료된다. 이번 테스트는 55 시스템 클록으로 축소했다. 실제 100MHz 기준의 장시간 센서 갱신 정책과 타임아웃 값은 물리 센서의 변환 주기에 맞춰 별도 확인해야 한다.</p>
+<p class="callout warn"><strong>교육용 안전 인터록의 한계:</strong> 실제 회로의 Emergency Stop(비상 정지)이나 Fail-Safe 인증 장치가 아니다. 전원이 끊기는 경우의 모터 코일·전원 구동, 데이터 지연·통신 오류, 모듈 손상과 다중 고장, 센서별 품질은 별도 안전 설계가 필요하다. 산업 현장 보호 기능으로 사용하면 안 된다.</p>
+    </section>
+    <section class="section" id="s05">
+      <h2><span class="num">06</span>통합 RTL·테스트벤치 전체 코드</h2>
+<p>실제 기존 12.4장·18장·19장 RTL을 컴파일 경로에서 참조하므로 중복 정의 없이 설계가 누적된다. 아래에 P2-20 신규 계층과 자가확인 테스트벤치의 전체 코드을 모았다.</p><details><summary>rtl/soc20_safety_supervisor.v — 전체 소스 보기</summary><div class="codeblock"><div class="codebar"><span>rtl/soc20_safety_supervisor.v · VERILOG · 소스</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-20: Safety DEMO policy, NOT a certified safety function.
+// Freshness applies to valid temperature sources, not to RTC/PIR.
+// Fail-safe: no valid sample, stale sample, or active environment
+// alarm disables actuator permit. Arm must be re-asserted after a
+// loss of permit (latched trip) and a fresh sample must be present.
+module soc20_safety_supervisor #(
+    parameter integer MAX_AGE_CYCLES=100000000
+)(
+    input wire clk,input wire resetn,
+    input wire sample_valid,
+    input wire arm_request,
+    input wire disarm_request,
+    input wire fault_clear_pulse,
+    input wire alarm_active,
+    output wire actuator_permit,
+    output reg fresh,
+    output reg fault_latched,
+    output reg [31:0] sample_age
+);
+    reg armed;
+    assign actuator_permit = resetn &amp;&amp; armed &amp;&amp; fresh &amp;&amp;
+                             !fault_latched &amp;&amp; !alarm_active;
+    always @(posedge clk) begin
+        if(!resetn)begin
+            armed&lt;=0;fresh&lt;=0;fault_latched&lt;=0;sample_age&lt;=0;
+        end else begin
+            if(sample_valid)begin
+                fresh&lt;=1;sample_age&lt;=0;
+            end else if(fresh)begin
+                if(sample_age&gt;=MAX_AGE_CYCLES-1)begin
+                    fresh&lt;=0;
+                    fault_latched&lt;=1;
+                end else sample_age&lt;=sample_age+1;
+            end
+            if(alarm_active) fault_latched&lt;=1;
+            // Clear a trip does not automatically restart actuators.
+            // Need a separate arm_request after fault_clear.
+            if(fault_clear_pulse &amp;&amp; !alarm_active &amp;&amp; fresh)begin
+                fault_latched&lt;=0;armed&lt;=0;
+            end
+            if(disarm_request)armed&lt;=0;
+            else if(arm_request &amp;&amp; fresh &amp;&amp; !fault_latched &amp;&amp;
+                    !alarm_active &amp;&amp; !fault_clear_pulse)armed&lt;=1;
+            if(!fresh)armed&lt;=0;
+        end
+    end
+endmodule
+</code></pre></div></div></details>
+<details><summary>rtl/soc20_integrated_core.v — 전체 소스 보기</summary><div class="codeblock"><div class="codebar"><span>rtl/soc20_integrated_core.v · VERILOG · 소스</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-20 REAL RTL integration of existing P2-18 + P2-19 + P2-12.4 cores.
+// No invented AXI bridge. External decoded/validated sensor samples only.
+// UART/RFID/LCD/RTC hardware drivers and AXI addresses remain OUT OF SCOPE.
+// Top shell has no functional logic: put policy and interlock HERE.
+module soc20_integrated_core #(
+    parameter [63:0] PIR_WARMUP_CYCLES=64'd6000000000,
+    parameter integer PIR_FILTER_CYCLES=3,
+    parameter integer MAX_AGE_CYCLES=100000000,
+    parameter [31:0] MOTOR_MIN_STEP_CYCLES=32'd200000
+)(
+    input wire clk,input wire resetn,
+    input wire pir_in_async,input wire pir_arm,input wire pir_irq_enable,
+    input wire pir_ack,input wire pir_count_clear,
+    input wire dht_valid,input wire signed [15:0] dht_temp_tenths,
+    input wire [15:0] dht_hum_tenths,
+    input wire ds_valid,input wire signed [15:0] ds_temp_raw,
+    input wire bme_valid,input wire signed [31:0] bme_temp_centi,
+    input wire [31:0] bme_hum_milli,input wire [31:0] bme_pressure_pa,
+    input wire rtc_valid,input wire [4:0] rtc_hour,
+    input wire [5:0] rtc_minute,input wire page_next_pulse,
+    input wire actuator_arm,input wire actuator_disarm,
+    input wire fault_clear,
+    input wire motor_start,input wire motor_stop,
+    input wire [31:0] motor_steps,input wire [31:0] motor_start_period,
+    input wire [31:0] motor_cruise_period,
+    input wire [31:0] motor_delta_period,input wire [31:0] motor_ramp_steps,
+    input wire motor_reverse,input wire motor_half_step,
+    output wire pir_irq,output wire pir_pending,
+    output wire [31:0] pir_count,
+    output wire [2:0] display_page,output wire display_valid,
+    output wire signed [31:0] display_value,
+    output wire [2:0] display_source,
+    output wire [2:0] alarm_reason,
+    output wire actuator_permit,output wire sensor_fresh,
+    output wire fault_latched,
+    output wire [3:0] motor_coil,
+    output wire motor_busy,output wire motor_done,output wire motor_error,
+    output wire [31:0] motor_steps_done,
+    output wire [31:0] updates_accepted
+);
+    wire pir_warmup_ready,pir_level,pir_motion_pulse;
+    wire policy_alarm_active;
+    wire [31:0] motor_active_period;
+    // (추가) Reference existing chapter 18 exactly; no duplicate RTL.
+    pir_irq_controller #(
+        .WARMUP_CYCLES(PIR_WARMUP_CYCLES),
+        .FILTER_CYCLES(PIR_FILTER_CYCLES)
+    ) u_pir (
+        .clk(clk),.resetn(resetn),.pir_in_async(pir_in_async),
+        .arm(pir_arm),.irq_enable(pir_irq_enable),
+        .irq_ack_pulse(pir_ack),.count_clear_pulse(pir_count_clear),
+        .irq(pir_irq),.warmup_ready(pir_warmup_ready),
+        .pir_level(pir_level),.motion_pulse(pir_motion_pulse),
+        .event_pending(pir_pending),.event_count(pir_count)
+    );
+    // (추가) Reference existing chapter 19, unchanged.
+    environment_policy u_env (
+        .clk(clk),.resetn(resetn),
+        .dht_valid(dht_valid),.dht_temp_tenths(dht_temp_tenths),
+        .dht_hum_tenths(dht_hum_tenths),.ds_valid(ds_valid),
+        .ds_temp_raw(ds_temp_raw),
+        .bme_valid(bme_valid),.bme_temp_centi(bme_temp_centi),
+        .bme_hum_milli(bme_hum_milli),.bme_pressure_pa(bme_pressure_pa),
+        .rtc_valid(rtc_valid),.rtc_hour(rtc_hour),
+        .rtc_minute(rtc_minute),.pir_event_pending(pir_pending),
+        .page_next_pulse(page_next_pulse),
+        .display_page(display_page),.display_valid(display_valid),
+        .display_value(display_value),.display_source(display_source),
+        .alarm_reason(alarm_reason),.alarm_active(policy_alarm_active),
+        .accepted_updates(updates_accepted)
+    );
+    // (추가) Freshness timeout disables actuator even if old policy
+    // retains a formerly normal reading.
+    soc20_safety_supervisor #(
+        .MAX_AGE_CYCLES(MAX_AGE_CYCLES)
+    ) u_safety (
+        .clk(clk),.resetn(resetn),
+        .sample_valid(dht_valid||ds_valid||bme_valid),
+        .arm_request(actuator_arm),.disarm_request(actuator_disarm),
+        .fault_clear_pulse(fault_clear),
+        .alarm_active(policy_alarm_active),
+        .actuator_permit(actuator_permit),.fresh(sensor_fresh),
+        .fault_latched(fault_latched),.sample_age()
+    );
+    // (추가) P2-12.4 actual stepper ramp instantiated. Permit revocation
+    // forces the stop input and coil LOW, no automatic restart after ACK.
+    stepper_ramp_core #(
+        .MIN_STEP_CYCLES(MOTOR_MIN_STEP_CYCLES)
+    ) u_motor (
+        .clk(clk),.resetn(resetn),
+        .start_pulse(motor_start &amp;&amp; actuator_permit),
+        .stop_pulse(motor_stop || !actuator_permit),
+        .cfg_steps(motor_steps),
+        .cfg_start_period(motor_start_period),
+        .cfg_cruise_period(motor_cruise_period),
+        .cfg_delta_period(motor_delta_period),
+        .cfg_ramp_steps(motor_ramp_steps),
+        .cfg_reverse(motor_reverse),.cfg_half_step(motor_half_step),
+        .coil_o(motor_coil),.busy(motor_busy),
+        .done_pulse(motor_done),.error_pulse(motor_error),
+        .steps_done(motor_steps_done),.active_period(motor_active_period)
+    );
+endmodule
+</code></pre></div></div></details>
+<details><summary>tests/tb_soc20_integrated_core.v — 전체 소스 보기</summary><div class="codeblock"><div class="codebar"><span>tests/tb_soc20_integrated_core.v · VERILOG · 소스</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-20 REAL three-chapter RTL integration test: P2-18 PIR + P2-19
+// environment_policy + P2-12.4 stepper, plus new fail-safe supervisor.
+// Simulated sensor readings are already validated input events.
+// No fake AXI bus, no physical I2C/SPI, no Vivado or board here.
+module tb_soc20_integrated_core;
+    reg clk=0;always #5 clk=~clk;
+    reg resetn=0,pir=0,pir_arm=1,irq_enable=1,pir_ack=0,clear_pir=0;
+    reg dht_valid=0,ds_valid=0,bme_valid=0,rtc_valid=0;
+    reg signed [15:0] dht_t=0,ds_t=0;
+    reg [15:0] dht_h=0;
+    reg signed [31:0] bme_t=0;
+    reg [31:0] bme_h=0,bme_p=0;
+    reg [4:0] hour=0;reg [5:0] minute=0;
+    reg page_next=0,arm=0,disarm=0,clear_fault=0;
+    reg motor_start=0,motor_stop=0;
+    wire pir_irq,pir_pending,display_valid,permit,fresh,fault;
+    wire [31:0] pir_count,steps_done,updates;
+    wire [2:0] page,source,alarm;
+    wire signed [31:0] display_value;
+    wire [3:0] coil;
+    wire motor_busy,motor_done,motor_error;
+    soc20_integrated_core #(
+        .PIR_WARMUP_CYCLES(64'd5),.PIR_FILTER_CYCLES(2),
+        .MAX_AGE_CYCLES(55),.MOTOR_MIN_STEP_CYCLES(3)
+    ) dut(
+        .clk(clk),.resetn(resetn),
+        .pir_in_async(pir),.pir_arm(pir_arm),.pir_irq_enable(irq_enable),
+        .pir_ack(pir_ack),.pir_count_clear(clear_pir),
+        .dht_valid(dht_valid),.dht_temp_tenths(dht_t),
+        .dht_hum_tenths(dht_h),.ds_valid(ds_valid),.ds_temp_raw(ds_t),
+        .bme_valid(bme_valid),.bme_temp_centi(bme_t),
+        .bme_hum_milli(bme_h),.bme_pressure_pa(bme_p),
+        .rtc_valid(rtc_valid),.rtc_hour(hour),.rtc_minute(minute),
+        .page_next_pulse(page_next),.actuator_arm(arm),
+        .actuator_disarm(disarm),.fault_clear(clear_fault),
+        .motor_start(motor_start),.motor_stop(motor_stop),
+        .motor_steps(32'd30),.motor_start_period(32'd12),
+        .motor_cruise_period(32'd6),.motor_delta_period(32'd3),
+        .motor_ramp_steps(32'd2),.motor_reverse(1'b0),
+        .motor_half_step(1'b1),
+        .pir_irq(pir_irq),.pir_pending(pir_pending),
+        .pir_count(pir_count),.display_page(page),
+        .display_valid(display_valid),.display_value(display_value),
+        .display_source(source),.alarm_reason(alarm),
+        .actuator_permit(permit),.sensor_fresh(fresh),
+        .fault_latched(fault),.motor_coil(coil),.motor_busy(motor_busy),
+        .motor_done(motor_done),.motor_error(motor_error),
+        .motor_steps_done(steps_done),.updates_accepted(updates)
+    );
+    task cycles;input integer n;integer i;
+        begin for(i=0;i&lt;n;i=i+1) @(negedge clk);end
+    endtask
+    task pulse_arm;
+        begin @(negedge clk);arm=1;@(negedge clk);arm=0;end
+    endtask
+    task pulse_start;
+        begin @(negedge clk);motor_start=1;
+              @(negedge clk);motor_start=0;end
+    endtask
+    task good_sample;
+        begin @(negedge clk);dht_t=16'sd240;dht_h=16'd500;
+              dht_valid=1;
+              @(negedge clk);dht_valid=0;end
+    endtask
+    initial begin
+        cycles(4);resetn=1;cycles(8);
+        if(permit || fresh || fault || motor_busy || coil)
+            $fatal(1,"P2-20 reset interlock failed");
+        pulse_start();cycles(2);
+        if(motor_busy || coil) $fatal(1,"unarmed motor started");
+        $display("P2_20_DEFAULT_SAFE_INTERLOCK_PASS");
+
+        good_sample();cycles(2);
+        if(!fresh || alarm) $fatal(1,"validated DHT not accepted");
+        pulse_arm();cycles(2);
+        if(!permit) $fatal(1,"valid sample could not arm");
+        pulse_start();cycles(18);
+        if(!motor_busy || steps_done==0 || coil==0)
+            $fatal(1,"P2-12.4 stepper not actually progressing");
+        $display("P2_20_EXISTING_STEPPER_INTEGRATION_PASS");
+
+        @(negedge clk);pir=1;
+        cycles(9);
+        if(!pir_pending || !pir_irq || alarm!=1 || permit || coil!=0)
+            $fatal(1,"PIR interrupt failed to shut off motor");
+        cycles(2);
+        if(motor_busy) $fatal(1,"motor busy after PIR interlock");
+        $display("P2_20_PIR_IRQ_MOTOR_STOP_PASS");
+
+        @(negedge clk);pir_ack=1;@(negedge clk);pir_ack=0;
+        cycles(2);
+        if(pir_pending || pir_irq || !fault || permit)
+            $fatal(1,"IRQ ACK incorrectly rearmed actuator");
+        $display("P2_20_LATCHED_FAULT_NO_AUTO_RESTART_PASS");
+
+        good_sample();
+        @(negedge clk);clear_fault=1;
+        @(negedge clk);clear_fault=0;
+        cycles(2);
+        if(fault || permit) $fatal(1,"fault clear must disarm");
+        pulse_arm();cycles(2);
+        if(!permit) $fatal(1,"explicit rearm failed");
+        $display("P2_20_MANUAL_REARM_PASS");
+
+        pulse_start();cycles(16);
+        if(!motor_busy || !coil) $fatal(1,"restarted stepper stopped early");
+        cycles(65);
+        if(fresh || !fault || permit || coil!=0 || motor_busy)
+            $fatal(1,"stale sample failed to shut down motor");
+        $display("P2_20_STALE_SENSOR_FAIL_SAFE_PASS");
+
+        // Fresh sample alone must not clear a latched trip.
+        good_sample();cycles(2);
+        if(!fresh || !fault || permit)
+            $fatal(1,"new sample implicitly cleared fault");
+        $display("P2_20_FRESH_SAMPLE_DOES_NOT_AUTO_REARM_PASS");
+
+        // Existing P2-19 policy also consumes normalized BME/RTC data.
+        // BME values here are MOCK ALREADY-COMPENSATED, not raw ADC.
+        @(negedge clk);bme_t=32'sd2250;bme_h=32'd45000;
+        bme_p=32'd101000;bme_valid=1;
+        @(negedge clk);bme_valid=0;
+        cycles(2);
+        if(page!=0 || !display_valid ||
+           display_value!=225 || source!=3)
+            $fatal(1,"BME source priority failed");
+        @(negedge clk);rtc_valid=1;hour=5'd14;minute=6'd35;
+        @(negedge clk);rtc_valid=0;
+        // temp -&gt; hum -&gt; pressure -&gt; clock
+        repeat(3)begin
+            @(negedge clk);page_next=1;
+            @(negedge clk);page_next=0;
+        end
+        cycles(2);
+        if(page!=3 || !display_valid || display_value!=1435 ||
+           source!=4)
+            $fatal(1,"P2-19 policy RTC page not integrated");
+        if(permit || !fault)
+            $fatal(1,"new BME/RTC events bypassed latched stop");
+        $display("P2_20_EXISTING_POLICY_BME_RTC_PASS");
+        $display("P2_20_INTEGRATED_SOC_RTL PASS");
+        $finish;
+    end
+    initial begin #250000;$fatal(1,"TIMEOUT");end
+endmodule
+</code></pre></div></div></details>
+<h3>Ubuntu에서 확인하기</h3><div class="codeblock"><div class="codebar"><span>실습 명령 · Bash / 실행 예시</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code># 1. 최초 1회: Ubuntu 패키지 목록 갱신
+sudo apt update
+
+# 2. Icarus Verilog RTL 시뮬레이터 설치
+sudo apt install -y iverilog
+
+# 3. 저장소 루트에서 종합 RTL 시뮬레이션
+bash part02/chapters/P2_20_Lesson/tests/run_rtl_tests.sh</code></pre></div></div>
+<p>`run_rtl_tests.sh`는 12.4, 18, 19장 프로젝트 RTL과 제20장 신규 RTL을 함께 컴파일하고 가상의 센서 입력·PIR 변화를 주어 시뮬레이션한다. 기존 RTL 자체를 수정하지 않고 재사용 가능한 계층만 확장한다.</p>
+    </section>
+    <section class="section" id="s08">
+      <h2><span class="num">07</span>핵심 정리</h2>
+<p><strong>① 기존 RTL을 실제 재사용한다.</strong> 단계별로 합격한 개별 Core를 변경하지 않고 통합 계층에서 결합한다.</p><p><strong>② 센서 Valid만으로 안전하다고 가정하지 않는다.</strong> 새 데이터의 유효기간, 인터럽트, 경보, 출력 재시작 정책을 구별한다.</p><p><strong>③ 모의 통합과 실제 전체 SoC를 구분한다.</strong> RFID/LCD/RTC/I²C/AXI와 실물 전체는 통합 전 Gate로 남아 있다.</p><nav aria-label="이전·다음 장" id="chapter-links"></nav>
+    </section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

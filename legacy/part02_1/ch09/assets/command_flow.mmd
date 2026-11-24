@@ -1,0 +1,14 @@
+flowchart LR
+ A["poll_uart()"] --> B["handle_line(line)"]
+ B --> C["p2_09_parse_command(line)"]
+ C -->|MODE AUTO| D["enter_auto_mode()"]
+ C -->|MODE MANUAL| E["enter_manual_mode()"]
+ C -->|MODE STATUS| F["p2_09_mode_name()"]
+ C -->|IRQ STATUS| G["print_irq_status()"]
+ C -->|기존 명령| H["p2_09_allowed_in_auto()"]
+ H --> I["기존 ADC/MOTOR/SONIC/CDS/PWM/LED/FND 파서"]
+ D --> Z["main() 루프"]
+ E --> Z
+ F --> Z
+ G --> Z
+ I --> Z

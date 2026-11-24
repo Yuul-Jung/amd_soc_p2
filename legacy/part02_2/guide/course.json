@@ -1,0 +1,108 @@
+{
+  "site_title": "제2부 · 주변장치 및 사용자 AXI IP",
+  "site_subtitle": "Basys3 + MicroBlaze V SoC · 11~20장",
+  "version": "v05",
+  "rule_reference": "Yuul-Jung/rule_md@38f7b0a6513bbd23dc4d70798ef3c65541c412ae",
+  "chapters": [
+    {
+      "id": "ch11",
+      "number": 11,
+      "title": "SG90 서보 모터 제어",
+      "subtitle": "PWM 주기·듀티 계산 · AXI IP 개념",
+      "file": "ch11_servo_v05.html",
+      "tags": [
+        "출력·액추에이터"
+      ]
+    },
+    {
+      "id": "ch12",
+      "number": 12,
+      "title": "28BYJ-48 스테핑 모터",
+      "subtitle": "정역회전 · Full/Half Step · 가감속",
+      "file": "ch12_stepper_v05.html",
+      "tags": [
+        "출력·액추에이터"
+      ]
+    },
+    {
+      "id": "ch13",
+      "number": 13,
+      "title": "SPI · RC522 RFID",
+      "subtitle": "VersionReg · REQA · UID4 모의",
+      "file": "ch13_spi_rfid_v05.html",
+      "tags": [
+        "직렬 통신"
+      ]
+    },
+    {
+      "id": "ch14",
+      "number": 14,
+      "title": "I²C · LCD1602/2004",
+      "subtitle": "오픈드레인 · 4비트 LCD 초기화",
+      "file": "ch14_i2c_lcd_v05.html",
+      "tags": [
+        "직렬 통신"
+      ]
+    },
+    {
+      "id": "ch15",
+      "number": 15,
+      "title": "DS18B20 온도 센서",
+      "subtitle": "Reset · Presence · Scratchpad CRC",
+      "file": "ch15_ds18b20_v05.html",
+      "tags": [
+        "센서 수집"
+      ]
+    },
+    {
+      "id": "ch16",
+      "number": 16,
+      "title": "DS3231 실시간 시계",
+      "subtitle": "Repeated START · BCD · OSF 검사",
+      "file": "ch16_ds3231_rtc_v05.html",
+      "tags": [
+        "센서 수집"
+      ]
+    },
+    {
+      "id": "ch17",
+      "number": 17,
+      "title": "DHT22 온습도 센서",
+      "subtitle": "40비트 펄스폭 · 체크섬 · 오류",
+      "file": "ch17_dht22_v05.html",
+      "tags": [
+        "센서 수집"
+      ]
+    },
+    {
+      "id": "ch18",
+      "number": 18,
+      "title": "HC-SR501 PIR 인터럽트",
+      "subtitle": "입력 동기화 · IRQ Pending · ACK",
+      "file": "ch18_pir_irq_v05.html",
+      "tags": [
+        "이벤트·인터럽트"
+      ]
+    },
+    {
+      "id": "ch19",
+      "number": 19,
+      "title": "BME280·복합 환경 제어",
+      "subtitle": "보정 전용 인터페이스 · 표시·경보",
+      "file": "ch19_bme280_environment_v05.html",
+      "tags": [
+        "정책 통합"
+      ]
+    },
+    {
+      "id": "ch20",
+      "number": 20,
+      "title": "종합 RTL 통합",
+      "subtitle": "원본 모터·PIR·환경 Policy 재사용",
+      "file": "ch20_integrated_soc_v05.html",
+      "tags": [
+        "종합 통합"
+      ]
+    }
+  ]
+}

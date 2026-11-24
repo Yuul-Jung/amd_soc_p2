@@ -1,0 +1,272 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 02장 · AXI FND 구조도",
+ "title": "제2부 02장 · AXI FND 구조도",
+ "subtitle": "",
+ "width": 2101,
+ "height": 422,
+ "headings": {
+  "title": {
+   "x": 1050.5,
+   "y": 44,
+   "w": 2021,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 1050.5,
+   "y": 90,
+   "w": 2021,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "pc",
+   "type": "rect",
+   "x": 139,
+   "y": 237,
+   "w": 158,
+   "h": 76,
+   "title": "PC terminal",
+   "sub": "DISP 0050 + Enter",
+   "fill": "#e9f2fc",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "uart",
+   "type": "rect",
+   "x": 482,
+   "y": 237,
+   "w": 228,
+   "h": 56,
+   "title": "Existing AXI UART Lite",
+   "sub": "",
+   "fill": "#f3f0ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "cpu",
+   "type": "rect",
+   "x": 862,
+   "y": 237,
+   "w": 233,
+   "h": 76,
+   "title": "MicroBlaze V",
+   "sub": "main() / handle_command()",
+   "fill": "#f3f0ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "fnd",
+   "type": "rect",
+   "x": 1238,
+   "y": 188,
+   "w": 218,
+   "h": 76,
+   "title": "p2_02_axi_fnd_v1_0",
+   "sub": "AXI4-Lite register bank",
+   "fill": "#f3f0ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "led",
+   "type": "rect",
+   "x": 1238,
+   "y": 304,
+   "w": 180,
+   "h": 76,
+   "title": "P2-01 AXI LED IP",
+   "sub": "LED0 preserved",
+   "fill": "#eef5ee",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "scan",
+   "type": "rect",
+   "x": 1604,
+   "y": 188,
+   "w": 214,
+   "h": 76,
+   "title": "fnd_scan_controller",
+   "sub": "4-digit multiplex scan",
+   "fill": "#f3f0ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "pins",
+   "type": "rect",
+   "x": 1936,
+   "y": 188,
+   "w": 150,
+   "h": 76,
+   "title": "Basys3 FND",
+   "sub": "seg / an / dp",
+   "fill": "#fcefcf",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "pc",
+   "to": "uart",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "uart",
+   "to": "cpu",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e3",
+   "from": "cpu",
+   "to": "fnd",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1013,
+     237
+    ],
+    [
+     1013,
+     188
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "cpu",
+   "to": "led",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1013,
+     237
+    ],
+    [
+     1013,
+     304
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "fnd",
+   "to": "scan",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e6",
+   "from": "scan",
+   "to": "pins",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  }
+ ]
+}

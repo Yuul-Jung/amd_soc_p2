@@ -1,0 +1,6 @@
+flowchart LR
+    PC["PC 터미널<br/>LED ON / LED OFF / STATUS"] --> UART["기존 AXI UART Lite"]
+    UART --> CPU["MicroBlaze V<br/>read_command_line / handle_command"]
+    CPU --> BUS["기존 AXI 인터커넥트"]
+    BUS --> IP["p2_01_axi_led<br/>slv_reg0[0]"]
+    IP --> PIN["p2_led_o → ip_led0 → LED0"]

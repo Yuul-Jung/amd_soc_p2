@@ -1,0 +1,10 @@
+flowchart LR
+    PC["PC UART 명령"] --> CPU["MicroBlaze V: handle_line()"]
+    CPU --> AXI5["p2_05_axi_cds_v1_0: CONTROL/STATUS"]
+    CPU --> AXI4["p2_04_axi_pwm_v1_0: PERIOD/DUTY"]
+    CDS["CdS 모듈 DO / JA1"] --> CORE["cds_digital_core: 2FF + Filter"]
+    AXI5 --> CORE
+    AXI5 --> GATE["auto_light_controller"]
+    CORE --> GATE
+    AXI4 --> GATE
+    GATE --> LED["Basys3 LED1 / E19"]

@@ -1,0 +1,14 @@
+digraph P202 {
+    graph [rankdir=LR, bgcolor="transparent", pad="0.26", nodesep="0.65", ranksep="0.65", splines=polyline, fontname="DejaVu Sans"];
+    node [shape=box, style="rounded,filled", color="#9288b8", fillcolor="#f3f0ff", fontcolor="#242131", fontname="DejaVu Sans", fontsize=12.5, margin="0.21,0.15", penwidth=1.2];
+    edge [color="#7767a8", arrowsize=0.78, penwidth=1.5];
+    pc [label="PC terminal\nDISP 0050 + Enter", fillcolor="#e9f2fc", color="#6998bd"];
+    uart [label="Existing AXI UART Lite"];
+    cpu [label="MicroBlaze V\nmain() / handle_command()"];
+    fnd [label="p2_02_axi_fnd_v1_0\nAXI4-Lite register bank"];
+    scan [label="fnd_scan_controller\n4-digit multiplex scan"];
+    pins [label="Basys3 FND\nseg / an / dp", fillcolor="#fcefcf", color="#c8a54b"];
+    led [label="P2-01 AXI LED IP\nLED0 preserved", fillcolor="#eef5ee", color="#7aa57f"];
+    pc -> uart -> cpu -> fnd -> scan -> pins;
+    cpu -> led [minlen=1];
+}

@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 01.2장 · RTL · AXI 풀이">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 01.2장 · RTL · AXI 풀이 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-01-2">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 01.2장 <span class="vbadge">v02</span></p>
+    <h1>제2부 01.2장 · RTL · AXI 풀이</h1>
+    <p>Vivado AXI4-Lite Wizard의 기존 RTL을 유지하면서 REG0 bit0을 LED 출력으로 연결합니다.</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+ <section class="section" id="overview">
+<h2><span class="num">00</span>이 장의 목표</h2>
+<p>Vivado AXI4-Lite Wizard의 기존 RTL을 유지하면서 REG0 bit0을 LED 출력으로 연결합니다.</p>
+<ul aria-label="핵심 용어" class="chips"><li>Basys3</li><li>MicroBlaze V</li><li>Vivado / Vitis 2024.2</li><li>AXI4-Lite</li></ul>
+</section>
+<section class="section" id="axi">
+<h2><span class="num">01</span>사용자 AXI IP의 역할</h2>
+<div>A · 하드웨어</div><div>MicroBlaze V → AXI4-Lite Write(REG0) → slv_reg0[0] → led_o → p2_led_o → LED0</div><p>기존 Wizard 생성 AXI4-Lite Slave의 쓰기·읽기 로직을 재사용합니다. <code>slv_reg0</code>는 AXI가 쓴 데이터를 보관하는 플립플롭 레지스터입니다. <code>led_o</code>는 이 값의 최하위 bit0을 배선으로 전달합니다.</p><div>현재 실제 Wizard 생성 파일은 사용자가 아직 만들지 않았습니다. 여기의 예시는 포트 삽입 원리를 설명하며, 실제 파일과 <code>slv_reg0</code> 구조를 확인한 뒤 적용합니다. 을 함께 사용합니다.</div>
+</section>
+<section class="section" id="files">
+<h2><span class="num">02</span>두 파일의 수정 위치</h2>
+<div>B · RTL 수정</div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>파일</th><th>삽입 위치·내용</th></tr></thead><tbody><tr><td><code>p2_01_axi_led_v1_0.v</code></td><td>상위 module 선언부의 출력 포트 목록에 <code>output wire led_o</code> 추가. <code>p2_01_axi_led_v1_0_S00_AXI</code> 인스턴스 포트에 <code>.led_o(led_o)</code> 추가.</td></tr><tr><td><code>p2_01_axi_led_v1_0_S00_AXI.v</code></td><td>하위 module 출력 포트 목록에 <code>output wire led_o</code> 추가. <code>slv_reg0</code> 선언 확인 후 모듈 내부에서 <code>assign led_o = slv_reg0[0];</code> 추가.</td></tr></tbody></table></div><p><b>추가 코드 ① 상위 파일:</b></p><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>module p2_01_axi_led_v1_0 #(/* 생성한 파라미터 유지 */)(
+    // ... 기존 포트 유지
+    output wire led_o,  // (추가) 보드 LED로 나갈 출력
+    // ... 기존 AXI 포트 유지
+);
+
+// 기존 S00_AXI 인스턴스의 포트 연결 목록에 추가
+.led_o(led_o),</code></pre></div><p><b>추가 코드 ② 하위 파일:</b></p><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>// S00_AXI 모듈 포트 선언부에 추가
+output wire led_o,
+
+// S00_AXI 모듈 내부에 추가 (slv_reg0 선언 확인 후)
+assign led_o = slv_reg0[0];</code></pre></div><div>위 예시는 삽입 위치를 보여주는 <b>변경 조각</b>입니다. 말줄임표를 RTL에 입력하지 않습니다. 실제 Vivado가 만든 전체 포트 이름과 충돌하지 않도록 선언부를 대조해야 합니다.</div>
+</section>
+<section class="section" id="ports">
+<h2><span class="num">03</span>BD → Wrapper → Top 순서</h2>
+<div>C · 연결</div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>p2_01_axi_led_v1_0_S00_AXI.slv_reg0[0]
+      ↓ assign led_o
+p2_01_axi_led_v1_0.led_o
+      ↓ Make External, rename p2_led_o
+soc11_integration_wrapper.p2_led_o
+      ↓ .p2_led_o(ip_led0)
+basys3_soc11_top.led[0]</code></pre></div><p>기존 <code>led_tri_o[15:0]</code>는 전체를 LED 외부 포트에 다시 연결하지 않습니다. <a href="#f-part02_1_ch01_P2_01_basys3_top_v">사용자 Top 전체 소스</a>에서는 <code>led[15:1]</code>만 기존 GPIO에 연결하고 bit0은 새로운 사용자 IP에서 받습니다.</p><div>PART 02 · CHAPTER 01</div>
+</section>
+    <section class="section" id="files">
+      <h2><span class="num">04</span>실습 파일</h2>
+      <div class="codeblock" id="f-part02_1_ch01_P2_01_basys3_top_v"><div class="codebar"><span>P2_01_basys3_top.v · Verilog</span></div><pre tabindex="0"><code>// 제2부 01장(P2-01) 사용자 Top — 보드 연결 전용
+// (변경) LED0을 신규 AXI IP 단독 출력에 연결한다.
+// (유지) LED1~15, SW, UART, Clock, Reset은 기존 Wrapper에 연결한다.
+module basys3_soc11_top (
+    input  wire        clk,     // Basys3 100 MHz: W5
+    input  wire        btnC,    // 기존 시스템 Reset: U18
+    input  wire [15:0] sw,      // 기존 스위치 입력
+    output wire [15:0] led,     // 내장 LED[15:0]
+    input  wire        RsRx,    // PC -&gt; FPGA UART
+    output wire        RsTx     // FPGA -&gt; PC UART
+);
+    wire [15:0] gpio_led;       // 기존 AXI GPIO 출력, bit0은 미사용
+    wire        ip_led0;        // 새 사용자 AXI IP 출력
+
+    // (변경) 결합된 신호를 보드 출력에 연결한다.
+    // LED[15:1]은 gpio_led[15:1], LED[0]은 ip_led0으로 연결.
+    // 연산이나 상태 결정이 아닌 단순 배선이다.
+    assign led = {gpio_led[15:1], ip_led0};
+
+    soc11_integration_wrapper u_soc11 (
+        .clk(clk),
+        .btnC(btnC),
+        .sw_tri_i(sw),
+        .led_tri_o(gpio_led),
+        .UART_0_rxd(RsRx),
+        .UART_0_txd(RsTx),
+        .p2_led_o(ip_led0)       // BD에서 외부화한 포트; 생성 Wrapper와 대조
+    );
+endmodule
+</code></pre></div>
+    </section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

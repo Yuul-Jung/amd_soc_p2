@@ -1,0 +1,8 @@
+flowchart LR
+ PC["PC UART 명령"] --> MAIN["MicroBlaze V · main_p2_10.c"]
+ MAIN --> POLICY["p2_10_capstone_logic.c"]
+ MAIN --> SNAP["cap_snapshot()"]
+ SENSORS["기존 CdS / SONIC / MOTOR 상태"] --> SNAP
+ SNAP --> POLICY
+ POLICY --> MOTOR["기존 AXI MOTOR / motor_controller"]
+ MOTOR --> OUT["모터 드라이버 · ENA"]

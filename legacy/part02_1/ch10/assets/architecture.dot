@@ -1,0 +1,14 @@
+digraph P210 {
+ graph [rankdir=LR,bgcolor="white",pad="0.27",nodesep="0.80",ranksep="1.00",splines=polyline,fontname="DejaVu Sans",outputorder=edgesfirst];
+ node [shape=box,style="rounded,filled",fillcolor="#F5F3FF",color="#8A81BB",fontname="DejaVu Sans",fontsize=13,margin="0.28,0.22"];
+ edge [color="#59647A",penwidth=1.7,arrowsize=.75];
+ PC [label="PC UART\nMODE AUTO / RUN START / STATUS"];
+ MAIN [label="MicroBlaze V\nmain_p2_10.c"];
+ POLICY [label="p2_10_capstone_logic.c\nRUNNING / IDLE / FAULT"];
+ STATUS [label="cap_snapshot()\nSONIC / MOTOR / CDS 읽기"];
+ MOTOR [label="기존 07장 AXI MOTOR\nmotor_controller 보호 RTL"];
+ SENSORS [label="기존 상태 레지스터\nSONIC / MOTOR / CDS"];
+ OUTPUTS [label="모터 드라이버\nIN1 / IN2 / ENA"];
+ PC->MAIN; MAIN->POLICY; MAIN->STATUS; SENSORS->STATUS;
+ STATUS->POLICY; POLICY->MOTOR; MOTOR->OUTPUTS;
+}

@@ -1,0 +1,450 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 03장 · 방향 버튼 · 인터럽트 구조도",
+ "title": "제2부 03장 · 방향 버튼 · 인터럽트 구조도",
+ "subtitle": "",
+ "width": 2307,
+ "height": 422,
+ "headings": {
+  "title": {
+   "x": 1153.5,
+   "y": 44,
+   "w": 2227,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 1153.5,
+   "y": 90,
+   "w": 2227,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "PC",
+   "type": "rect",
+   "x": 818,
+   "y": 188,
+   "w": 175,
+   "h": 76,
+   "title": "PC 터미널",
+   "sub": "LED / DISP / STATUS",
+   "fill": "#efedfa",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "UART",
+   "type": "rect",
+   "x": 1168,
+   "y": 188,
+   "w": 192,
+   "h": 56,
+   "title": "기존 AXI UART Lite",
+   "sub": "",
+   "fill": "#f8f8fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "CPU",
+   "type": "rect",
+   "x": 1489,
+   "y": 239,
+   "w": 150,
+   "h": 76,
+   "title": "MicroBlaze V",
+   "sub": "main_p2_03.c",
+   "fill": "#eee9ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "FNDIP",
+   "type": "rect",
+   "x": 1816,
+   "y": 193,
+   "w": 203,
+   "h": 56,
+   "title": "기존 p2_02_axi_fnd",
+   "sub": "",
+   "fill": "#f8f8fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "LEDIP",
+   "type": "rect",
+   "x": 1816,
+   "y": 289,
+   "w": 201,
+   "h": 56,
+   "title": "기존 p2_01_axi_led",
+   "sub": "",
+   "fill": "#f8f8fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "BTN",
+   "type": "rect",
+   "x": 135,
+   "y": 289,
+   "w": 150,
+   "h": 76,
+   "title": "BTNU / BTND",
+   "sub": "BTNL / BTNR",
+   "fill": "#e6f4ed",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "CORE",
+   "type": "rect",
+   "x": 462,
+   "y": 289,
+   "w": 205,
+   "h": 76,
+   "title": "button_event_core",
+   "sub": "동기화 · 디바운스 · 5초",
+   "fill": "#f8f8fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "AXI",
+   "type": "rect",
+   "x": 818,
+   "y": 304,
+   "w": 207,
+   "h": 76,
+   "title": "p2_03_axi_buttons",
+   "sub": "PENDING / ENABLE / IRQ",
+   "fill": "#f3efff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "INTC",
+   "type": "rect",
+   "x": 1168,
+   "y": 304,
+   "w": 150,
+   "h": 76,
+   "title": "기존 AXI INTC",
+   "sub": "IRQ 입력 추가",
+   "fill": "#f8f8fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "FND",
+   "type": "rect",
+   "x": 2142,
+   "y": 191,
+   "w": 150,
+   "h": 76,
+   "title": "Basys3 FND",
+   "sub": "4자리",
+   "fill": "#e6f4ed",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "LED",
+   "type": "rect",
+   "x": 2142,
+   "y": 297,
+   "w": 150,
+   "h": 56,
+   "title": "LED0",
+   "sub": "",
+   "fill": "#e6f4ed",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "PC",
+   "to": "UART",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "UART",
+   "to": "CPU",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1298,
+     188
+    ],
+    [
+     1298,
+     239
+    ]
+   ]
+  },
+  {
+   "id": "e3",
+   "from": "CPU",
+   "to": "FNDIP",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1598,
+     239
+    ],
+    [
+     1598,
+     193
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "CPU",
+   "to": "LEDIP",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1598,
+     239
+    ],
+    [
+     1598,
+     289
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "BTN",
+   "to": "CORE",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e6",
+   "from": "CORE",
+   "to": "AXI",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     599,
+     289
+    ],
+    [
+     599,
+     304
+    ]
+   ]
+  },
+  {
+   "id": "e7",
+   "from": "AXI",
+   "to": "INTC",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e8",
+   "from": "INTC",
+   "to": "CPU",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1298,
+     304
+    ],
+    [
+     1298,
+     239
+    ]
+   ]
+  },
+  {
+   "id": "e9",
+   "from": "FNDIP",
+   "to": "FND",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1951,
+     193
+    ],
+    [
+     1951,
+     191
+    ]
+   ]
+  },
+  {
+   "id": "e10",
+   "from": "LEDIP",
+   "to": "LED",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1951,
+     289
+    ],
+    [
+     1951,
+     297
+    ]
+   ]
+  }
+ ]
+}

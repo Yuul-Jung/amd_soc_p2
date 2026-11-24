@@ -1,0 +1,295 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 10장 · 종합제어 구조도",
+ "title": "제2부 10장 · 종합제어 구조도",
+ "subtitle": "",
+ "width": 2199,
+ "height": 424,
+ "headings": {
+  "title": {
+   "x": 1099.5,
+   "y": 44,
+   "w": 2119,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 1099.5,
+   "y": 90,
+   "w": 2119,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "PC",
+   "type": "rect",
+   "x": 200,
+   "y": 188,
+   "w": 279,
+   "h": 76,
+   "title": "PC UART",
+   "sub": "MODE AUTO / RUN START / STATUS",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "MAIN",
+   "type": "rect",
+   "x": 582,
+   "y": 188,
+   "w": 150,
+   "h": 76,
+   "title": "MicroBlaze V",
+   "sub": "main_p2_10.c",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "POLICY",
+   "type": "rect",
+   "x": 1318,
+   "y": 247,
+   "w": 248,
+   "h": 76,
+   "title": "p2_10_capstone_logic.c",
+   "sub": "RUNNING / IDLE / FAULT",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "STATUS",
+   "type": "rect",
+   "x": 935,
+   "y": 306,
+   "w": 218,
+   "h": 76,
+   "title": "cap_snapshot()",
+   "sub": "SONIC / MOTOR / CDS 읽기",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "MOTOR",
+   "type": "rect",
+   "x": 1700,
+   "y": 247,
+   "w": 217,
+   "h": 76,
+   "title": "기존 07장 AXI MOTOR",
+   "sub": "motor_controller 보호 RTL",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "SENSORS",
+   "type": "rect",
+   "x": 582,
+   "y": 306,
+   "w": 187,
+   "h": 76,
+   "title": "기존 상태 레지스터",
+   "sub": "SONIC / MOTOR / CDS",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "OUTPUTS",
+   "type": "rect",
+   "x": 2034,
+   "y": 247,
+   "w": 150,
+   "h": 76,
+   "title": "모터 드라이버",
+   "sub": "IN1 / IN2 / ENA",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "PC",
+   "to": "MAIN",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "MAIN",
+   "to": "POLICY",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1078,
+     188
+    ],
+    [
+     1078,
+     247
+    ]
+   ]
+  },
+  {
+   "id": "e3",
+   "from": "MAIN",
+   "to": "STATUS",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     710,
+     188
+    ],
+    [
+     710,
+     306
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "POLICY",
+   "to": "MOTOR",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e5",
+   "from": "STATUS",
+   "to": "POLICY",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1078,
+     306
+    ],
+    [
+     1078,
+     247
+    ]
+   ]
+  },
+  {
+   "id": "e6",
+   "from": "MOTOR",
+   "to": "OUTPUTS",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e7",
+   "from": "SENSORS",
+   "to": "STATUS",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  }
+ ]
+}

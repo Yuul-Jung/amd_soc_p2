@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 06.2장 · RTL · AXI 풀이">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 06.2장 · RTL · AXI 풀이 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-06-2">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 06.2장 <span class="vbadge">v02</span></p>
+    <h1>제2부 06.2장 · RTL · AXI 풀이</h1>
+    <p>HC-SR04 상태머신·AXI 슬레이브·IP Wrapper·보드 사용자 Top의 실제 코드와 설명.</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+ <section class="section" id="overview">
+<h2><span class="num">00</span>이 장의 목표</h2>
+<p>HC-SR04 상태머신·AXI 슬레이브·IP Wrapper·보드 사용자 Top의 실제 코드와 설명.</p>
+<ul aria-label="핵심 용어" class="chips"><li>Basys3 XC7A35T</li><li>MicroBlaze V</li><li>Vivado/Vitis 2024.2</li><li>SONIC / WARN</li><li>RTL + AXI</li></ul>
+</section>
+<section class="section" id="principle">
+<h2><span class="num">01</span>Core · AXI IP · 사용자 Top 책임 분리</h2>
+<div>RTL · 개념</div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>모듈</th><th>책임</th><th>확인할 조건</th></tr></thead><tbody><tr><td><code>hc_sr04_core</code></td><td>TRIG/ ECHO 동기화·타이머·거리 환산</td><td>12us TRIG, 38ms Timeout, 60ms Cooldown, 2~400cm</td></tr><tr><td><code>p2_06_axi_sonic_v1_0_S00_AXI</code></td><td>설정 레지스터·값 읽기·AXI 프로토콜</td><td>AW/W 독립, WSTRB, B/R backpressure, RO 보호</td></tr><tr><td><code>p2_06_axi_sonic_v1_0</code></td><td>사용자 IP Packager 외부 인터페이스</td><td>Ports and Interfaces, S00_AXI</td></tr><tr><td><code>basys3_soc11_top</code></td><td>FPGA 보드 핀·Wire/Controller/Wrapper 연결</td><td>LED0~15 단일 출력 소유권, 핀 이름 일치</td></tr></tbody></table></div><p>Core는 TRIG를 약 12us HIGH로 유지한 뒤 ECHO의 상승 에지부터 하강 에지까지 카운트한다. ECHO가 지나치게 길거나 짧으면 VALID=0을 설정한다. 완료 시 <code>done_pulse_o</code>는 한 클록만 HIGH이며, AXI의 <code>seq_count</code>가 새 결과를 표시한다.</p><p><code>sonic_unsafe_o</code>는 WARN_EN과 무관하다. <code>sonic_alert_o</code>만 WARN_EN을 반영하므로 나중에 안전 정지 기능을 설계할 때 경고 LED의 OFF 설정을 안전 해제로 오해하지 않는다.</p><div><img alt="초음파 Core와 AXI IP 구조" class="zoom" loading="lazy" src="diagrams/p2_06_architecture.svg"/></div>
+</section>
+<section class="section" id="axi">
+<h2><span class="num">02</span>AXI4-Lite 독립 채널과 레지스터 사용</h2>
+<div>RTL · 주요 해설</div><p>AXI4-Lite는 AW(쓰기 주소), W(쓰기 데이터), B(쓰기 응답), AR(읽기 주소), R(읽기 응답) 등 5개의 채널로 구성된다. AW와 W는 반드시 같은 주기에 도착하지 않으며, 본 슬레이브는 각각 버퍼에 보관한 뒤 한 번의 레지스터 쓰기로 결합한다.</p><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>버스 신호</th><th>동작 의미</th></tr></thead><tbody><tr><td>AWVALID/AWREADY</td><td>쓰기 주소 전달의 handshake(핸드셰이크, 양측 동의)</td></tr><tr><td>WVALID/WREADY/WSTRB</td><td>쓰기 데이터와 바이트별 유효 표시 전달</td></tr><tr><td>BVALID/BREADY</td><td>CPU가 응답을 수락할 때까지 응답 유지</td></tr><tr><td>ARVALID/ARREADY</td><td>읽기 주소 수락</td></tr><tr><td>RVALID/RREADY</td><td>읽기 데이터·오류 응답 수락 시까지 유지</td></tr></tbody></table></div><p><b>주소 정렬:</b> 32비트 레지스터는 0x00, 0x04, 0x08 ...처럼 4바이트 단위로 지정한다. 0x03 등 비정렬 주소와 읽기 전용 레지스터 쓰기는 SLVERR로 응답해야 한다.</p>
+</section>
+<section class="section" id="rfile0">
+<h2><span class="num">03</span>rtl/hc_sr04_core.v</h2>
+<div>RTL · 전체 코드</div><p><b>전체 코드:</b> <a href="#f-part02_1_ch06_rtl_hc_sr04_core_v">해당 Verilog 소스 열기</a>. 실제 Vivado 2024.2 Packager 생성 파일의 포트·파라미터와 대조 후 적용한다.</p><div><div class="codeblock" id="f-part02_1_ch06_rtl_hc_sr04_core_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-06 HC-SR04 reusable timing core; no board pins or AXI dependency.
+// (추가) 2FF Echo synchronizer, microsecond tick, bounded waits, cooldown.
+// 100 MHz AXI clock -&gt; 100 clocks / 1 us; 12 us TRIG, &gt;=60 ms cooldown.
+// Result is the last COMPLETED reading. valid_o and fault flags persist.
+module hc_sr04_core #(
+    parameter integer CLK_HZ = 100000000,
+    parameter integer TRIG_US = 12,
+    parameter integer TIMEOUT_US = 38000,
+    parameter integer COOLDOWN_US = 60000
+)(
+    input wire clk, input wire resetn,
+    input wire echo_i, input wire start_i,
+    output reg trig_o, output wire ready_o, output wire busy_o,
+    output reg done_pulse_o,
+    output reg [15:0] distance_cm_o,
+    output reg [31:0] echo_us_o,
+    output reg valid_o, output reg timeout_o, output reg out_range_o
+);
+    localparam integer TICK_CYCLES = CLK_HZ / 1000000;
+    localparam [2:0] S_IDLE=3'd0, S_TRIG=3'd1,
+                     S_WAIT=3'd2, S_ECHO=3'd3, S_COOL=3'd4;
+    reg [2:0] state;
+    reg [31:0] div_count, us_count, high_us;
+    reg echo_meta, echo_sync, echo_prev;
+    wire tick_us = (div_count == TICK_CYCLES-1);
+    wire echo_rise = echo_sync &amp;&amp; !echo_prev;
+    reg echo_rise_pending; // Catch sub-us rising edges until the next us tick.
+    assign ready_o = (state == S_IDLE);
+    assign busy_o = !ready_o;
+
+    // (추가) FPGA input can be asynchronous. Metastability cannot be
+    // eliminated absolutely; this 2FF path lowers the risk.
+    always @(posedge clk) begin
+        if (!resetn) begin
+            echo_meta &lt;= 1'b0;
+            echo_sync &lt;= 1'b0;
+            echo_prev &lt;= 1'b0;
+        end else begin
+            echo_meta &lt;= echo_i;
+            echo_sync &lt;= echo_meta;
+            echo_prev &lt;= echo_sync;
+        end
+    end
+
+    always @(posedge clk) begin
+        if (!resetn || state != S_WAIT) echo_rise_pending &lt;= 1'b0;
+        else if (echo_rise) echo_rise_pending &lt;= 1'b1;
+        else if (tick_us) echo_rise_pending &lt;= 1'b0;
+    end
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            div_count &lt;= 32'd0;
+            state &lt;= S_IDLE;
+            us_count &lt;= 32'd0;
+            high_us &lt;= 32'd0;
+            trig_o &lt;= 1'b0;
+            done_pulse_o &lt;= 1'b0;
+            distance_cm_o &lt;= 16'd0;
+            echo_us_o &lt;= 32'd0;
+            valid_o &lt;= 1'b0;
+            timeout_o &lt;= 1'b0;
+            out_range_o &lt;= 1'b0;
+        end else begin
+            done_pulse_o &lt;= 1'b0;
+            if (tick_us) div_count &lt;= 32'd0;
+            else div_count &lt;= div_count + 32'd1;
+
+            case (state)
+            S_IDLE: begin
+                if (start_i) begin
+                    trig_o &lt;= 1'b1;
+                    us_count &lt;= 32'd0;
+                    high_us &lt;= 32'd0;
+                    state &lt;= S_TRIG;
+                end
+            end
+            S_TRIG: if (tick_us) begin
+                if (us_count + 32'd1 &gt;= TRIG_US) begin
+                    trig_o &lt;= 1'b0;
+                    us_count &lt;= 32'd0;
+                    state &lt;= S_WAIT;
+                end else us_count &lt;= us_count + 32'd1;
+            end
+            S_WAIT: if (tick_us) begin
+                if (echo_rise_pending || echo_rise) begin
+                    // Edge latched at 100MHz to avoid missing it on us tick.
+                    high_us &lt;= 32'd1;
+                    us_count &lt;= 32'd0;
+                    state &lt;= S_ECHO;
+                end else if (us_count + 32'd1 &gt;= TIMEOUT_US) begin
+                    valid_o &lt;= 1'b0;
+                    timeout_o &lt;= 1'b1;
+                    out_range_o &lt;= 1'b0;
+                    distance_cm_o &lt;= 16'd0;
+                    echo_us_o &lt;= 32'd0;
+                    done_pulse_o &lt;= 1'b1;
+                    us_count &lt;= 32'd0;
+                    state &lt;= S_COOL;
+                end else us_count &lt;= us_count + 32'd1;
+            end
+            S_ECHO: if (tick_us) begin
+                if (!echo_sync) begin
+                    echo_us_o &lt;= high_us;
+                    // D(cm) ~= EchoHigh(us)/58 at nominal room temperature.
+                    if (high_us &gt;= 32'd116 &amp;&amp; high_us &lt;= 32'd23200) begin
+                        distance_cm_o &lt;= (high_us + 32'd29) / 32'd58;
+                        valid_o &lt;= 1'b1;
+                        timeout_o &lt;= 1'b0;
+                        out_range_o &lt;= 1'b0;
+                    end else begin
+                        distance_cm_o &lt;= 16'd0;
+                        valid_o &lt;= 1'b0;
+                        timeout_o &lt;= 1'b0;
+                        out_range_o &lt;= 1'b1;
+                    end
+                    done_pulse_o &lt;= 1'b1;
+                    us_count &lt;= 32'd0;
+                    state &lt;= S_COOL;
+                end else if (high_us &gt;= TIMEOUT_US) begin
+                    echo_us_o &lt;= high_us;
+                    distance_cm_o &lt;= 16'd0;
+                    valid_o &lt;= 1'b0;
+                    timeout_o &lt;= 1'b1;
+                    out_range_o &lt;= 1'b0;
+                    done_pulse_o &lt;= 1'b1;
+                    us_count &lt;= 32'd0;
+                    state &lt;= S_COOL;
+                end else high_us &lt;= high_us + 32'd1;
+            end
+            S_COOL: if (tick_us) begin
+                if (us_count + 32'd1 &gt;= COOLDOWN_US) begin
+                    us_count &lt;= 32'd0;
+                    state &lt;= S_IDLE;
+                end else us_count &lt;= us_count + 32'd1;
+            end
+            default: state &lt;= S_IDLE;
+            endcase
+        end
+    end
+endmodule</code></pre></div></div>
+</section>
+<section class="section" id="rfile1">
+<h2><span class="num">04</span>rtl/p2_06_axi_sonic_v1_0_S00_AXI.v</h2>
+<div>RTL · 전체 코드</div><p><b>전체 코드:</b> <a href="#f-part02_1_ch06_rtl_p2_06_axi_sonic_v1_0_S00_AXI_v">해당 Verilog 소스 열기</a>. 실제 Vivado 2024.2 Packager 생성 파일의 포트·파라미터와 대조 후 적용한다.</p><div><div class="codeblock" id="f-part02_1_ch06_rtl_p2_06_axi_sonic_v1_0_S00_AXI_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-06 AXI4-Lite HC-SR04 user IP, 32-bit aligned addresses only.
+// REG0 0x00 CONTROL: bit0 AUTO, bit1 START W1P, bit2 WARN_EN (reset 1)
+// REG1 0x04 STATUS: bit0 BUSY,1 VALID,2 TIMEOUT,3 RANGE_ERROR,
+//                   bit4 WARN_LED,5 UNSAFE,6 AUTO,7 WARN_EN,8 READY
+// REG2 0x08 DIST_CM; REG3 0x0C ECHO_US; REG4 0x10 WARN_CM (1..400)
+// REG5 0x14 SEQUENCE; REG6 0x18 ID 0x00060001; REG7 0x1C CLK_HZ
+// AW/W sampled independently; B/R held while backpressured; byte strobe.
+module p2_06_axi_sonic_v1_0_S00_AXI #(
+    parameter integer C_S_AXI_DATA_WIDTH = 32,
+    parameter integer C_S_AXI_ADDR_WIDTH = 6,
+    parameter integer CLK_HZ = 100000000,
+    parameter integer TIMEOUT_US = 38000,
+    parameter integer COOLDOWN_US = 60000
+)(
+    input wire S_AXI_ACLK, input wire S_AXI_ARESETN,
+    input wire [C_S_AXI_ADDR_WIDTH-1:0] S_AXI_AWADDR,
+    input wire [2:0] S_AXI_AWPROT, input wire S_AXI_AWVALID,
+    output wire S_AXI_AWREADY,
+    input wire [C_S_AXI_DATA_WIDTH-1:0] S_AXI_WDATA,
+    input wire [(C_S_AXI_DATA_WIDTH/8)-1:0] S_AXI_WSTRB,
+    input wire S_AXI_WVALID, output wire S_AXI_WREADY,
+    output reg [1:0] S_AXI_BRESP, output reg S_AXI_BVALID,
+    input wire S_AXI_BREADY,
+    input wire [C_S_AXI_ADDR_WIDTH-1:0] S_AXI_ARADDR,
+    input wire [2:0] S_AXI_ARPROT, input wire S_AXI_ARVALID,
+    output wire S_AXI_ARREADY,
+    output reg [C_S_AXI_DATA_WIDTH-1:0] S_AXI_RDATA,
+    output reg [1:0] S_AXI_RRESP, output reg S_AXI_RVALID,
+    input wire S_AXI_RREADY,
+    input wire sonic_echo_i, output wire sonic_trig_o,
+    output wire sonic_alert_o, output wire sonic_unsafe_o
+);
+    localparam [1:0] RESP_OKAY=2'b00, RESP_SLVERR=2'b10;
+    reg auto_en, warn_en, kick;
+    reg [15:0] warn_cm;
+    wire core_ready, core_busy, core_done;
+    wire [15:0] core_dist;
+    wire [31:0] core_echo_us;
+    wire core_valid, core_timeout, core_range_error;
+    reg [31:0] seq_count;
+    wire core_start = (auto_en || kick) &amp;&amp; core_ready;
+    assign sonic_unsafe_o = (!core_valid) || (core_dist &lt;= warn_cm);
+    assign sonic_alert_o = warn_en &amp;&amp; sonic_unsafe_o;
+
+    hc_sr04_core #(.CLK_HZ(CLK_HZ), .TIMEOUT_US(TIMEOUT_US),
+                   .COOLDOWN_US(COOLDOWN_US)) u_sonic_core (
+        .clk(S_AXI_ACLK), .resetn(S_AXI_ARESETN),
+        .echo_i(sonic_echo_i), .start_i(core_start),
+        .trig_o(sonic_trig_o), .ready_o(core_ready), .busy_o(core_busy),
+        .done_pulse_o(core_done), .distance_cm_o(core_dist),
+        .echo_us_o(core_echo_us), .valid_o(core_valid),
+        .timeout_o(core_timeout), .out_range_o(core_range_error)
+    );
+
+    reg aw_hold, w_hold;
+    reg [C_S_AXI_ADDR_WIDTH-1:0] awaddr_hold;
+    reg [31:0] wdata_hold;
+    reg [3:0] wstrb_hold;
+    reg [31:0] merged_data;
+    integer j;
+    wire [31:0] status_word = {23'd0, core_ready, warn_en, auto_en,
+                                sonic_unsafe_o, sonic_alert_o,
+                                core_range_error, core_timeout,
+                                core_valid, core_busy};
+    assign S_AXI_AWREADY = S_AXI_ARESETN &amp;&amp; !aw_hold &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_WREADY  = S_AXI_ARESETN &amp;&amp; !w_hold  &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_ARREADY = S_AXI_ARESETN &amp;&amp; !S_AXI_RVALID;
+
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            auto_en &lt;= 1'b0;
+            warn_en &lt;= 1'b1; // Default fail-safe near/fault indicator ON.
+            warn_cm &lt;= 16'd20;
+            kick &lt;= 1'b0;
+            seq_count &lt;= 32'd0;
+            aw_hold &lt;= 1'b0; w_hold &lt;= 1'b0;
+            awaddr_hold &lt;= {C_S_AXI_ADDR_WIDTH{1'b0}};
+            wdata_hold &lt;= 32'd0; wstrb_hold &lt;= 4'd0;
+            S_AXI_BRESP &lt;= RESP_OKAY;
+            S_AXI_BVALID &lt;= 1'b0;
+        end else begin
+            kick &lt;= 1'b0; // One-clock W1P pulse.
+            if (core_done) seq_count &lt;= seq_count + 32'd1;
+            if (S_AXI_AWVALID &amp;&amp; S_AXI_AWREADY) begin
+                aw_hold &lt;= 1'b1;
+                awaddr_hold &lt;= S_AXI_AWADDR;
+            end
+            if (S_AXI_WVALID &amp;&amp; S_AXI_WREADY) begin
+                w_hold &lt;= 1'b1;
+                wdata_hold &lt;= S_AXI_WDATA;
+                wstrb_hold &lt;= S_AXI_WSTRB;
+            end
+            if (S_AXI_BVALID &amp;&amp; S_AXI_BREADY) S_AXI_BVALID &lt;= 1'b0;
+            if (aw_hold &amp;&amp; w_hold &amp;&amp; !S_AXI_BVALID) begin
+                aw_hold &lt;= 1'b0; w_hold &lt;= 1'b0;
+                S_AXI_BVALID &lt;= 1'b1;
+                S_AXI_BRESP &lt;= RESP_OKAY;
+                case (awaddr_hold)
+                6'h00: begin
+                    merged_data = {29'd0,warn_en,1'b0,auto_en};
+                    for (j=0;j&lt;4;j=j+1)
+                        if (wstrb_hold[j])
+                            merged_data[j*8 +: 8] = wdata_hold[j*8 +: 8];
+                    if ((merged_data &amp; ~32'h7) != 0) begin
+                        S_AXI_BRESP &lt;= RESP_SLVERR;
+                    end else if (merged_data[1] &amp;&amp; !core_ready) begin
+                        S_AXI_BRESP &lt;= RESP_SLVERR; // Busy one-shot rejected.
+                    end else begin
+                        auto_en &lt;= merged_data[0];
+                        warn_en &lt;= merged_data[2];
+                        kick &lt;= merged_data[1];
+                    end
+                end
+                6'h10: begin
+                    merged_data = {16'd0,warn_cm};
+                    for (j=0;j&lt;4;j=j+1)
+                        if (wstrb_hold[j])
+                            merged_data[j*8 +: 8] = wdata_hold[j*8 +: 8];
+                    if (merged_data &gt;= 32'd1 &amp;&amp; merged_data &lt;= 32'd400)
+                        warn_cm &lt;= merged_data[15:0];
+                    else S_AXI_BRESP &lt;= RESP_SLVERR;
+                end
+                default: S_AXI_BRESP &lt;= RESP_SLVERR;
+                endcase
+            end
+        end
+    end
+
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            S_AXI_RVALID &lt;= 1'b0;
+            S_AXI_RDATA &lt;= 32'd0;
+            S_AXI_RRESP &lt;= RESP_OKAY;
+        end else begin
+            if (S_AXI_RVALID &amp;&amp; S_AXI_RREADY) S_AXI_RVALID &lt;= 1'b0;
+            if (S_AXI_ARVALID &amp;&amp; S_AXI_ARREADY) begin
+                S_AXI_RVALID &lt;= 1'b1;
+                S_AXI_RRESP &lt;= RESP_OKAY;
+                case (S_AXI_ARADDR)
+                6'h00: S_AXI_RDATA &lt;= {29'd0,warn_en,1'b0,auto_en};
+                6'h04: S_AXI_RDATA &lt;= status_word;
+                6'h08: S_AXI_RDATA &lt;= {16'd0,core_dist};
+                6'h0C: S_AXI_RDATA &lt;= core_echo_us;
+                6'h10: S_AXI_RDATA &lt;= {16'd0,warn_cm};
+                6'h14: S_AXI_RDATA &lt;= seq_count;
+                6'h18: S_AXI_RDATA &lt;= 32'h00060001;
+                6'h1C: S_AXI_RDATA &lt;= CLK_HZ;
+                default: begin
+                    S_AXI_RDATA &lt;= 32'd0;
+                    S_AXI_RRESP &lt;= RESP_SLVERR;
+                end
+                endcase
+            end
+        end
+    end
+endmodule</code></pre></div></div>
+</section>
+<section class="section" id="rfile2">
+<h2><span class="num">05</span>rtl/p2_06_axi_sonic_v1_0.v</h2>
+<div>RTL · 전체 코드</div><p><b>전체 코드:</b> <a href="#f-part02_1_ch06_rtl_p2_06_axi_sonic_v1_0_v">해당 Verilog 소스 열기</a>. 실제 Vivado 2024.2 Packager 생성 파일의 포트·파라미터와 대조 후 적용한다.</p><div><div class="codeblock" id="f-part02_1_ch06_rtl_p2_06_axi_sonic_v1_0_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-06 Vivado IP Packager external shell; 32-bit AXI4-Lite only.
+module p2_06_axi_sonic_v1_0 #(
+    parameter integer C_S00_AXI_DATA_WIDTH=32,
+    parameter integer C_S00_AXI_ADDR_WIDTH=6,
+    parameter integer CLK_HZ=100000000,
+    parameter integer TIMEOUT_US=38000,
+    parameter integer COOLDOWN_US=60000
+)(
+    input wire sonic_echo_i, output wire sonic_trig_o,
+    output wire sonic_alert_o, output wire sonic_unsafe_o,
+    input wire s00_axi_aclk, input wire s00_axi_aresetn,
+    input wire [C_S00_AXI_ADDR_WIDTH-1:0] s00_axi_awaddr,
+    input wire [2:0] s00_axi_awprot, input wire s00_axi_awvalid,
+    output wire s00_axi_awready,
+    input wire [C_S00_AXI_DATA_WIDTH-1:0] s00_axi_wdata,
+    input wire [(C_S00_AXI_DATA_WIDTH/8)-1:0] s00_axi_wstrb,
+    input wire s00_axi_wvalid, output wire s00_axi_wready,
+    output wire [1:0] s00_axi_bresp, output wire s00_axi_bvalid,
+    input wire s00_axi_bready,
+    input wire [C_S00_AXI_ADDR_WIDTH-1:0] s00_axi_araddr,
+    input wire [2:0] s00_axi_arprot, input wire s00_axi_arvalid,
+    output wire s00_axi_arready,
+    output wire [C_S00_AXI_DATA_WIDTH-1:0] s00_axi_rdata,
+    output wire [1:0] s00_axi_rresp, output wire s00_axi_rvalid,
+    input wire s00_axi_rready
+);
+    p2_06_axi_sonic_v1_0_S00_AXI #(
+        .C_S_AXI_DATA_WIDTH(C_S00_AXI_DATA_WIDTH),
+        .C_S_AXI_ADDR_WIDTH(C_S00_AXI_ADDR_WIDTH),
+        .CLK_HZ(CLK_HZ),.TIMEOUT_US(TIMEOUT_US),
+        .COOLDOWN_US(COOLDOWN_US)
+    ) u_axi (
+        .S_AXI_ACLK(s00_axi_aclk),.S_AXI_ARESETN(s00_axi_aresetn),
+        .S_AXI_AWADDR(s00_axi_awaddr),.S_AXI_AWPROT(s00_axi_awprot),
+        .S_AXI_AWVALID(s00_axi_awvalid),.S_AXI_AWREADY(s00_axi_awready),
+        .S_AXI_WDATA(s00_axi_wdata),.S_AXI_WSTRB(s00_axi_wstrb),
+        .S_AXI_WVALID(s00_axi_wvalid),.S_AXI_WREADY(s00_axi_wready),
+        .S_AXI_BRESP(s00_axi_bresp),.S_AXI_BVALID(s00_axi_bvalid),
+        .S_AXI_BREADY(s00_axi_bready),
+        .S_AXI_ARADDR(s00_axi_araddr),.S_AXI_ARPROT(s00_axi_arprot),
+        .S_AXI_ARVALID(s00_axi_arvalid),.S_AXI_ARREADY(s00_axi_arready),
+        .S_AXI_RDATA(s00_axi_rdata),.S_AXI_RRESP(s00_axi_rresp),
+        .S_AXI_RVALID(s00_axi_rvalid),.S_AXI_RREADY(s00_axi_rready),
+        .sonic_echo_i(sonic_echo_i),.sonic_trig_o(sonic_trig_o),
+        .sonic_alert_o(sonic_alert_o),.sonic_unsafe_o(sonic_unsafe_o)
+    );
+endmodule</code></pre></div></div>
+</section>
+<section class="section" id="rfile3">
+<h2><span class="num">06</span>rtl/basys3_soc11_top_p2_06.v</h2>
+<div>RTL · 전체 코드</div><p><b>전체 코드:</b> <a href="#f-part02_1_ch06_rtl_basys3_soc11_top_p2_06_v">해당 Verilog 소스 열기</a>. 실제 Vivado 2024.2 Packager 생성 파일의 포트·파라미터와 대조 후 적용한다.</p><div><div class="codeblock" id="f-part02_1_ch06_rtl_basys3_soc11_top_p2_06_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>// P2-06 USER TOP: Shell/Wrapper ONLY. No always/FSM/policy expressions.
+// (유지) LED0 P2-01; LED1 P2-05 AUTO/PWM controller;
+// (변경) LED2 P2-06 sonic_alert, LED3~15 old GPIO.
+// WARNING: compare actual generated BD Wrapper port names before applying!
+module basys3_soc11_top (
+    input wire clk, input wire btnC,
+    input wire btnU, input wire btnD, input wire btnL, input wire btnR,
+    input wire cds_digital, // JA1, J1 (P2-05)
+    output wire sonic_trig, // JA2, L2; see level-shifting note
+    input wire sonic_echo,  // JA3, J2; external 5V-&gt;3.3V conversion required
+    input wire [15:0] sw, output wire [15:0] led,
+    input wire RsRx, output wire RsTx,
+    output wire [6:0] seg, output wire [3:0] an, output wire dp
+);
+    wire [15:0] gpio_led;
+    wire p2_led0;
+    wire pwm_led1;
+    wire auto_enable, cds_dark, cds_valid;
+    wire light_led1;
+    wire sonic_alert, sonic_unsafe;
+    auto_light_controller u_light_controller (
+        .pwm_led_i(pwm_led1),.auto_enable_i(auto_enable),
+        .sensor_dark_i(cds_dark),.sensor_valid_i(cds_valid),
+        .led1_o(light_led1)
+    );
+    // (변경) Pure board-bit wiring; LED2 has exactly one source.
+    assign led = {gpio_led[15:3], sonic_alert, light_led1, p2_led0};
+    soc11_integration_wrapper u_soc11 (
+        .clk(clk),.btnC(btnC),
+        .btnU(btnU),.btnD(btnD),.btnL(btnL),.btnR(btnR),
+        .sw_tri_i(sw),.led_tri_o(gpio_led),
+        .UART_0_rxd(RsRx),.UART_0_txd(RsTx),
+        .p2_led_o(p2_led0),.pwm_led1(pwm_led1),
+        .fnd_seg(seg),.fnd_an(an),.fnd_dp(dp),
+        .cds_digital(cds_digital),
+        .cds_dark(cds_dark),.cds_valid(cds_valid),
+        .cds_auto_enable(auto_enable),
+        .sonic_trig(sonic_trig),.sonic_echo(sonic_echo),
+        .sonic_alert(sonic_alert),.sonic_unsafe(sonic_unsafe)
+    );
+endmodule</code></pre></div></div>
+</section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

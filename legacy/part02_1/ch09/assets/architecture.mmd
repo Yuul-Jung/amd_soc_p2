@@ -1,0 +1,9 @@
+flowchart LR
+ PC["PC UART 문자열"] --> CPU["MicroBlaze V · main_p2_09.c"]
+ CPU --> MODE["p2_09_mode_logic.c"]
+ CPU --> IRQ["setup_integrated_interrupts()"]
+ IRQ --> TIMER["timer_callback() · LED15"]
+ IRQ --> BTN["btn_irq_handler() · 4방향 버튼"]
+ CPU --> GPIO["기존 AXI GPIO · LED14/15"]
+ CPU --> IPS["기존 AXI IP 01~08"]
+ IPS --> IO["LED0~2 · FND · CdS · SONIC · MOTOR · XADC"]

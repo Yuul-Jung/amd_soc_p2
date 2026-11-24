@@ -1,0 +1,49 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>제2부 10장 · 사용자 AXI IP 라이브러리 기술 사양서</title><style>*{box-sizing:border-box}body{margin:0;background:#f3f5f8;font:15px/1.7 system-ui,"Noto Sans KR",sans-serif;color:#25364a}main{max-width:1020px;background:white;margin:30px auto;padding:42px 50px}h1{font-size:28px}h2{font-size:22px;border-bottom:1px solid #d8e2eb;padding-bottom:9px;margin:34px 0 15px}h3{font-size:18px;margin-top:24px}h4{font-size:16px;margin-top:20px}table{border-collapse:collapse;width:100%;font-size:13.7px}th,td{border:1px solid #dbe3ec;padding:9px;vertical-align:top;text-align:left}th{background:#edf3f8}.tablewrap{overflow:auto}pre{background:#f3f6f9;border:1px solid #dfe6ed;overflow:auto;padding:15px;font:13px/1.55 ui-monospace,monospace}code{font-family:ui-monospace,monospace}p code,td code,li code{background:#edf1f6;padding:2px 4px}li{margin:8px 0}a{color:#345e87}nav{font-size:13px;color:#586f83}@media(max-width:700px){main{padding:18px;margin:0}}</style></head><body><main><nav><a href="index.html">제2부 목차</a> · <a href="P2_10_Guide.html">10장 실습안내서</a></nav><h2>제2부 10장 — 사용자 AXI IP 라이브러리 사양서</h2>
+<p>버전: 초안 0.1 · 기준: 제2부 01~09장 소스 · 대상 Vivado/Vitis: 2024.2</p>
+<h3>1. 목적과 적용 범위</h3>
+<p>Basys3 + MicroBlaze V SoC 교육과정의 사용자 작성 RTL/AXI IP를 보드와 C 애플리케이션에서 분리해 재사용 가능한 패키지로 관리합니다. Vivado IP Packager가 생성하는 실제 <code>component.xml</code>은 해당 IP의 실제 포트·파일·버스 인터페이스를 확인하여 배포합니다.</p>
+<div class="tablewrap"><table><thead><tr><th>출처</th><th>IP/모듈</th><th>재사용 단위</th></tr></thead><tbody><tr><td>P2-01</td><td><code>p2_01_axi_led</code></td><td>AXI4-Lite LED0 제어 예제 IP (Vivado Wizard 생성 소스 기반)</td></tr><tr><td>P2-02</td><td><code>p2_02_axi_fnd_v1_0</code>, <code>fnd_scan_controller</code></td><td>4자리 BCD FND 표시 IP</td></tr><tr><td>P2-03</td><td><code>p2_03_axi_buttons_v1_0</code>, <code>button_event_core</code></td><td>버튼 Short/Long 이벤트+IRQ IP</td></tr><tr><td>P2-04</td><td><code>p2_04_axi_pwm_v1_0</code>, <code>pwm_core</code></td><td>프로그래머블 PWM IP</td></tr><tr><td>P2-05</td><td><code>p2_05_axi_cds_v1_0</code>, <code>cds_digital_core</code>, <code>auto_light_controller</code></td><td>디지털 조도 검출 및 자동 게이트</td></tr><tr><td>P2-06</td><td><code>p2_06_axi_sonic_v1_0</code>, <code>hc_sr04_core</code></td><td>초음파 거리 측정 IP</td></tr><tr><td>P2-07</td><td><code>p2_07_axi_motor_v1_0</code>, <code>motor_controller</code></td><td>모터 명령/상태 및 안전 정지 IP</td></tr><tr><td>P2-08</td><td><code>xadc_wiz_0</code> (AMD 제공 IP)</td><td><strong>자체 IP가 아닌 외부 의존성</strong>. AMD 생성물 재배포 조건을 별도로 확인</td></tr><tr><td>P2-09</td><td><code>p2_09_mode_logic</code> (소프트웨어)</td><td>IP가 아닌 애플리케이션·SW 예제</td></tr></tbody></table></div>
+<h3>2. 공통 AXI4-Lite 버스 계약</h3>
+<ul><li>슬레이브 인터페이스: 32-bit AXI4-Lite, 단일 클록 도메인, Active-Low <code>ARESETN</code>.</li><li>AXI AW(쓰기 주소)와 W(쓰기 데이터)는 독립 핸드셰이크합니다. B 응답 대기 중에는 두 번째 쓰기 거래를 수락하지 않습니다.</li><li>읽기 RDATA/RRESP는 RVALID 동안 RREADY가 수락할 때까지 유지합니다.</li><li>정렬되지 않은 주소·미정의 주소의 반응은 <strong>개별 RTL 규약을 확인해 지정</strong>합니다.</li><li><code>WSTRB</code>에 의한 바이트 쓰기 범위 및 읽기 전용 레지스터에 대한 쓰기 동작은 IP별 표에 따릅니다.</li><li>실제 <code>BASEADDR</code>는 사용자의 SoC Address Editor에서 할당되므로 <strong>IP 사양서에 고정 주소를 적지 않습니다</strong>.</li><li>인터럽트 IP는 <code>IRQ</code> 극성, 마스크, Pending 해제 순서를 별도로 명세합니다.</li></ul>
+<h3>3. IP별 레지스터 계약 (RTL 기준)</h3>
+<h4>3.1 P2-01 AXI LED</h4>
+<div class="tablewrap"><table><thead><tr><th>Offset</th><th>이름</th><th>내용</th></tr></thead><tbody><tr><td><code>0x00</code></td><td>REG0</td><td><code>slv_reg0[0]</code>이 <code>led_o</code>로 출력. 0=OFF, 1=ON</td></tr></tbody></table></div>
+<p>기본 Vivado 4레지스터 Wizard 템플릿을 수정하는 교육용 IP이므로 REG1~3의 읽기·쓰기 계약은 실제 생성 및 수정된 RTL에서 확정합니다. 패키징 시 생성 템플릿을 동봉하고 포트 <code>led_o</code> 추가 여부를 재확인합니다.</p>
+<h4>3.2 P2-02 AXI FND</h4>
+<div class="tablewrap"><table><thead><tr><th>Offset</th><th>이름</th><th>접근 및 의미</th></tr></thead><tbody><tr><td><code>0x00</code></td><td>DISP_VALUE / REG0</td><td>RW · 하위 16비트 packed BCD, 왼쪽부터 4자리; Reset 0</td></tr><tr><td><code>0x04</code></td><td>DISP_CTRL / REG1</td><td>RW · bit0 표시 허용; Reset 0</td></tr><tr><td><code>0x08</code></td><td>REG2</td><td>예약 · 읽기 0, 쓰기 SLVERR</td></tr><tr><td><code>0x0C</code></td><td>REG3</td><td>예약 · 읽기 0, 쓰기 SLVERR</td></tr></tbody></table></div>
+<p><code>fnd_scan_controller</code>: <code>display_bcd[15:0]</code>, <code>display_enable</code>, <code>seg[6:0]</code>, <code>an[3:0]</code>, <code>dp</code>. 출력은 Active-Low이며 <code>an[0]</code>이 가장 오른쪽 자리입니다. <code>TICKS_PER_DIGIT</code>는 실제 클록에 따라 조절합니다.</p>
+<h4>3.3 P2-03 AXI Buttons</h4>
+<div class="tablewrap"><table><thead><tr><th>Offset</th><th>이름</th><th>접근 및 의미</th></tr></thead><tbody><tr><td><code>0x00</code></td><td>PENDING</td><td>R/W1C · [7:0] 이벤트 비트, 이벤트 SET 우선</td></tr><tr><td><code>0x04</code></td><td>ENABLE</td><td>RW · [7:0] IRQ 마스크, Reset 0</td></tr><tr><td><code>0x08</code></td><td>PRESSED</td><td>RO · [3:0] 안정화 버튼 상태</td></tr><tr><td><code>0x0C</code></td><td>ID</td><td>RO · <code>0x00030001</code></td></tr><tr><td><code>0x10</code></td><td>COALESCED</td><td>R/W1C · 이미 Pending인 이벤트의 중복 발생 비트</td></tr></tbody></table></div>
+<p><code>irq</code>는 레벨 신호이며 <code>PENDING &amp; ENABLE</code>이 0이 될 때 해제됩니다. W1C(1을 기록하면 지움)와 동시에 새 이벤트가 발생하면 이벤트 SET이 우선입니다. 5초 Long 판정은 <code>button_event_core</code>의 클록 파라미터에 의존합니다.</p>
+<h4>3.4 P2-04 AXI PWM</h4>
+<div class="tablewrap"><table><thead><tr><th>Offset</th><th>이름</th><th>접근 및 의미</th></tr></thead><tbody><tr><td><code>0x00</code></td><td>PERIOD_CFG</td><td>RW · 요청 주기 카운트</td></tr><tr><td><code>0x04</code></td><td>DUTY_CFG</td><td>RW · 요청 HIGH 카운트</td></tr><tr><td><code>0x08</code></td><td>CONTROL_CFG</td><td>RW · bit0 Enable, bit1 Polarity</td></tr><tr><td><code>0x0C</code></td><td>APPLY</td><td>쓰기 명령 · 새 설정 적용 요청; 읽기 0</td></tr><tr><td><code>0x10</code></td><td>STATUS</td><td>RO · bit0 Pending, bit8 Active Enable, bit9 Active Polarity</td></tr><tr><td><code>0x14</code></td><td>ACTIVE_PERIOD</td><td>RO · 현재 적용된 주기</td></tr><tr><td><code>0x18</code></td><td>ACTIVE_DUTY</td><td>RO · 현재 적용된 듀티</td></tr><tr><td><code>0x1C</code></td><td>ID</td><td>RO · 구현 RTL 상수와 대조</td></tr></tbody></table></div>
+<p>설정값 적용은 <code>pwm_core</code>에서 주기 경계에 갱신하여 도중의 펄스 왜곡을 막습니다.</p>
+<h4>3.5 P2-05 AXI CdS</h4>
+<div class="tablewrap"><table><thead><tr><th>Offset</th><th>이름</th><th>접근 및 의미</th></tr></thead><tbody><tr><td><code>0x00</code></td><td>CONTROL</td><td>RW · bit0 AUTO_ENABLE, bit1 DARK_WHEN_LOW (기본 1)</td></tr><tr><td><code>0x04</code></td><td>STATUS</td><td>RO · 센서 RAW_SYNC, DARK, VALID, AUTO_GATE 상태</td></tr><tr><td><code>0x08</code></td><td>ID</td><td>RO · <code>0x00050001</code></td></tr><tr><td><code>0x0C</code></td><td>FILTER_CYCLES</td><td>RO · 안정화 필터 클록 수</td></tr></tbody></table></div>
+<p>외부 센서 DO의 HIGH 전압이 FPGA I/O 범위를 초과하지 않도록 모듈 전원과 출력 극성을 확인합니다. <code>cds_digital_core</code>의 센서 입력은 별도 동기화 경로를 거칩니다.</p>
+<h4>3.6 P2-06 AXI HC-SR04</h4>
+<div class="tablewrap"><table><thead><tr><th>Offset</th><th>이름</th><th>접근 및 의미</th></tr></thead><tbody><tr><td><code>0x00</code></td><td>CONTROL</td><td>RW · bit0 AUTO, bit1 START W1P(쓰기 1 펄스), bit2 WARN_EN (Reset 1)</td></tr><tr><td><code>0x04</code></td><td>STATUS</td><td>RO · BUSY, VALID, TIMEOUT, RANGE_ERROR, WARN_LED, UNSAFE, AUTO, WARN_EN, READY</td></tr><tr><td><code>0x08</code></td><td>DIST_CM</td><td>RO · 측정 거리(cm)</td></tr><tr><td><code>0x0C</code></td><td>ECHO_US</td><td>RO · ECHO High 시간(µs)</td></tr><tr><td><code>0x10</code></td><td>WARN_CM</td><td>RW · 경고 임계값 1~400</td></tr><tr><td><code>0x14</code></td><td>SEQUENCE</td><td>RO · 측정 횟수</td></tr><tr><td><code>0x18</code></td><td>ID</td><td>RO · <code>0x00060001</code></td></tr><tr><td><code>0x1C</code></td><td>CLK_HZ</td><td>RO · 코어 클록 주파수</td></tr></tbody></table></div>
+<p>HC-SR04 ECHO는 5V이므로 3.3V FPGA 입력 전에 전압 변환이 필요합니다. 거리 불능·타임아웃 때의 UNSAFE 정책은 모터 연계 전에 확인합니다.</p>
+<h4>3.7 P2-07 AXI Motor</h4>
+<div class="tablewrap"><table><thead><tr><th>Offset</th><th>이름</th><th>접근 및 의미</th></tr></thead><tbody><tr><td><code>0x00</code></td><td>CMD</td><td>RW · 0 STOP, 1 FWD, 2 REV</td></tr><tr><td><code>0x04</code></td><td>STATUS</td><td>RO · 제어기 안전/차단/동작 상태</td></tr><tr><td><code>0x08</code></td><td>ID</td><td>RO · <code>0x00070001</code></td></tr><tr><td><code>0x0C</code></td><td>DEADTIME_CYCLES</td><td>RO · 방향 전환 대기 클록 수</td></tr><tr><td><code>0x10</code></td><td>FRESH_CYCLES</td><td>RO · 초음파 정보 유효시간 판정 클록 수</td></tr><tr><td><code>0x14</code></td><td>CLK_HZ</td><td>RO · 코어 클록 주파수</td></tr></tbody></table></div>
+<p>모터 제어의 안전 조건은 CPU가 아니라 <code>motor_controller</code> RTL에 구현합니다. FPGA 핀을 모터 전원과 직접 연결해서는 안 됩니다.</p>
+<h3>4. 배포물의 필수 구성</h3>
+<pre><code>ip-library/
+  README.md
+  LICENSE                 ← 저작권·배포 조건 확정 후
+  ip/
+    p2_02_axi_fnd/
+      component.xml       ← Vivado IP Packager 출력
+      hdl/                ← 실제 패키징 소스
+      ...
+  docs/
+    P2_10_IP_LIBRARY_SPEC.md
+  examples/
+    basys3_microblaze_v/  ← 외부 설치 예시
+  tests/
+    rtl/                  ← 자동 판정 테스트
+</code></pre>
+<p><code>component.xml</code>과 <code>hdl/</code>은 Vivado IP Packager 출력물을 사용합니다. 사용자가 개발한 RTL과 AMD 제공 IP 생성물을 혼합해 재배포하지 않습니다.</p>
+<h3>5. 버전과 공개 범위</h3>
+<ol><li>IP의 모듈 포트, 데이터 폭, 리셋·클록, <code>WSTRB</code>, 잘못된 주소, IRQ 동작을 명세합니다.</li><li>기존 누적 SoC 밖의 <strong>새 최소 프로젝트</strong>에서 IP를 단독 인스턴스화합니다.</li><li>라이브러리 릴리스에는 코드, 문서, 라이선스와 재사용 예제를 포함합니다.</li><li>공개 전 로컬 경로, 개인 아이디, 토큰, 계정 정보와 GUI 스크린샷의 내부 정보를 제거합니다.</li></ol>
+<p><strong>공식 참조:</strong> AMD UG1118 (Vivado IP Packaging) 및 AXI4-Lite 관련 AMD 문서, Digilent Basys3 Reference Manual, AMD UG480 (XADC).</p></main></body></html>

@@ -1,0 +1,15 @@
+digraph Command {
+  graph[rankdir=LR,bgcolor="white",pad="0.3",ranksep="0.75",nodesep="0.35",splines=polyline];
+  node[fontname="DejaVu Sans",fontsize=11,shape=box,style="rounded,filled",fillcolor="#f5f7ff",color="#a4aec4",margin="0.15,0.13"];
+  edge[fontname="DejaVu Sans",fontsize=10,color="#596679",arrowsize=0.7];
+  rx[label="poll_uart()\nhandle_line()"];
+  cmd[shape=diamond,label="adc_parse_command()",fillcolor="#f0e9ff"];
+  read[label="ADC READ\nadc_print_reading()"];
+  pwm[label="ADC PWM\nadc_percent_from_raw()"];
+  busy[shape=diamond,label="pwm_queue_percent()"];
+  queue[label="PWM queued\nLED1",fillcolor="#e9f7ed"];
+  retry[label="BUSY retry",fillcolor="#fff3e4"];
+  err[label="ERROR",fillcolor="#ffe9e9"];
+  other[label="Legacy commands"];
+  rx->cmd;cmd->read[label="READ"];cmd->pwm[label="PWM"];cmd->err[label="bad ADC"];cmd->other[label="other"];pwm->busy;busy->queue[label="accepted"];busy->retry[label="pending"];
+}

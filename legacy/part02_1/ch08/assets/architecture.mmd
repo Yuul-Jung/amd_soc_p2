@@ -1,0 +1,10 @@
+flowchart LR
+  PC["PC UART 터미널"] --> CPU["MicroBlaze V / main_p2_08.c"]
+  POT["0~1V 차동 아날로그 입력"] --> J["JXADC1/JXADC7 · VAUX6"]
+  J --> X["xadc_wiz_0 · AXI4-Lite"]
+  X --> CPU
+  CPU -->|"ADC PWM · 1회 설정"| PWM["p2_04_axi_pwm · pwm_queue_percent()"]
+  PWM --> GATE["auto_light_controller · CdS 게이트"]
+  GATE --> LED["Basys3 LED1"]
+  CPU -->|"ADC READ"| PC
+  SONIC["HC-SR04"] --> MOTOR["motor_controller · 독립 보호"]

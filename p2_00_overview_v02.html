@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 00장 · 제2부 SoC 전체 구조">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 00장 · 제2부 SoC 전체 구조 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-00">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 00장 <span class="vbadge">v02</span></p>
+    <h1>제2부 00장 · 제2부 SoC 전체 구조</h1>
+    <p></p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+    <section class="section" id="overview">
+      <h2><span class="num">00</span>이 장의 목표</h2>
+      <p>Basys3 + MicroBlaze V SoC · 제2부 01~10장 통합 안내서</p>
+    </section>
+    <section class="section" id="s01">
+      <h2><span class="num">01</span>과제 개요</h2>
+<p>기본 MicroBlaze V SoC에 사용자 AXI4-Lite(에이엑스아이 포 라이트, 경량 메모리 맵 제어 버스) IP를 단계적으로 추가한다. 01~07장 사용자 IP 7종, 08장 AMD XADC, 09장 UART·IRQ 통합, 10장 종합 제어를 다룬다.</p>
+    </section>
+    <section class="section" id="s02">
+      <h2><span class="num">02</span>전체 SoC 시스템 구조</h2>
+<p>CPU는 AXI Interconnect를 통해 각 IP의 레지스터에 접근하며, 기능별 RTL Core는 독립적으로 동작한다.</p><figure class="fig"><svg aria-label="MicroBlaze V CPU, AXI Interconnect, 사용자 IP 7종과 AMD 제공 IP 분류도" id="p2-fig-p2-00-0" role="img" viewbox="0 0 1120 920" xmlns="http://www.w3.org/2000/svg"><defs><marker id="arr" markerheight="8" markerwidth="8" orient="auto-start-reverse" refx="7" refy="4"><path d="M1 1 L7 4 L1 7" fill="none" stroke="#64748b" stroke-width="1.3"></path></marker></defs><style>#p2-fig-p2-00-0 text{font-family:'Noto Sans KR',Arial,sans-serif;fill:#243443}#p2-fig-p2-00-0 .big{font-size:26px;font-weight:700}#p2-fig-p2-00-0 .head{font-size:21px;font-weight:700}#p2-fig-p2-00-0 .item{font-size:17px;font-weight:600}#p2-fig-p2-00-0 .minor{font-size:14px;fill:#526579}#p2-fig-p2-00-0 .line{fill:none;stroke:#64748b;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}</style><rect fill="#fff" height="894" rx="24" stroke="#dce3e8" stroke-width="1.5" width="1096" x="12" y="12"></rect><rect fill="#e7f1fa" height="72" rx="14" width="950" x="85" y="36"></rect><text class="big" text-anchor="middle" x="560" y="81">MicroBlaze V CPU</text><path class="line" d="M560 112 V158" marker-end="url(#arr)" marker-start="url(#arr)"></path><rect fill="#f0f5f9" height="70" rx="14" width="950" x="85" y="162"></rect><text class="big" text-anchor="middle" x="560" y="205">AXI Interconnect</text><path class="line" d="M560 232 V256 H278 V290" marker-end="url(#arr)"></path><path class="line" d="M560 256 H842 V290" marker-end="url(#arr)"></path><rect fill="#fbfcfd" height="575" rx="18" stroke="#dce3e8" stroke-width="1.5" width="480" x="38" y="300"></rect><rect fill="#fbfcfd" height="575" rx="18" stroke="#dce3e8" stroke-width="1.5" width="480" x="602" y="300"></rect><text class="head" text-anchor="middle" x="278" y="344">사용자 AXI4-Lite IP</text><text fill="#667582" text-anchor="middle" x="278" y="369">01~07장 · 직접 제작</text><text class="head" text-anchor="middle" x="842" y="344">AMD 제공 IP</text><text fill="#667582" text-anchor="middle" x="842" y="369">기본 SoC 재사용 + 08장 XADC</text><rect fill="#e7f1fa" height="57" rx="14" width="430" x="63" y="386"></rect><text class="item" text-anchor="middle" x="168" y="421">01 LED IP</text><text class="minor" text-anchor="middle" x="395" y="421">LED0</text><rect fill="#e7f1fa" height="57" rx="14" width="430" x="63" y="453"></rect><text class="item" text-anchor="middle" x="168" y="488">02 FND IP</text><text class="minor" text-anchor="middle" x="395" y="488">4자리 FND</text><rect fill="#e7f1fa" height="57" rx="14" width="430" x="63" y="520"></rect><text class="item" text-anchor="middle" x="168" y="555">03 Button IP</text><text class="minor" text-anchor="middle" x="395" y="555">방향 버튼 · IRQ</text><rect fill="#e7f1fa" height="57" rx="14" width="430" x="63" y="587"></rect><text class="item" text-anchor="middle" x="168" y="622">04 PWM IP</text><text class="minor" text-anchor="middle" x="395" y="622">LED1 PWM</text><rect fill="#e7f1fa" height="57" rx="14" width="430" x="63" y="654"></rect><text class="item" text-anchor="middle" x="168" y="689">05 CdS IP</text><text class="minor" text-anchor="middle" x="395" y="689">디지털 CdS</text><rect fill="#e7f1fa" height="57" rx="14" width="430" x="63" y="721"></rect><text class="item" text-anchor="middle" x="168" y="756">06 Sonic IP</text><text class="minor" text-anchor="middle" x="395" y="756">HC-SR04</text><rect fill="#e7f1fa" height="57" rx="14" width="430" x="63" y="788"></rect><text class="item" text-anchor="middle" x="168" y="823">07 Motor IP</text><text class="minor" text-anchor="middle" x="395" y="823">L298N</text><rect fill="#e9eff5" height="69" rx="14" width="430" x="627" y="386"></rect><text class="item" text-anchor="middle" x="842" y="416">AXI GPIO</text><text class="minor" text-anchor="middle" x="842" y="439">스위치 · LED</text><rect fill="#e9eff5" height="69" rx="14" width="430" x="627" y="474"></rect><text class="item" text-anchor="middle" x="842" y="504">AXI UART Lite</text><text class="minor" text-anchor="middle" x="842" y="527">PC UART 통신</text><rect fill="#e9eff5" height="69" rx="14" width="430" x="627" y="562"></rect><text class="item" text-anchor="middle" x="842" y="592">AXI Timer</text><text class="minor" text-anchor="middle" x="842" y="615">타이머</text><rect fill="#e9eff5" height="69" rx="14" width="430" x="627" y="650"></rect><text class="item" text-anchor="middle" x="842" y="680">AXI INTC</text><text class="minor" text-anchor="middle" x="842" y="703">인터럽트 제어</text><rect fill="#e2f1e9" height="69" rx="14" width="430" x="627" y="738"></rect><text class="item" text-anchor="middle" x="842" y="768">08 XADC IP</text><text class="minor" text-anchor="middle" x="842" y="791">VAUX6 아날로그 입력</text><text class="minor" text-anchor="middle" x="842" y="850">XADC 실제 버스 연결은 BD 설정 기준</text></svg></figure><p>그림 2-1. 사용자 AXI IP와 AMD 제공 IP의 논리적 분류. 실제 Vivado Block Design 배선과 구분한다.</p>
+    </section>
+    <section class="section" id="s03">
+      <h2><span class="num">03</span>사용자 AXI IP 7종</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>장</th><th>사용자 IP</th><th>주요 기능</th></tr></thead><tbody><tr><td>01</td><td>LED IP</td><td>LED0</td></tr><tr><td>02</td><td>FND IP</td><td>4자리 FND</td></tr><tr><td>03</td><td>Button IP</td><td>방향 버튼 · IRQ</td></tr><tr><td>04</td><td>PWM IP</td><td>LED1 PWM</td></tr><tr><td>05</td><td>CdS IP</td><td>디지털 CdS</td></tr><tr><td>06</td><td>Sonic IP</td><td>HC-SR04</td></tr><tr><td>07</td><td>Motor IP</td><td>L298N</td></tr></tbody></table></div>
+    </section>
+    <section class="section" id="s04">
+      <h2><span class="num">04</span>IP 내부 구조</h2>
+<p><strong>MicroBlaze V CPU ↔ AXI4-Lite 레지스터 ↔ RTL Core ↔ 주변장치</strong>. 실제 Register Map은 장별 RTL 기준이다.</p>
+    </section>
+    <section class="section" id="s05">
+      <h2><span class="num">05</span>제2부 01~10장 테크트리</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>장</th><th>기능</th><th>대표 명령·입력</th></tr></thead><tbody><tr><td>01</td><td>LED</td><td>LED ON / LED OFF / STATUS</td></tr><tr><td>02</td><td>FND</td><td>DISP dddd / DISP OFF</td></tr><tr><td>03</td><td>Button</td><td>방향 버튼·5초 Long</td></tr><tr><td>04</td><td>PWM</td><td>PWM 0..100</td></tr><tr><td>05</td><td>CdS</td><td>AUTO ON/OFF · CDS READ/POL</td></tr><tr><td>06</td><td>Sonic</td><td>SONIC ON/OFF/READ/SHOT · WARN</td></tr><tr><td>07</td><td>Motor</td><td>MOTOR FWD/REV/STOP/STATUS</td></tr><tr><td>08</td><td>XADC</td><td>ADC READ / ADC PWM</td></tr><tr><td>09</td><td>통합</td><td>MODE AUTO/MANUAL/STATUS · IRQ STATUS</td></tr><tr><td>10</td><td>종합</td><td>RUN START/STOP/RESET/STATUS</td></tr></tbody></table></div>
+    </section>
+    <section class="section" id="s06">
+      <h2><span class="num">06</span>Basys3 입출력 배정</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>자원</th><th>배정·주의사항</th></tr></thead><tbody><tr><td>LED0</td><td>01 사용자 LED IP</td></tr><tr><td>LED1</td><td>04 PWM / 05 CdS / 08 XADC 연계</td></tr><tr><td>LED2</td><td>06 초음파 경고</td></tr><tr><td>LED3~13</td><td>기존 AXI GPIO</td></tr><tr><td>LED14/15</td><td>09~10 UART 활동 / Timer 하트비트</td></tr><tr><td>BTNC</td><td>시스템 Reset</td></tr><tr><td>BTNU/D/L/R</td><td>방향 버튼 이벤트</td></tr><tr><td>HC-SR04 ECHO</td><td>5V→3.3V 레벨 변환 필수</td></tr><tr><td>L298N</td><td>외부 모터 전원·공통 GND</td></tr><tr><td>VAUX6</td><td>XADC 입력 범위 확인</td></tr></tbody></table></div>
+    </section>
+    <section class="section" id="s07">
+      <h2><span class="num">07</span>Vivado·Vitis 공통 절차</h2>
+<ol><li>직전 장의 실제 성공 프로젝트 독립 복제</li><li>사용자 IP 생성·RTL Core 연결</li><li>IP Package 후 Catalog 등록</li><li>Block Design에 AXI·Clock·Reset·IRQ 연결</li><li>Address Editor 및 Validate Design 확인</li><li>Wrapper·Top·XDC 연결, 합성·구현·Bitstream·XSA 생성</li><li>Vitis에서 실제 주소 확인 및 C 프로그램 빌드</li><li>실물 보드 동작 확인</li></ol><p>Top Module은 보드 입출력·배선·인스턴스 연결만 담당한다.</p>
+    </section>
+    <section class="section" id="s08">
+      <h2><span class="num">08</span>CPU와 RTL의 역할</h2>
+<p>CPU는 명령 해석·설정·상태 관리, RTL은 정밀 타이밍·병렬 동작·하드웨어 보호를 담당한다.</p>
+    </section>
+    <section class="section" id="s09">
+      <h2><span class="num">09</span>최종 핵심 정리</h2>
+<p>제2부는 사용자 AXI IP 7종과 AMD 제공 IP를 결합하고 09~10장에서 누적 통합한다. 각 장은 직전 장의 기능을 유지하면서 새 기능을 누적한다.</p>
+    </section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

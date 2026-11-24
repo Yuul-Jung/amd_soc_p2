@@ -1,0 +1,18 @@
+digraph P205 {
+ graph [rankdir=LR, pad="0.25", nodesep="0.45", ranksep="0.55", bgcolor="transparent", fontname="DejaVu Sans", dpi=145, splines=ortho];
+ node [shape=box,style="rounded,filled",color="#bbbdd3",fillcolor="#f8f8fd",fontname="DejaVu Sans",fontsize=12,margin="0.15,0.12"];
+ edge [color="#686995",penwidth=1.5,arrowsize=0.65,fontname="DejaVu Sans",fontsize=10];
+ PC [label="PC terminal\nAUTO ON/OFF, PWM 50",fillcolor="#f8f1dd"];
+ CPU [label="MicroBlaze V\nUART command parser",fillcolor="#e6e6fa"];
+ CDSP [label="P2-05 AXI CdS IP\nCONTROL / STATUS",fillcolor="#dfeafa"];
+ FILTER [label="cds_digital_core\n2FF + 20ms filter",fillcolor="#e4f4f4"];
+ PWM [label="P2-04 pwm_core\nPWM duty 0..100%",fillcolor="#f4e6ff"];
+ GATE [label="auto_light_controller\nmanual / automatic",fillcolor="#e9f6e7"];
+ LED [label="Basys3 LED1\nE19",fillcolor="#fff3d9"];
+ CDS [label="CdS module DO\nPmod JA1 · J1",fillcolor="#fff3d9"];
+ PC -> CPU; CPU -> CDSP; CPU -> PWM;
+ CDS -> FILTER; CDSP -> FILTER [style=dashed, constraint=false];
+ FILTER -> GATE;
+ CDSP -> GATE [style=dotted, constraint=false];
+ PWM -> GATE; GATE -> LED;
+}

@@ -1,0 +1,324 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 10장 · 종합제어 C 프로그램 흐름도",
+ "title": "제2부 10장 · 종합제어 C 프로그램 흐름도",
+ "subtitle": "",
+ "width": 1368,
+ "height": 825,
+ "headings": {
+  "title": {
+   "x": 684.0,
+   "y": 44,
+   "w": 1288,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 684.0,
+   "y": 90,
+   "w": 1288,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "A",
+   "type": "rect",
+   "x": 135,
+   "y": 458,
+   "w": 150,
+   "h": 76,
+   "title": "poll_uart()",
+   "sub": "Enter로 명령 확정",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "B",
+   "type": "rect",
+   "x": 442,
+   "y": 458,
+   "w": 163,
+   "h": 76,
+   "title": "handle_line()",
+   "sub": "cap_handle_line()",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "C",
+   "type": "rect",
+   "x": 754,
+   "y": 458,
+   "w": 163,
+   "h": 76,
+   "title": "p2_10_parse()",
+   "sub": "RUN 명령 판별",
+   "fill": "#fff6de",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "START",
+   "type": "rect",
+   "x": 1132,
+   "y": 188,
+   "w": 286,
+   "h": 76,
+   "title": "RUN START",
+   "sub": "p2_10_start() · 조건 충족 시 FWD 요청",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "STOP",
+   "type": "rect",
+   "x": 1132,
+   "y": 323,
+   "w": 252,
+   "h": 76,
+   "title": "RUN STOP",
+   "sub": "p2_10_stop() · 모터 CMD=STOP",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "RESET",
+   "type": "rect",
+   "x": 1132,
+   "y": 458,
+   "w": 292,
+   "h": 76,
+   "title": "RUN RESET",
+   "sub": "p2_10_reset() · 정지 확인 후 latch 해제",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "STATUS",
+   "type": "rect",
+   "x": 1132,
+   "y": 586,
+   "w": 154,
+   "h": 76,
+   "title": "RUN STATUS",
+   "sub": "cap_run_status()",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "LEGACY",
+   "type": "rect",
+   "x": 1132,
+   "y": 707,
+   "w": 185,
+   "h": 76,
+   "title": "기존 01~09장 명령",
+   "sub": "MODE / ADC / PWM 등",
+   "fill": "#f5f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "A",
+   "to": "B",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "B",
+   "to": "C",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e3",
+   "from": "C",
+   "to": "START",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     870,
+     458
+    ],
+    [
+     870,
+     188
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "C",
+   "to": "STOP",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     870,
+     458
+    ],
+    [
+     870,
+     323
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "C",
+   "to": "RESET",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e6",
+   "from": "C",
+   "to": "STATUS",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     870,
+     458
+    ],
+    [
+     870,
+     586
+    ]
+   ]
+  },
+  {
+   "id": "e7",
+   "from": "C",
+   "to": "LEGACY",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     870,
+     458
+    ],
+    [
+     870,
+     707
+    ]
+   ]
+  }
+ ]
+}

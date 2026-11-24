@@ -1,0 +1,380 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 05장 · CdS 자동 조명 구조도",
+ "title": "제2부 05장 · CdS 자동 조명 구조도",
+ "subtitle": "",
+ "width": 2031,
+ "height": 589,
+ "headings": {
+  "title": {
+   "x": 1015.5,
+   "y": 44,
+   "w": 1951,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 1015.5,
+   "y": 90,
+   "w": 1951,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "PC",
+   "type": "rect",
+   "x": 158,
+   "y": 188,
+   "w": 195,
+   "h": 76,
+   "title": "PC terminal",
+   "sub": "AUTO ON/OFF, PWM 50",
+   "fill": "#f8f1dd",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "CPU",
+   "type": "rect",
+   "x": 503,
+   "y": 188,
+   "w": 196,
+   "h": 76,
+   "title": "MicroBlaze V",
+   "sub": "UART command parser",
+   "fill": "#e6e6fa",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "CDSP",
+   "type": "rect",
+   "x": 842,
+   "y": 355,
+   "w": 180,
+   "h": 76,
+   "title": "P2-05 AXI CdS IP",
+   "sub": "CONTROL / STATUS",
+   "fill": "#dfeafa",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "PWM",
+   "type": "rect",
+   "x": 842,
+   "y": 239,
+   "w": 183,
+   "h": 76,
+   "title": "P2-04 pwm_core",
+   "sub": "PWM duty 0..100%",
+   "fill": "#f4e6ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "FILTER",
+   "type": "rect",
+   "x": 1174,
+   "y": 342,
+   "w": 181,
+   "h": 76,
+   "title": "cds_digital_core",
+   "sub": "2FF + 20ms filter",
+   "fill": "#e4f4f4",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "GATE",
+   "type": "rect",
+   "x": 1528,
+   "y": 291,
+   "w": 226,
+   "h": 76,
+   "title": "auto_light_controller",
+   "sub": "manual / automatic",
+   "fill": "#e9f6e7",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "LED",
+   "type": "rect",
+   "x": 1866,
+   "y": 291,
+   "w": 150,
+   "h": 76,
+   "title": "Basys3 LED1",
+   "sub": "E19",
+   "fill": "#fff3d9",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "CDS",
+   "type": "rect",
+   "x": 842,
+   "y": 471,
+   "w": 173,
+   "h": 76,
+   "title": "CdS module DO",
+   "sub": "Pmod JA1 · J1",
+   "fill": "#fff3d9",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "PC",
+   "to": "CPU",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "CPU",
+   "to": "CDSP",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     635,
+     188
+    ],
+    [
+     635,
+     355
+    ]
+   ]
+  },
+  {
+   "id": "e3",
+   "from": "CPU",
+   "to": "PWM",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     635,
+     188
+    ],
+    [
+     635,
+     239
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "CDSP",
+   "to": "FILTER",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     968,
+     355
+    ],
+    [
+     968,
+     342
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "CDSP",
+   "to": "GATE",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     968,
+     355
+    ],
+    [
+     968,
+     291
+    ]
+   ]
+  },
+  {
+   "id": "e6",
+   "from": "FILTER",
+   "to": "GATE",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1299,
+     342
+    ],
+    [
+     1299,
+     291
+    ]
+   ]
+  },
+  {
+   "id": "e7",
+   "from": "PWM",
+   "to": "GATE",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1299,
+     239
+    ],
+    [
+     1299,
+     291
+    ]
+   ]
+  },
+  {
+   "id": "e8",
+   "from": "GATE",
+   "to": "LED",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e9",
+   "from": "CDS",
+   "to": "FILTER",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     968,
+     471
+    ],
+    [
+     968,
+     342
+    ]
+   ]
+  }
+ ]
+}

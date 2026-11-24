@@ -1,0 +1,318 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 04장 · AXI PWM C 프로그램 흐름도",
+ "title": "제2부 04장 · AXI PWM C 프로그램 흐름도",
+ "subtitle": "",
+ "width": 1751,
+ "height": 538,
+ "headings": {
+  "title": {
+   "x": 875.5,
+   "y": 44,
+   "w": 1671,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 875.5,
+   "y": 90,
+   "w": 1671,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "poll",
+   "type": "rect",
+   "x": 150,
+   "y": 277,
+   "w": 179,
+   "h": 76,
+   "title": "poll_uart()",
+   "sub": "Enter completes line",
+   "fill": "#edf1fa",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "dispatch",
+   "type": "rect",
+   "x": 493,
+   "y": 277,
+   "w": 208,
+   "h": 76,
+   "title": "handle_line()",
+   "sub": "pwm_parse_command()",
+   "fill": "#e7e0fa",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "valid",
+   "type": "diamond",
+   "x": 860,
+   "y": 277,
+   "w": 226,
+   "h": 92,
+   "title": "PWM valid?",
+   "sub": "",
+   "fill": "#fff4da",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "queue",
+   "type": "rect",
+   "x": 1242,
+   "y": 188,
+   "w": 238,
+   "h": 76,
+   "title": "pwm_queue_percent()",
+   "sub": "CFG writes + APPLY",
+   "fill": "#d9f0e5",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "busy",
+   "type": "rect",
+   "x": 1242,
+   "y": 304,
+   "w": 160,
+   "h": 76,
+   "title": "BUSY / ERROR",
+   "sub": "no update",
+   "fill": "#fce8e8",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "legacy",
+   "type": "rect",
+   "x": 1242,
+   "y": 420,
+   "w": 230,
+   "h": 76,
+   "title": "p2_parse_command()",
+   "sub": "LED / DISP / STATUS",
+   "fill": "#eaf2fd",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "reply",
+   "type": "rect",
+   "x": 1586,
+   "y": 277,
+   "w": 150,
+   "h": 76,
+   "title": "UART reply",
+   "sub": "main loop",
+   "fill": "#edf1fa",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "poll",
+   "to": "dispatch",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "dispatch",
+   "to": "valid",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e3",
+   "from": "valid",
+   "to": "queue",
+   "label": "PWM 0..100",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "top",
+   "tp": "left"
+  },
+  {
+   "id": "e4",
+   "from": "valid",
+   "to": "busy",
+   "label": "invalid or busy",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1007,
+     277
+    ],
+    [
+     1007,
+     304
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "valid",
+   "to": "legacy",
+   "label": "other command",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "left"
+  },
+  {
+   "id": "e6",
+   "from": "queue",
+   "to": "reply",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1395,
+     188
+    ],
+    [
+     1395,
+     277
+    ]
+   ]
+  },
+  {
+   "id": "e7",
+   "from": "busy",
+   "to": "reply",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1395,
+     304
+    ],
+    [
+     1395,
+     277
+    ]
+   ]
+  },
+  {
+   "id": "e8",
+   "from": "legacy",
+   "to": "reply",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1395,
+     420
+    ],
+    [
+     1395,
+     277
+    ]
+   ]
+  }
+ ]
+}

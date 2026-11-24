@@ -1,0 +1,22 @@
+digraph P205C {
+ graph [rankdir=LR, pad="0.22", nodesep="0.5", ranksep="0.65", bgcolor="transparent", fontname="DejaVu Sans", dpi=145];
+ node [shape=box,style="rounded,filled",fillcolor="#f4f4fb",color="#9999c1",fontname="DejaVu Sans",fontsize=11,margin="0.17,0.10"];
+ edge [color="#66668c",fontname="DejaVu Sans",fontsize=9,arrowsize=0.65];
+ IN [label="poll_uart()\nEnter -> handle_line()",fillcolor="#fff4df"];
+ CDS [label="cds_parse_command()",shape=diamond,fillcolor="#e5e2f9"];
+ AUTO [label="AUTO ON/OFF\ncds_commit_control()"];
+ POL [label="CDS POL LOW/HIGH\ncds_commit_control()"];
+ READ [label="CDS READ\ncds_print_reading()"];
+ PWM [label="pwm_parse_command()",shape=diamond,fillcolor="#e5e2f9"];
+ Q [label="PWM 0..100\npwm_queue_percent()"];
+ OLD [label="p2_parse_command()\nLED/DISP/STATUS",fillcolor="#eaf4ff"];
+ OUT [label="UART response",fillcolor="#e4f4ed"];
+ IN -> CDS;
+ CDS -> AUTO [label="AUTO"];
+ CDS -> POL [label="POL"];
+ CDS -> READ [label="READ"];
+ CDS -> PWM [label="other"];
+ PWM -> Q [label="PWM"];
+ PWM -> OLD [label="other"];
+ AUTO -> OUT; POL -> OUT; READ -> OUT; Q -> OUT; OLD -> OUT;
+}

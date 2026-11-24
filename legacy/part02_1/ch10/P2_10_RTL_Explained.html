@@ -1,0 +1,136 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Basys3 MicroBlaze V 제2부 10장 종합 제어 캡스톤 따라하기"><title>10.2장 · 기존 RTL과 AXI 통합구조 해설</title><style>
+:root{--paper:#F1F2EE;--card:#fff;--ink:#15171C;--muted:#505765;--line:#DDDFD8;--accent:#4635B1;--yellow:#FFD24A;--warn:#805719;--ok:#176045}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic",system-ui,sans-serif;line-height:1.72;font-size:15px}
+a{color:var(--accent)}.top{background:white;border-bottom:1px solid var(--line);padding:12px max(24px,calc((100vw - 1460px)/2));font-size:13px}
+.hero{background:#171820;color:#fff;padding:51px max(24px,calc((100vw - 1460px)/2)) 44px}.hero small{font-weight:800;color:var(--yellow);letter-spacing:1.7px}.hero h1{font-size:clamp(25px,3.4vw,43px);margin:11px 0 7px;line-height:1.28}.hero p{color:#C8CBD5;max-width:1000px}.chips{display:flex;flex-wrap:wrap;gap:8px}.chips span{border:1px solid #656578;padding:4px 11px;font-size:12px}
+.layout{max-width:1520px;margin:auto;display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;padding:22px}.side{background:white;border:1px solid var(--line);padding:17px 19px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}.side h2{font-size:15px;color:var(--accent);margin:0 0 12px}.side a{display:block;text-decoration:none;padding:7px 0;border-bottom:1px solid #eff0ed;font-size:12.8px}.side a:hover{text-decoration:underline}.content{min-width:0}
+.section{background:var(--card);padding:30px 36px;margin-bottom:17px;border:1px solid var(--line);scroll-margin-top:16px}.section h2{font-size:24px;line-height:1.35;margin:4px 0 17px}.section h3{font-size:17px;margin:20px 0 8px}.section p,.section li{color:#424954}.step-tag{font-size:12px;color:var(--accent);letter-spacing:.1em;font-weight:900}.lead{font-size:16px}.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.box{border:1px solid #e1e3eb;background:#fafbfe;padding:13px 15px}.box h3{margin:0 0 5px;font-size:14px;color:#4635B1}.box p{margin:0;font-size:13.5px}.g{font-weight:700;color:#262938}
+.table-wrap{overflow:auto;margin:13px 0 20px}table{border-collapse:collapse;width:100%;min-width:610px}td,th{padding:10px 13px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:13.5px}th{background:#f4f6fa;color:#495268}
+code,pre{font-family:Consolas,"Liberation Mono",monospace}code{background:#f4f4f7;padding:2px 5px}pre{background:#f8f9fc;border:1px solid #dfe3ea;padding:17px;overflow:auto;line-height:1.58;font-size:12.5px;white-space:pre;max-height:780px}pre code{background:none;padding:0}
+.fig{border:1px solid var(--line);background:#fff;margin:17px 0;padding:15px;overflow:auto}.fig img{display:block;width:100%;min-width:500px;height:auto}.fig figcaption{font-size:12px;color:#65707d;text-align:center;margin-top:9px}.note{border-left:4px solid var(--accent);padding:13px 16px;background:#f5f3fb;margin:14px 0;color:#30275a}.warn{border-left:4px solid #c18734;padding:13px 16px;background:#fff7e8;color:#64461e;margin:14px 0}.ok{border-left:4px solid #27865b;padding:13px 16px;background:#eff9f2;color:#1f593c;margin:14px 0}.links{display:flex;flex-wrap:wrap;gap:9px;margin:15px 0}.links a{padding:7px 11px;border:1px solid #cbc6e8;background:#f7f5fe;text-decoration:none;font-size:13px;font-weight:750}
+.steps{list-style:decimal-leading-zero;padding-left:21px}.steps li{margin:8px 0}.procedure{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.procedure>div{background:#fbfbfd;border:1px solid #e1e3ea;padding:13px 15px}.procedure strong{font-size:12.5px;color:#4b35a0}.procedure p{margin:5px 0;font-size:13.5px}.footer{padding:20px 0 50px;color:#647080;font-size:12px}.checklist li{margin:7px 0}.small{font-size:13px;color:#65717e}.stretch{overflow-wrap:anywhere}
+@media(max-width:960px){.layout{display:block;padding:13px}.side{position:static;max-height:none;margin-bottom:12px}.section{padding:18px}.cols,.procedure{grid-template-columns:1fr}.hero{padding:36px 18px}.fig img{min-width:620px}}
+@media print{.side{display:none}.layout{display:block}.hero{background:#222!important}.section{break-inside:avoid}}
+</style></head><body><div class="top"><a href="P2_10_Study_Guide.html">제2부 10장</a> · 10.2장 · 기존 RTL과 AXI 통합구조 해설</div><header class="hero"><small>PART 02 · CHAPTER 10.2</small><h1>10.2장 · 기존 RTL과 AXI 통합구조 해설</h1><p>모터 하드웨어 인터록과 C 명령 정책의 역할 분리·Top 배선·센서 경로</p><div class="chips"><span>Basys3 XC7A35T</span><span>Vivado/Vitis 2024.2</span><span>AXI4-Lite</span><span>UART ASCII</span><span>종합제어 + 인터록</span></div></header><div class="layout"><nav class="side"><h2>실습 목차</h2><a href="#overview">1. 신규 하드웨어 변경이 없는 이유</a><a href="#top">2. basys3_soc11_top — 전체 코드</a><a href="#motor">3. motor_controller.v — 하드웨어 차단 경로</a><a href="#sonic">4. 초음파 IP와 모터 IP 간 실시간 신호</a><a href="#xadc">5. XADC 안전 규칙</a><a href="#regs">6. IP 전체 레지스터·커넥터 확인</a><a href="#source">7. 재사용 RTL 전체 파일 링크</a></nav><main class="content"><section class="section" id="overview"><span class="step-tag">RTL</span><h2>1. 신규 하드웨어 변경이 없는 이유</h2><p>10장에는 신규 Verilog 모듈이나 새 AXI Slave를 만들지 않습니다. 01~09장 구조와 보드 Top을 재사용하고, 10장 특유의 상태 관리·모드 전환은 MicroBlaze V의 C 모듈에 배치합니다. 안전 차단은 기존 07장 모터 RTL에서 수행합니다.</p><figure class="fig"><img src="assets/architecture.svg" alt="기존 하드웨어를 재사용하는 10장 구조"></figure></section><section class="section" id="top"><span class="step-tag">RTL</span><h2>2. basys3_soc11_top — 전체 코드</h2><pre><code class="verilog">// P2-08 USER TOP: Shell/Wrapper ONLY. No always/FSM/policy expressions.
+// (유지) LED0 P2-01; LED1 P2-05 AUTO/PWM controller;
+// (변경) LED2 P2-06 sonic_alert, LED3~15 old GPIO.
+// WARNING: generated BD Wrapper must expose vauxp6/vauxn6 before this file can elaborate.
+module basys3_soc11_top (
+    input wire clk, input wire btnC,
+    input wire btnU, input wire btnD, input wire btnL, input wire btnR,
+    input wire cds_digital, // JA1, J1 (P2-05)
+    output wire sonic_trig, // JA2, L2; see level-shifting note
+    input wire sonic_echo,  // JA3, J2; external 5V-&gt;3.3V conversion required
+    output wire motor_in1, output wire motor_in2, output wire motor_ena,
+    input wire [15:0] sw, output wire [15:0] led,
+    // (추가) JXADC1(P)·JXADC7(N) : VAUX6 쌍, 디지털 I/O 아님.
+    input wire vauxp6, input wire vauxn6,
+    input wire RsRx, output wire RsTx,
+    output wire [6:0] seg, output wire [3:0] an, output wire dp
+);
+    wire [15:0] gpio_led;
+    wire p2_led0;
+    wire pwm_led1;
+    wire auto_enable, cds_dark, cds_valid;
+    wire light_led1;
+    wire sonic_alert, sonic_unsafe;
+    auto_light_controller u_light_controller (
+        .pwm_led_i(pwm_led1),.auto_enable_i(auto_enable),
+        .sensor_dark_i(cds_dark),.sensor_valid_i(cds_valid),
+        .led1_o(light_led1)
+    );
+    // (변경) Pure board-bit wiring; LED2 has exactly one source.
+    assign led = {gpio_led[15:3], sonic_alert, light_led1, p2_led0};
+    soc11_integration_wrapper u_soc11 (
+        .clk(clk),.btnC(btnC),
+        .btnU(btnU),.btnD(btnD),.btnL(btnL),.btnR(btnR),
+        .sw_tri_i(sw),.led_tri_o(gpio_led),
+        .UART_0_rxd(RsRx),.UART_0_txd(RsTx),
+        .p2_led_o(p2_led0),.pwm_led1(pwm_led1),
+        .fnd_seg(seg),.fnd_an(an),.fnd_dp(dp),
+        .cds_digital(cds_digital),
+        .cds_dark(cds_dark),.cds_valid(cds_valid),
+        .cds_auto_enable(auto_enable),
+        .sonic_trig(sonic_trig),.sonic_echo(sonic_echo),
+        .sonic_alert(sonic_alert),.sonic_unsafe(sonic_unsafe),
+        .motor_in1(motor_in1),.motor_in2(motor_in2),
+        .motor_ena(motor_ena),
+        // (추가) BD XADC Wizard Vaux6를 Make External 후 wrapper 포트 재생성.
+        .vauxp6(vauxp6),.vauxn6(vauxn6)
+    );
+endmodule
+</code></pre><p>Top의 <code>assign led</code>는 보드 비트 소유권을 위한 단순 배선만 표현하며, 새로운 조건 판정은 추가하지 않습니다. <code>gpio_led[15:3]</code>에는 LED14/15가 포함됩니다.</p></section><section class="section" id="motor"><span class="step-tag">RTL</span><h2>3. motor_controller.v — 하드웨어 차단 경로</h2><pre><code class="verilog">`timescale 1ns/1ps
+// P2-07 reusable motor controller; no AXI or board-specific pins.
+// (추가) Valid, recent HC-SR04 data + AUTO must exist before any drive.
+// (추가) Near/fault/timeout immediately disables ENA via combinational gating.
+// (추가) Fault while commanded latches TRIP; MOTOR STOP clears, FWD/REV re-arms.
+module motor_controller #(
+    parameter integer DEADTIME_CYCLES = 10000000, // 100 ms at 100MHz
+    parameter integer FRESH_CYCLES    = 25000000  // 250 ms at 100MHz
+)(
+    input wire clk, input wire resetn,
+    input wire [1:0] request_i, // 0 STOP, 1 FWD, 2 REV
+    input wire stop_clear_i,   // One-clock pulse on MOTOR STOP write
+    input wire sonic_auto_i, input wire sonic_done_i,
+    input wire sonic_valid_i, input wire sonic_unsafe_i,
+    output wire motor_in1_o, output wire motor_in2_o, output wire motor_ena_o,
+    output wire [1:0] active_dir_o,
+    output wire sensor_safe_o, output wire fresh_o,
+    output reg trip_latched_o, output wire deadtime_o
+);
+    reg [31:0] fresh_count, dead_count;
+    reg [1:0] drive_dir;
+    // Always gate the physical outputs, even before the next clock edge.
+    assign fresh_o = (fresh_count != 32&#x27;d0);
+    assign sensor_safe_o = sonic_auto_i &amp;&amp; fresh_o &amp;&amp;
+                           sonic_valid_i &amp;&amp; !sonic_unsafe_i;
+    wire output_allowed = sensor_safe_o &amp;&amp; !trip_latched_o &amp;&amp;
+                          !stop_clear_i &amp;&amp; (request_i != 2&#x27;d0);
+    assign motor_in1_o = output_allowed &amp;&amp; (drive_dir == 2&#x27;d1);
+    assign motor_in2_o = output_allowed &amp;&amp; (drive_dir == 2&#x27;d2);
+    assign motor_ena_o = motor_in1_o || motor_in2_o;
+    assign active_dir_o = motor_ena_o ? drive_dir : 2&#x27;d0;
+    assign deadtime_o = (dead_count != 32&#x27;d0);
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            fresh_count &lt;= 32&#x27;d0;
+            dead_count &lt;= 32&#x27;d0;
+            drive_dir &lt;= 2&#x27;d0;
+            trip_latched_o &lt;= 1&#x27;b0;
+        end else begin
+            // Stale/invalid/off -&gt; stop. Periodic successful DONE re-arms freshness.
+            if (!sonic_auto_i || !sonic_valid_i || sonic_unsafe_i)
+                fresh_count &lt;= 32&#x27;d0;
+            else if (sonic_done_i)
+                fresh_count &lt;= FRESH_CYCLES;
+            else if (fresh_count != 32&#x27;d0)
+                fresh_count &lt;= fresh_count - 32&#x27;d1;
+
+            if (stop_clear_i)
+                trip_latched_o &lt;= 1&#x27;b0;
+            else if (request_i != 2&#x27;d0 &amp;&amp; !sensor_safe_o)
+                trip_latched_o &lt;= 1&#x27;b1;
+
+            if (!sensor_safe_o || trip_latched_o || stop_clear_i ||
+                request_i == 2&#x27;d0 || request_i == 2&#x27;d3) begin
+                drive_dir &lt;= 2&#x27;d0;
+                // (변경) STOP after motion must not bypass reversal dead-time.
+                if (drive_dir != 2&#x27;d0)
+                    dead_count &lt;= DEADTIME_CYCLES;
+                else if (dead_count != 32&#x27;d0)
+                    dead_count &lt;= dead_count - 32&#x27;d1;
+            end else if (drive_dir != 2&#x27;d0 &amp;&amp; drive_dir != request_i) begin
+                // Disable bridge, then enforce a direction-change dead time.
+                drive_dir &lt;= 2&#x27;d0;
+                dead_count &lt;= DEADTIME_CYCLES;
+            end else if (drive_dir == 2&#x27;d0) begin
+                if (dead_count != 32&#x27;d0)
+                    dead_count &lt;= dead_count - 32&#x27;d1;
+                else
+                    drive_dir &lt;= request_i;
+            end
+        end
+    end
+endmodule
+</code></pre><p><code>sensor_safe_o</code>는 SONIC AUTO·유효 데이터·신선도·위험 여부를 모두 확인합니다. <code>motor_ena_o</code>는 하드웨어에서 직접 게이팅됩니다. 이번 10장의 <code>RUN</code> 정책은 이 조건을 우회하지 않습니다.</p></section><section class="section" id="sonic"><span class="step-tag">RTL</span><h2>4. 초음파 IP와 모터 IP 간 실시간 신호</h2><p><code>sonic_auto_o</code>, <code>sonic_done_o</code>, <code>sonic_valid_o</code>, <code>sonic_unsafe_o</code>는 06장 IP에서 07장 모터 IP로 직접 연결되어야 합니다. CPU는 AXI 상태를 읽어 추가로 오류 래치를 구현합니다. 하드웨어 연결은 사용 중인 BD에서 실제 확인해야 합니다.</p><div class="table-wrap"><table><thead><tr><th>신호</th><th>의미</th></tr></thead><tbody><tr><td><code>sonic_auto_o</code></td><td>연속 측정 설정</td></tr><tr><td><code>sonic_done_o</code></td><td>거리 측정 완료 펄스</td></tr><tr><td><code>sonic_valid_o</code></td><td>측정 유효</td></tr><tr><td><code>sonic_unsafe_o</code></td><td>근접 또는 데이터 무효</td></tr><tr><td><code>motor_ena_o</code></td><td>실제 모터 구동 허용 출력</td></tr></tbody></table></div></section><section class="section" id="xadc"><span class="step-tag">RTL</span><h2>5. XADC 안전 규칙</h2><p>XADC는 기존 08장 AXI XADC Wizard로 측정값을 제공합니다. <code>ADC READ</code>는 상태 레지스터에 저장된 값을 읽는 기능이며, 현재 <b>새로운 변환 완료를 증명하지 않습니다</b>. 따라서 캡스톤 <code>RUN START</code>의 필수 안전 조건에는 XADC 값을 넣지 않았습니다. 이는 미구현 안전 기능을 구현했다고 주장하지 않기 위한 구분입니다.</p></section><section class="section" id="regs"><span class="step-tag">RTL</span><h2>6. IP 전체 레지스터·커넥터 확인</h2><p>실제 프로젝트에서 <code>Address Editor</code>의 BaseAddr, AXI Interconnect 연결, IRQ 라인, 외부 센서 핀, Reset·Clock Domain을 확인합니다. 해당 자료 없이는 실제 Address Map을 확정할 수 없습니다.</p><div class="table-wrap"><table><thead><tr><th>기존 자원</th><th>설계 계약</th></tr></thead><tbody><tr><td>P2-01 LED</td><td>LED0, AXI REG0 bit0</td></tr><tr><td>P2-02 FND</td><td>4자리 BCD, Active-Low 출력</td></tr><tr><td>P2-03 Button</td><td>BTN U/D/L/R, BTNC reset, IRQ</td></tr><tr><td>P2-04/05 LED1</td><td>PWM Core + CdS AUTO 게이트</td></tr><tr><td>P2-06 SONIC</td><td>TRIG/ECHO, LED2, 안전 상태</td></tr><tr><td>P2-07 MOTOR</td><td>IN1/IN2/ENA, 근접/신선도/Deadtime</td></tr><tr><td>P2-08 XADC</td><td>VAUX6 차동 입력</td></tr><tr><td>P2-09 GPIO/Timer</td><td>LED14 UART 활동, LED15 Timer IRQ</td></tr><tr><td>P2-10 RUN</td><td>기존 레지스터만 이용하는 새 C 정책</td></tr></tbody></table></div></section><section class="section" id="source"><span class="step-tag">RTL</span><h2>7. 재사용 RTL 전체 파일 링크</h2><div class="links"><a href="reuse/p2_02/fnd_scan_controller.v">FND Core</a><a href="reuse/p2_03/button_event_core.v">Button Core</a><a href="reuse/p2_04/pwm_core.v">PWM Core</a><a href="reuse/p2_05/cds_digital_core.v">CdS Core</a><a href="reuse/p2_05/auto_light_controller.v">Auto Light Controller</a><a href="reuse/p2_06/hc_sr04_core.v">HC-SR04 Core</a><a href="reuse/p2_07/motor_controller.v">Motor Controller</a><a href="rtl/basys3_soc11_top_p2_08.v">Top 원본</a></div><p>각 파일은 앞선 장의 소스를 그대로 재사용합니다.</p></section></main></div></body></html>

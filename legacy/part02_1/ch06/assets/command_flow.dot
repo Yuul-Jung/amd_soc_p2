@@ -1,0 +1,17 @@
+digraph G {
+ graph [rankdir=TB,nodesep=.4,ranksep=.55,bgcolor="transparent",splines=ortho,pad=.35];
+ node [fontname="Baekmuk Dotum",fontsize=12,shape=box,style="rounded,filled",fillcolor="#F5F6FA",color="#A6A7B0",margin=".22,.13"];
+ edge [color="#6359B2",penwidth=1.4,arrowsize=.65,fontname="Baekmuk Dotum",fontsize=10];
+ a [label="poll_uart()\n문자열 + Enter",fillcolor="#E8E8FA"];
+ b [label="handle_line()"];
+ p [label="sonic_parse_command()",shape=diamond,fillcolor="#FFF3CF"];
+ on [label="SONIC ON\nAUTO / 거리 표시",fillcolor="#E6F2E9"];
+ off [label="SONIC OFF\n기존 FND 복귀",fillcolor="#E6F2E9"];
+ read [label="SONIC READ\n상태 조회",fillcolor="#E6F2E9"];
+ shot [label="SONIC SHOT\n1회 시작",fillcolor="#E6F2E9"];
+ warn [label="WARN n / OFF\n임계값·경고 설정",fillcolor="#E6F2E9"];
+ old [label="기존 01~05 명령\nLED / DISP / PWM / CDS / STATUS",fillcolor="#E6F2E9"];
+ a->b->p;
+ {rank=same; on;off;read;shot;warn;old;}
+ p->on; p->off; p->read; p->shot; p->warn; p->old;
+}

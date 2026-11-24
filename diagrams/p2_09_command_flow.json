@@ -1,0 +1,324 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 09장 · UART · 모드 통합 C 프로그램 흐름도",
+ "title": "제2부 09장 · UART · 모드 통합 C 프로그램 흐름도",
+ "subtitle": "",
+ "width": 1688,
+ "height": 834,
+ "headings": {
+  "title": {
+   "x": 844.0,
+   "y": 44,
+   "w": 1608,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 844.0,
+   "y": 90,
+   "w": 1608,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "A",
+   "type": "rect",
+   "x": 166,
+   "y": 459,
+   "w": 213,
+   "h": 76,
+   "title": "poll_uart()",
+   "sub": "Enter 후 handle_line(line)",
+   "fill": "#f6f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "B",
+   "type": "rect",
+   "x": 554,
+   "y": 459,
+   "w": 261,
+   "h": 76,
+   "title": "p2_09_parse_command()",
+   "sub": "문자열 전체 비교",
+   "fill": "#f6f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "C",
+   "type": "diamond",
+   "x": 924,
+   "y": 459,
+   "w": 179,
+   "h": 92,
+   "title": "명령 분기",
+   "sub": "",
+   "fill": "#fff8df",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "D",
+   "type": "rect",
+   "x": 1380,
+   "y": 188,
+   "w": 435,
+   "h": 76,
+   "title": "MODE AUTO",
+   "sub": "enter_auto_mode() · STOP → SONIC ON → CdS AUTO ON",
+   "fill": "#f6f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "E",
+   "type": "rect",
+   "x": 1380,
+   "y": 327,
+   "w": 430,
+   "h": 76,
+   "title": "MODE MANUAL",
+   "sub": "enter_manual_mode() · CdS AUTO OFF / SONIC 감시 유지",
+   "fill": "#f6f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "F",
+   "type": "rect",
+   "x": 1380,
+   "y": 459,
+   "w": 192,
+   "h": 76,
+   "title": "MODE STATUS",
+   "sub": "운전 정책·모터 요청 읽기",
+   "fill": "#f6f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "G",
+   "type": "rect",
+   "x": 1380,
+   "y": 584,
+   "w": 158,
+   "h": 76,
+   "title": "IRQ STATUS",
+   "sub": "print_irq_status()",
+   "fill": "#f6f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "H",
+   "type": "rect",
+   "x": 1380,
+   "y": 716,
+   "w": 364,
+   "h": 76,
+   "title": "기존 01~08 명령",
+   "sub": "p2_09_allowed_in_auto() · 기존 개별 파서로 전달",
+   "fill": "#f6f3ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "A",
+   "to": "B",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "B",
+   "to": "C",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e3",
+   "from": "C",
+   "to": "D",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1047,
+     459
+    ],
+    [
+     1047,
+     188
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "C",
+   "to": "E",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1047,
+     459
+    ],
+    [
+     1047,
+     327
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "C",
+   "to": "F",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e6",
+   "from": "C",
+   "to": "G",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1047,
+     459
+    ],
+    [
+     1047,
+     584
+    ]
+   ]
+  },
+  {
+   "id": "e7",
+   "from": "C",
+   "to": "H",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1047,
+     459
+    ],
+    [
+     1047,
+     716
+    ]
+   ]
+  }
+ ]
+}

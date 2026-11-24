@@ -1,0 +1,22 @@
+flowchart TD
+    A["main() 시작"] --> B["uart_puts() 시작 안내<br/>report_status() 초기 REG0 읽기"]
+    B --> C["read_command_line(line, LINE_CAPACITY)<br/>Enter까지 한 줄 수신"]
+    C --> D{"result 값"}
+    D -->|"> 0"| E["handle_command(line)"]
+    D -->|"== -1"| F["ERROR: command too long"]
+    D -->|"== -2"| G["ERROR: invalid character"]
+    D -->|"== 0"| H["빈 줄 무시"]
+    E --> I{"strcmp(line, 명령)"}
+    I -->|"LED ON"| J["Xil_Out32(BASE + 0x00, 1U)"]
+    I -->|"LED OFF"| K["Xil_Out32(BASE + 0x00, 0U)"]
+    I -->|"STATUS"| L["레지스터 쓰기 없음"]
+    I -->|"그 외"| M["ERROR: use LED ON / LED OFF / STATUS"]
+    J --> N["report_status()<br/>Xil_In32()로 REG0 읽기"]
+    K --> N
+    L --> N
+    N --> O["UART 결과 출력"]
+    M --> O
+    O --> C
+    F --> C
+    G --> C
+    H --> C

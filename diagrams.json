@@ -1,0 +1,141 @@
+{
+ "note": "Graphviz 원본 그림 → 규칙 맞춤 도면. python3 tools/diagram/build_from_graphviz.py part02",
+ "diagrams": [
+  {
+   "name": "p2_01_architecture",
+   "source": "legacy/part02_1/ch01/P2_01_Architecture.svg",
+   "title": "제2부 01장 · AXI LED 구조도",
+   "variant": 8
+  },
+  {
+   "name": "p2_01_command_flow",
+   "source": "legacy/part02_1/ch01/P2_01_C_Flow.svg",
+   "title": "제2부 01장 · AXI LED C 프로그램 흐름도",
+   "variant": 0
+  },
+  {
+   "name": "p2_02_architecture",
+   "source": "legacy/part02_1/ch02/assets/architecture.svg",
+   "title": "제2부 02장 · AXI FND 구조도",
+   "variant": 2
+  },
+  {
+   "name": "p2_02_command_flow",
+   "source": "legacy/part02_1/ch02/assets/command_flow.svg",
+   "title": "제2부 02장 · AXI FND C 프로그램 흐름도",
+   "variant": 13
+  },
+  {
+   "name": "p2_03_architecture",
+   "source": "legacy/part02_1/ch03/assets/architecture.svg",
+   "title": "제2부 03장 · 방향 버튼 · 인터럽트 구조도",
+   "variant": 2
+  },
+  {
+   "name": "p2_03_command_flow",
+   "source": "legacy/part02_1/ch03/assets/command_flow.svg",
+   "title": "제2부 03장 · 방향 버튼 · 인터럽트 C 프로그램 흐름도",
+   "variant": 2
+  },
+  {
+   "name": "p2_04_architecture",
+   "source": "legacy/part02_1/ch04/assets/architecture.svg",
+   "title": "제2부 04장 · AXI PWM 구조도",
+   "variant": 10
+  },
+  {
+   "name": "p2_04_command_flow",
+   "source": "legacy/part02_1/ch04/assets/command_flow.svg",
+   "title": "제2부 04장 · AXI PWM C 프로그램 흐름도",
+   "variant": 10
+  },
+  {
+   "name": "p2_05_architecture",
+   "source": "legacy/part02_1/ch05/assets/architecture.svg",
+   "title": "제2부 05장 · CdS 자동 조명 구조도",
+   "ranks": {
+    "PC": 0,
+    "CPU": 1,
+    "CDSP": 2,
+    "PWM": 2,
+    "CDS": 2,
+    "FILTER": 3,
+    "GATE": 4,
+    "LED": 5
+   },
+   "variant": 4
+  },
+  {
+   "name": "p2_05_command_flow",
+   "source": "legacy/part02_1/ch05/assets/command_flow.svg",
+   "title": "제2부 05장 · CdS 자동 조명 C 프로그램 흐름도",
+   "variant": 0
+  },
+  {
+   "name": "p2_06_architecture",
+   "source": "legacy/part02_1/ch06/assets/architecture.svg",
+   "title": "제2부 06장 · HC-SR04 초음파 구조도",
+   "variant": 10
+  },
+  {
+   "name": "p2_06_command_flow",
+   "source": "legacy/part02_1/ch06/assets/command_flow.svg",
+   "title": "제2부 06장 · HC-SR04 초음파 C 프로그램 흐름도",
+   "variant": 10
+  },
+  {
+   "name": "p2_07_architecture",
+   "source": "legacy/part02_1/ch07/assets/architecture.svg",
+   "title": "제2부 07장 · DC 모터 구조도",
+   "variant": 10
+  },
+  {
+   "name": "p2_07_command_flow",
+   "source": "legacy/part02_1/ch07/assets/command_flow.svg",
+   "title": "제2부 07장 · DC 모터 C 프로그램 흐름도",
+   "variant": 2
+  },
+  {
+   "name": "p2_08_architecture",
+   "source": "legacy/part02_1/ch08/assets/architecture.svg",
+   "title": "제2부 08장 · XADC 구조도",
+   "variant": 10
+  },
+  {
+   "name": "p2_08_command_flow",
+   "source": "legacy/part02_1/ch08/assets/command_flow.svg",
+   "title": "제2부 08장 · XADC C 프로그램 흐름도",
+   "variant": 0
+  },
+  {
+   "name": "p2_09_architecture",
+   "source": "legacy/part02_1/ch09/assets/architecture.svg",
+   "title": "제2부 09장 · UART · 모드 통합 구조도",
+   "variant": 2
+  },
+  {
+   "name": "p2_09_command_flow",
+   "source": "legacy/part02_1/ch09/assets/command_flow.svg",
+   "title": "제2부 09장 · UART · 모드 통합 C 프로그램 흐름도",
+   "variant": 2
+  },
+  {
+   "name": "p2_10_architecture",
+   "source": "legacy/part02_1/ch10/assets/architecture.svg",
+   "title": "제2부 10장 · 종합제어 구조도",
+   "variant": 2
+  },
+  {
+   "name": "p2_10_command_flow",
+   "source": "legacy/part02_1/ch10/assets/command_flow.svg",
+   "title": "제2부 10장 · 종합제어 C 프로그램 흐름도",
+   "variant": 2
+  },
+  {
+   "name": "p2_10_service_loop",
+   "source": "legacy/part02_1/ch10/assets/service_loop.svg",
+   "title": "제2부 10장 · 종합제어 서비스 루프",
+   "variant": 2
+  }
+ ]
+}

@@ -1,0 +1,17 @@
+digraph {
+ graph [rankdir=LR, bgcolor="white", pad="0.32", nodesep="0.45", ranksep="0.75", fontname="Noto Sans CJK KR", splines=polyline];
+ node [shape=box, style="rounded,filled", fontname="Noto Sans CJK KR", fontsize=13, margin="0.22,0.14", color="#BFC7D9", fillcolor="#F1F4FB", fontcolor="#162135"];
+ edge [fontname="Noto Sans CJK KR", fontsize=10, color="#6D739A", arrowsize=0.7];
+ uart [label="PC UART\nMOTOR FWD / REV / STOP"]; cpu [label="MicroBlaze V\nhandle_line() / Xil_Out32()"];
+ sonic [label="06장 HC-SR04 AXI IP\nAUTO / DONE / VALID / UNSAFE", fillcolor="#FCF3E1",color="#DCBD7A"];
+ motoraxi [label="07장 motor AXI IP\nCMD / STATUS / ID", fillcolor="#EAE7FC",color="#A398D9"];
+ core [label="motor_controller\nTRIP · 유효시간 · 방향 대기", fillcolor="#EAE7FC",color="#A398D9"];
+ pins [label="JB1 IN1 / JB2 IN2 / JB3 ENA\n3.3V logic, 외부 풀다운",fillcolor="#EBF6F0",color="#86B9A0"];
+ driver [label="L298N 드라이버\n외부 모터 전원",fillcolor="#EBF6F0",color="#86B9A0"];
+ uart -> cpu [label="문자열 + Enter"];
+ cpu -> motoraxi [label="AXI4-Lite"];
+ motoraxi -> core [label="request_dir"];
+ sonic -> core [label="하드웨어 안전 신호", color="#BE6A27",fontcolor="#A45822"];
+ core -> pins [label="IN1, IN2, ENA"];
+ pins -> driver;
+}

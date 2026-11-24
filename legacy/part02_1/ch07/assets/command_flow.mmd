@@ -1,0 +1,11 @@
+flowchart LR
+  A["poll_uart() → handle_line()"] --> B{"motor_parse_command(line)"}
+  B -->|MOTOR STOP| C["Xil_Out32(MOTOR_CMD_REG, 0) / TRIP 해제"]
+  B -->|MOTOR FWD/REV| D{"MOTOR_STATUS_REG: SAFE & !TRIP"}
+  D -->|예| E["Xil_Out32(MOTOR_CMD_REG, 1 또는 2)"]
+  D -->|아니오| F["BLOCKED"]
+  B -->|MOTOR STATUS| G["motor_print_status()"]
+  B -->|그 외| H["01~06장 기존 명령 처리"]
+  E --> I["motor_controller: SAFE / DEADTIME / TRIP"]
+  C --> I
+  I --> J["motor_in1 / motor_in2 / motor_ena"]

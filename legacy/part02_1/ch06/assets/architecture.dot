@@ -1,0 +1,19 @@
+digraph G {
+ graph [rankdir=LR, nodesep=.34, ranksep=.65, pad=.25, bgcolor="transparent", splines=ortho];
+ node [fontname="Baekmuk Dotum",fontsize=12,shape=box,style="rounded,filled",fillcolor="#F7F8FB",color="#9EA4AD",penwidth=1.3,margin=".22,.14"];
+ edge [color="#7771AC",arrowsize=.65,penwidth=1.6];
+ pc [label="PC 터미널\nSONIC ON / WARN 20",fillcolor="#ECEBFA"];
+ uart [label="AXI UART Lite"];
+ cpu [label="MicroBlaze V\nmain_p2_06.c"];
+ axi [label="AXI4-Lite 레지스터\np2_06_axi_sonic",fillcolor="#E8EEFF"];
+ core [label="hc_sr04_core\nTRIG / ECHO 폭 측정",fillcolor="#F8EDD5"];
+ sensor [label="HC-SR04\nJA2 TRIG",fillcolor="#FEF4E2"];
+ shift [label="ECHO 레벨 변환\n5V → 3.3V",fillcolor="#FCE2E0",color="#C15E5E"];
+ value [label="FND 4자리\n거리 cm / 유효성",fillcolor="#E2F4E7"];
+ led [label="LED2 경고\n근접 / 측정 실패",fillcolor="#FCEBDB"];
+ pc->uart->cpu->axi->core->sensor;
+ sensor -> shift [label=" ECHO 5V ",fontname="Baekmuk Dotum",fontsize=10];
+ shift -> core [constraint=false, color="#C15E5E"];
+ axi -> led [constraint=false];
+ cpu -> value [constraint=false];
+}

@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 05.2장 · RTL · AXI 풀이">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 05.2장 · RTL · AXI 풀이 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-05-2">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 05.2장 <span class="vbadge">v02</span></p>
+    <h1>제2부 05.2장 · RTL · AXI 풀이</h1>
+    <p>소스 기존을 누락 없이 제시하고, 주요 구문과 실제 하드웨어 동작을 연결합니다.</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+ <section class="section" id="overview">
+<h2><span class="num">00</span>이 장의 목표</h2>
+<p>소스 기존을 누락 없이 제시하고, 주요 구문과 실제 하드웨어 동작을 연결합니다.</p>
+</section>
+<section class="section" id="glossary">
+<h2><span class="num">01</span>소스 이해에 필요한 용어</h2>
+<div>A · 용어</div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>용어</th><th>의미</th></tr></thead><tbody><tr><td><code>2FF</code></td><td>Two-Flip-Flop(투 플립플롭, 2단 동기화 플립플롭)으로 비동기 센서 입력을 클록 도메인에 동기화한다.</td></tr><tr><td><code>FILTER_CYCLES</code></td><td>디지털 센서 값이 유지되어야 하는 클록 수. RTL 기본 2,000,000이며 테스트에서는 짧게 줄일 수 있다.</td></tr><tr><td><code>AW/W/B/AR/R</code></td><td>AXI4-Lite 쓰기 주소·쓰기 데이터·쓰기 응답·읽기 주소·읽기 데이터 채널.</td></tr><tr><td><code>WSTRB</code></td><td>쓰기 데이터 32비트 중 각 8비트 바이트를 갱신할지 선택하는 4비트 쓰기 마스크.</td></tr><tr><td><code>SLVERR</code></td><td>슬레이브 오류 응답. 비정렬·미정의 주소 또는 읽기 전용 레지스터 쓰기에 사용.</td></tr><tr><td><code>active-high</code></td><td>HIGH(1)일 때 활성이라는 뜻. Basys3 LED1의 보드 출력에 적용한다.</td></tr></tbody></table></div>
+</section>
+<section class="section" id="core">
+<h2><span class="num">02</span>cds_digital_core.v 전체</h2>
+<div>B · 소스 + 코드 풀이</div><p><b>코드 풀이:</b> <code>sync_meta</code>와 <code>sync_data</code>는 비동기 DO를 두 단계 플립플롭으로 동기화한다. <code>candidate</code>는 현재 극성으로 어두움을 의미하는 비트다. 같은 candidate가 <code>FILTER_CYCLES</code> 동안 유지되면 <code>stable_dark</code>를 변경한다. polarity 변경 시 <code>stable_valid=0</code>으로 놓아 이전 판단을 잠시 사용하지 않는다. 100MHz×20ms의 결과는 2,000,000 clock이다.</p><div><a href="#f-part02_1_ch05_rtl_cds_digital_core_v">소스 열기</a></div><div class="codeblock" id="f-part02_1_ch05_rtl_cds_digital_core_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-05 reusable digital CdS core. DO is an asynchronous 3.3V-safe input.
+// 2FF synchronization -&gt; programmable interpretation -&gt; stable-count filter.
+// FILTER_CYCLES=2,000,000 at a VERIFIED 100MHz AXI clock means about 20ms.
+module cds_digital_core #(
+    parameter integer FILTER_CYCLES = 2000000
+)(
+    input  wire clk,
+    input  wire resetn,
+    input  wire cds_digital_i,
+    input  wire dark_when_low,
+    output wire raw_sync,
+    output reg  stable_dark,
+    output reg  stable_valid
+);
+    localparam integer CNT_W = (FILTER_CYCLES &lt;= 2) ? 1 : $clog2(FILTER_CYCLES + 1);
+    reg sync_meta, sync_data;
+    reg polarity_q;
+    reg candidate_q;
+    reg [CNT_W-1:0] stable_count;
+    wire candidate = dark_when_low ? ~sync_data : sync_data;
+
+    // (추가) Two registers reduce metastability propagation probability.
+    // Neither filter nor 2FF replaces board-level 3.3V electrical protection.
+    always @(posedge clk) begin
+        if (!resetn) begin
+            sync_meta &lt;= 1'b1;
+            sync_data &lt;= 1'b1;
+        end else begin
+            sync_meta &lt;= cds_digital_i;
+            sync_data &lt;= sync_meta;
+        end
+    end
+    assign raw_sync = sync_data;
+
+    // (추가) On polarity changes, invalidate old interpretation and re-filter.
+    // Until valid, the automatic light gate will remain OFF (fail-off).
+    always @(posedge clk) begin
+        if (!resetn) begin
+            polarity_q   &lt;= 1'b1;
+            candidate_q  &lt;= 1'b0;
+            stable_count &lt;= {CNT_W{1'b0}};
+            stable_dark  &lt;= 1'b0;
+            stable_valid &lt;= 1'b0;
+        end else begin
+            polarity_q &lt;= dark_when_low;
+            if (polarity_q != dark_when_low) begin
+                candidate_q  &lt;= candidate;
+                stable_count &lt;= {CNT_W{1'b0}};
+                stable_dark  &lt;= 1'b0;
+                stable_valid &lt;= 1'b0;
+            end else if (candidate != candidate_q) begin
+                candidate_q  &lt;= candidate;
+                stable_count &lt;= {CNT_W{1'b0}};
+            end else if (!stable_valid || candidate != stable_dark) begin
+                if (stable_count &gt;= FILTER_CYCLES - 1) begin
+                    stable_dark  &lt;= candidate;
+                    stable_valid &lt;= 1'b1;
+                    stable_count &lt;= {CNT_W{1'b0}};
+                end else begin
+                    stable_count &lt;= stable_count + 1'b1;
+                end
+            end else begin
+                stable_count &lt;= {CNT_W{1'b0}};
+            end
+        end
+    end
+endmodule
+</code></pre></div><p>위 코드 블록은 현재 배포된 기존 파일 전체 내용과 일치합니다.</p>
+</section>
+<section class="section" id="gatemode">
+<h2><span class="num">03</span>auto_light_controller.v 전체</h2>
+<div>B · 소스 + 코드 풀이</div><p><b>코드 풀이:</b> AUTO OFF일 때 <code>led1_o</code>는 PWM 입력과 동일하고, AUTO ON일 때 <code>sensor_valid_i &amp; sensor_dark_i</code>가 1이어야 PWM이 통과한다. Top에는 이 연산을 넣지 않는다.</p><div><a href="#f-part02_1_ch05_rtl_auto_light_controller_v">소스 열기</a></div><div class="codeblock" id="f-part02_1_ch05_rtl_auto_light_controller_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-05 board-independent LED PWM gate. Input/output polarities are active-high.
+// MANUAL (AUTO=0): retain P2-04 PWM output unmodified.
+// AUTO=1: allow configured PWM only after stable dark is confirmed.
+// If PWM=0%, AUTO ON does NOT force light on: user sets PWM brightness first.
+module auto_light_controller (
+    input  wire pwm_led_i,
+    input  wire auto_enable_i,
+    input  wire sensor_dark_i,
+    input  wire sensor_valid_i,
+    output wire led1_o
+);
+    assign led1_o = pwm_led_i &amp;
+                    (~auto_enable_i | (sensor_valid_i &amp; sensor_dark_i));
+endmodule
+</code></pre></div><p>위 코드 블록은 현재 배포된 기존 파일 전체 내용과 일치합니다.</p>
+</section>
+<section class="section" id="axi">
+<h2><span class="num">04</span>p2_05_axi_cds_v1_0_S00_AXI.v 전체</h2>
+<div>B · 소스 + 코드 풀이</div><p><b>코드 풀이:</b> <code>aw_hold</code>, <code>w_hold</code>은 주소와 데이터 채널이 별도로 도착하는 경우를 처리한다. <code>WSTRB</code>로 CONTROL의 부분 쓰기를 처리한다. <code>BVALID</code>와 <code>RVALID</code>는 수신측 준비가 될 때까지 유지한다. STATUS의 RAW, DARK, VALID는 실제 Core 출력에서 생성된다.</p><div><a href="#f-part02_1_ch05_rtl_p2_05_axi_cds_v1_0_S00_AXI_v">소스 열기</a></div><div class="codeblock" id="f-part02_1_ch05_rtl_p2_05_axi_cds_v1_0_S00_AXI_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-05 AXI4-Lite CdS digital monitor/configuration slave.
+// Offset 0x00 CONTROL: RW bit0 AUTO_ENABLE, bit1 DARK_WHEN_LOW (default 1).
+// Offset 0x04 STATUS: RO bit0 RAW_SYNC, 1 DARK, 2 VALID, 3 AUTO_GATE,
+//                    bit4 AUTO_ENABLE, bit5 DARK_WHEN_LOW.
+// Offset 0x08 ID: RO 0x00050001. Offset 0x0C FILTER_CYCLES: RO.
+// AXI AW/W handshakes are independently captured; R/B held under backpressure.
+module p2_05_axi_cds_v1_0_S00_AXI #(
+    parameter integer C_S_AXI_DATA_WIDTH = 32,
+    parameter integer C_S_AXI_ADDR_WIDTH = 6,
+    parameter integer FILTER_CYCLES = 2000000
+)(
+    input wire S_AXI_ACLK, input wire S_AXI_ARESETN,
+    input wire [C_S_AXI_ADDR_WIDTH-1:0] S_AXI_AWADDR,
+    input wire [2:0] S_AXI_AWPROT, input wire S_AXI_AWVALID,
+    output wire S_AXI_AWREADY,
+    input wire [C_S_AXI_DATA_WIDTH-1:0] S_AXI_WDATA,
+    input wire [(C_S_AXI_DATA_WIDTH/8)-1:0] S_AXI_WSTRB,
+    input wire S_AXI_WVALID, output wire S_AXI_WREADY,
+    output reg [1:0] S_AXI_BRESP, output reg S_AXI_BVALID,
+    input wire S_AXI_BREADY,
+    input wire [C_S_AXI_ADDR_WIDTH-1:0] S_AXI_ARADDR,
+    input wire [2:0] S_AXI_ARPROT, input wire S_AXI_ARVALID,
+    output wire S_AXI_ARREADY,
+    output reg [C_S_AXI_DATA_WIDTH-1:0] S_AXI_RDATA,
+    output reg [1:0] S_AXI_RRESP, output reg S_AXI_RVALID,
+    input wire S_AXI_RREADY,
+    input wire cds_digital_i,
+    output wire cds_dark_o,
+    output wire cds_valid_o,
+    output wire auto_enable_o
+);
+    localparam [1:0] RESP_OKAY = 2'b00, RESP_SLVERR = 2'b10;
+    reg [1:0] control_reg;
+    wire raw_sync;
+    wire dark_filtered;
+    wire dark_valid;
+    wire gate = dark_filtered &amp; dark_valid;
+    reg aw_hold, w_hold;
+    reg [C_S_AXI_ADDR_WIDTH-1:0] awaddr_hold;
+    reg [31:0] wdata_hold;
+    reg [3:0] wstrb_hold;
+    reg [31:0] merged_data;
+    integer i;
+
+    assign auto_enable_o = control_reg[0];
+    assign cds_dark_o = dark_filtered;
+    assign cds_valid_o = dark_valid;
+
+    cds_digital_core #(.FILTER_CYCLES(FILTER_CYCLES)) u_cds_core (
+        .clk(S_AXI_ACLK), .resetn(S_AXI_ARESETN),
+        .cds_digital_i(cds_digital_i), .dark_when_low(control_reg[1]),
+        .raw_sync(raw_sync), .stable_dark(dark_filtered),
+        .stable_valid(dark_valid)
+    );
+
+    assign S_AXI_AWREADY = S_AXI_ARESETN &amp;&amp; !aw_hold &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_WREADY  = S_AXI_ARESETN &amp;&amp; !w_hold  &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_ARREADY = S_AXI_ARESETN &amp;&amp; !S_AXI_RVALID;
+
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            control_reg &lt;= 2'b10; // Safe manual mode; polarity is adjustable.
+            aw_hold &lt;= 1'b0; w_hold &lt;= 1'b0;
+            awaddr_hold &lt;= {C_S_AXI_ADDR_WIDTH{1'b0}};
+            wdata_hold &lt;= 32'd0; wstrb_hold &lt;= 4'd0;
+            S_AXI_BRESP &lt;= RESP_OKAY;
+            S_AXI_BVALID &lt;= 1'b0;
+        end else begin
+            if (S_AXI_AWVALID &amp;&amp; S_AXI_AWREADY) begin
+                awaddr_hold &lt;= S_AXI_AWADDR;
+                aw_hold &lt;= 1'b1;
+            end
+            if (S_AXI_WVALID &amp;&amp; S_AXI_WREADY) begin
+                wdata_hold &lt;= S_AXI_WDATA;
+                wstrb_hold &lt;= S_AXI_WSTRB;
+                w_hold &lt;= 1'b1;
+            end
+            if (S_AXI_BVALID &amp;&amp; S_AXI_BREADY)
+                S_AXI_BVALID &lt;= 1'b0;
+            if (aw_hold &amp;&amp; w_hold &amp;&amp; !S_AXI_BVALID) begin
+                aw_hold &lt;= 1'b0;
+                w_hold &lt;= 1'b0;
+                S_AXI_BVALID &lt;= 1'b1;
+                S_AXI_BRESP &lt;= RESP_OKAY;
+                // Only CONTROL is writable; byte masking is honored.
+                if (awaddr_hold == 6'h00) begin
+                    merged_data = {30'd0,control_reg};
+                    for (i=0;i&lt;4;i=i+1)
+                        if (wstrb_hold[i])
+                            merged_data[i*8 +: 8] = wdata_hold[i*8 +: 8];
+                    control_reg &lt;= merged_data[1:0];
+                end else
+                    S_AXI_BRESP &lt;= RESP_SLVERR;
+            end
+        end
+    end
+
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            S_AXI_RRESP &lt;= RESP_OKAY;
+            S_AXI_RVALID &lt;= 1'b0;
+            S_AXI_RDATA &lt;= 32'd0;
+        end else begin
+            if (S_AXI_RVALID &amp;&amp; S_AXI_RREADY)
+                S_AXI_RVALID &lt;= 1'b0;
+            if (S_AXI_ARVALID &amp;&amp; S_AXI_ARREADY) begin
+                S_AXI_RVALID &lt;= 1'b1;
+                S_AXI_RRESP &lt;= RESP_OKAY;
+                case (S_AXI_ARADDR)
+                    6'h00: S_AXI_RDATA &lt;= {30'd0,control_reg};
+                    6'h04: S_AXI_RDATA &lt;= {26'd0,control_reg[1],control_reg[0],
+                                           gate, dark_valid,dark_filtered,raw_sync};
+                    6'h08: S_AXI_RDATA &lt;= 32'h00050001;
+                    6'h0C: S_AXI_RDATA &lt;= FILTER_CYCLES;
+                    default: begin
+                        S_AXI_RDATA &lt;= 32'd0;
+                        S_AXI_RRESP &lt;= RESP_SLVERR;
+                    end
+                endcase
+            end
+        end
+    end
+endmodule
+</code></pre></div><p>위 코드 블록은 현재 배포된 기존 파일 전체 내용과 일치합니다.</p>
+</section>
+<section class="section" id="ip">
+<h2><span class="num">05</span>p2_05_axi_cds_v1_0.v 전체</h2>
+<div>B · 소스 + 코드 풀이</div><p><b>코드 풀이:</b> IP Packager의 표준 AXI4-Lite 인터페이스를 제공하고, 내부 AXI Slave에 sensor DO 및 결과 신호를 전달한다.</p><div><a href="#f-part02_1_ch05_rtl_p2_05_axi_cds_v1_0_v">소스 열기</a></div><div class="codeblock" id="f-part02_1_ch05_rtl_p2_05_axi_cds_v1_0_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-05 user IP wrapper. AXI4-Lite + digital CdS input + status wires.
+module p2_05_axi_cds_v1_0 #(
+    parameter integer C_S00_AXI_DATA_WIDTH = 32,
+    parameter integer C_S00_AXI_ADDR_WIDTH = 6,
+    parameter integer FILTER_CYCLES = 2000000
+)(
+    input wire cds_digital_i,
+    output wire cds_dark_o, output wire cds_valid_o, output wire auto_enable_o,
+    input wire s00_axi_aclk, input wire s00_axi_aresetn,
+    input wire [C_S00_AXI_ADDR_WIDTH-1:0] s00_axi_awaddr,
+    input wire [2:0] s00_axi_awprot, input wire s00_axi_awvalid,
+    output wire s00_axi_awready,
+    input wire [C_S00_AXI_DATA_WIDTH-1:0] s00_axi_wdata,
+    input wire [(C_S00_AXI_DATA_WIDTH/8)-1:0] s00_axi_wstrb,
+    input wire s00_axi_wvalid, output wire s00_axi_wready,
+    output wire [1:0] s00_axi_bresp, output wire s00_axi_bvalid,
+    input wire s00_axi_bready,
+    input wire [C_S00_AXI_ADDR_WIDTH-1:0] s00_axi_araddr,
+    input wire [2:0] s00_axi_arprot, input wire s00_axi_arvalid,
+    output wire s00_axi_arready,
+    output wire [C_S00_AXI_DATA_WIDTH-1:0] s00_axi_rdata,
+    output wire [1:0] s00_axi_rresp, output wire s00_axi_rvalid,
+    input wire s00_axi_rready
+);
+    p2_05_axi_cds_v1_0_S00_AXI #(
+        .C_S_AXI_DATA_WIDTH(C_S00_AXI_DATA_WIDTH),
+        .C_S_AXI_ADDR_WIDTH(C_S00_AXI_ADDR_WIDTH),
+        .FILTER_CYCLES(FILTER_CYCLES)
+    ) u_axi (
+        .S_AXI_ACLK(s00_axi_aclk), .S_AXI_ARESETN(s00_axi_aresetn),
+        .S_AXI_AWADDR(s00_axi_awaddr), .S_AXI_AWPROT(s00_axi_awprot),
+        .S_AXI_AWVALID(s00_axi_awvalid), .S_AXI_AWREADY(s00_axi_awready),
+        .S_AXI_WDATA(s00_axi_wdata), .S_AXI_WSTRB(s00_axi_wstrb),
+        .S_AXI_WVALID(s00_axi_wvalid), .S_AXI_WREADY(s00_axi_wready),
+        .S_AXI_BRESP(s00_axi_bresp), .S_AXI_BVALID(s00_axi_bvalid),
+        .S_AXI_BREADY(s00_axi_bready),
+        .S_AXI_ARADDR(s00_axi_araddr), .S_AXI_ARPROT(s00_axi_arprot),
+        .S_AXI_ARVALID(s00_axi_arvalid), .S_AXI_ARREADY(s00_axi_arready),
+        .S_AXI_RDATA(s00_axi_rdata), .S_AXI_RRESP(s00_axi_rresp),
+        .S_AXI_RVALID(s00_axi_rvalid), .S_AXI_RREADY(s00_axi_rready),
+        .cds_digital_i(cds_digital_i),
+        .cds_dark_o(cds_dark_o), .cds_valid_o(cds_valid_o),
+        .auto_enable_o(auto_enable_o)
+    );
+endmodule
+</code></pre></div><p>위 코드 블록은 현재 배포된 기존 파일 전체 내용과 일치합니다.</p>
+</section>
+<section class="section" id="top">
+<h2><span class="num">06</span>basys3_soc11_top_p2_05.v 전체</h2>
+<div>B · 소스 + 코드 풀이</div><p><b>코드 풀이:</b> <code>soc11_integration_wrapper</code>와 <code>auto_light_controller</code>만 인스턴스화하며 실제 LED0/LED1/GPIO 비트 연결을 수행한다. 기존 04장 PWM 원신호가 LED1로 직결되지 않도록 한다.</p><div><a href="#f-part02_1_ch05_rtl_basys3_soc11_top_p2_05_v">소스 열기</a></div><div class="codeblock" id="f-part02_1_ch05_rtl_basys3_soc11_top_p2_05_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>// P2-05 USER TOP (Shell/Wrapper ONLY): no priority, arithmetic or FSM here.
+// Keep Basys3 LED0 (P2-01), LED1 PWM (P2-04) and GPIO[15:2] ownership.
+// (변경) P2-04 pwm_led1 is an INTERNAL source; auto_light_controller owns LED1.
+// IMPORTANT: generated soc11_integration_wrapper ports MUST be rechecked.
+module basys3_soc11_top (
+    input wire clk, input wire btnC,
+    input wire btnU, input wire btnD, input wire btnL, input wire btnR,
+    input wire cds_digital, // JA1 J1 (verified only at XDC level, module not yet)
+    input wire [15:0] sw, output wire [15:0] led,
+    input wire RsRx, output wire RsTx,
+    output wire [6:0] seg, output wire [3:0] an, output wire dp
+);
+    wire [15:0] gpio_led;
+    wire p2_led0;
+    wire pwm_led1;
+    wire auto_enable;
+    wire cds_dark;
+    wire cds_valid;
+    wire light_led1;
+
+    // (추가) Board-independent mode controller owns LED1 logic.
+    auto_light_controller u_light_controller (
+        .pwm_led_i(pwm_led1), .auto_enable_i(auto_enable),
+        .sensor_dark_i(cds_dark), .sensor_valid_i(cds_valid),
+        .led1_o(light_led1)
+    );
+    // (유지) Top uses simple bit select and concatenation only.
+    assign led = {gpio_led[15:2], light_led1, p2_led0};
+
+    soc11_integration_wrapper u_soc11 (
+        .clk(clk), .btnC(btnC),
+        .btnU(btnU), .btnD(btnD), .btnL(btnL), .btnR(btnR),
+        .sw_tri_i(sw), .led_tri_o(gpio_led),
+        .UART_0_rxd(RsRx), .UART_0_txd(RsTx),
+        .p2_led_o(p2_led0), .pwm_led1(pwm_led1),
+        .fnd_seg(seg), .fnd_an(an), .fnd_dp(dp),
+        .cds_digital(cds_digital),
+        .cds_dark(cds_dark), .cds_valid(cds_valid),
+        .cds_auto_enable(auto_enable)
+    );
+endmodule
+</code></pre></div><p>위 코드 블록은 현재 배포된 기존 파일 전체 내용과 일치합니다.</p>
+</section>
+<section class="section" id="pwmreuse">
+<h2><span class="num">07</span>04장 PWM Core 재사용</h2>
+<div>B · 소스 + 코드 풀이</div><p><b>코드 풀이:</b> PWM 주기·Duty 카운터와 주기 경계의 설정 반영을 04장과 동일하게 유지한다. 05장에서는 다시 설계하지 않는다.</p><div><a href="#f-part02_1_ch05_rtl_pwm_core_v">소스 열기</a></div><div class="codeblock" id="f-part02_1_ch05_rtl_pwm_core_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-04: 보드와 무관한 단일 채널 범용 PWM 코어.
+// (추가) period와 duty는 클록 횟수 단위. 0%/100%는 지속 LOW/HIGH.
+// (추가) 설정은 주기 마지막 경계에서만 활성값으로 반영.
+module pwm_core #(
+    parameter [31:0] RESET_PERIOD = 32'd100000
+)(
+    input  wire        clk,
+    input  wire        resetn,
+    input  wire        cfg_apply,
+    input  wire [31:0] cfg_period,
+    input  wire [31:0] cfg_duty,
+    input  wire        cfg_enable,
+    input  wire        cfg_polarity,
+    output wire        pwm_out,
+    output reg         pending,
+    output reg [31:0] active_period,
+    output reg [31:0] active_duty,
+    output reg         active_enable,
+    output reg         active_polarity
+);
+    reg [31:0] counter;
+    reg [31:0] shadow_period;
+    reg [31:0] shadow_duty;
+    reg        shadow_enable;
+    reg        shadow_polarity;
+
+    wire boundary = (counter &gt;= active_period - 32'd1);
+    wire duty_high = (counter &lt; active_duty);
+
+    // (주의) enable=0이면 polarity와 관계없이 LOW로 차단.
+    // (설명) 기본 polarity에서 active_duty=0이면 항상 LOW,
+    //         active_duty=active_period이면 항상 HIGH.
+    assign pwm_out = resetn &amp;&amp; active_enable &amp;&amp;
+                     (active_polarity ? !duty_high : duty_high);
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            counter         &lt;= 32'd0;
+            active_period   &lt;= RESET_PERIOD;
+            active_duty     &lt;= 32'd0;
+            active_enable   &lt;= 1'b0;
+            active_polarity &lt;= 1'b0;
+            shadow_period   &lt;= RESET_PERIOD;
+            shadow_duty     &lt;= 32'd0;
+            shadow_enable   &lt;= 1'b0;
+            shadow_polarity &lt;= 1'b0;
+            pending         &lt;= 1'b0;
+        end else begin
+            if (boundary) begin
+                counter &lt;= 32'd0;
+                if (pending) begin
+                    active_period   &lt;= shadow_period;
+                    active_duty     &lt;= shadow_duty;
+                    active_enable   &lt;= shadow_enable;
+                    active_polarity &lt;= shadow_polarity;
+                    pending         &lt;= 1'b0;
+                end
+            end else begin
+                counter &lt;= counter + 32'd1;
+            end
+            // (추가) 경계와 APPLY가 겹치면 새 값은 다음 경계에 적용.
+            // 여러 APPLY가 겹치면 최종 요청값을 우선하는 단일 Shadow 구조.
+            if (cfg_apply) begin
+                shadow_period   &lt;= cfg_period;
+                shadow_duty     &lt;= cfg_duty;
+                shadow_enable   &lt;= cfg_enable;
+                shadow_polarity &lt;= cfg_polarity;
+                pending         &lt;= 1'b1;
+            end
+        end
+    end
+endmodule
+</code></pre></div><p>위 코드 블록은 현재 배포된 기존 파일 전체 내용과 일치합니다.</p>
+</section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

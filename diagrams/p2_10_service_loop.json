@@ -1,0 +1,240 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 10장 · 종합제어 서비스 루프",
+ "title": "제2부 10장 · 종합제어 서비스 루프",
+ "subtitle": "",
+ "width": 1768,
+ "height": 427,
+ "headings": {
+  "title": {
+   "x": 884.0,
+   "y": 44,
+   "w": 1688,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 884.0,
+   "y": 90,
+   "w": 1688,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "START",
+   "type": "rect",
+   "x": 144,
+   "y": 249,
+   "w": 169,
+   "h": 56,
+   "title": "main() 반복 루프",
+   "sub": "",
+   "fill": "#f4f8fc",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "UART",
+   "type": "rect",
+   "x": 454,
+   "y": 249,
+   "w": 150,
+   "h": 56,
+   "title": "poll_uart()",
+   "sub": "",
+   "fill": "#f4f8fc",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "BTN",
+   "type": "rect",
+   "x": 805,
+   "y": 249,
+   "w": 252,
+   "h": 76,
+   "title": "service_button_events()",
+   "sub": "BTNR LONG -> 정지 요청",
+   "fill": "#f4f8fc",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "GUARD",
+   "type": "rect",
+   "x": 1182,
+   "y": 249,
+   "w": 203,
+   "h": 76,
+   "title": "service_capstone()",
+   "sub": "p2_10_tick()",
+   "fill": "#f4f8fc",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "ACTION",
+   "type": "rect",
+   "x": 1556,
+   "y": 188,
+   "w": 225,
+   "h": 76,
+   "title": "위험 발견 시",
+   "sub": "MOTOR STOP + FAULT latch",
+   "fill": "#fff0ed",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "REST",
+   "type": "rect",
+   "x": 1556,
+   "y": 309,
+   "w": 244,
+   "h": 76,
+   "title": "service_sonic_display()",
+   "sub": "service_legacy_gpio_leds()",
+   "fill": "#f4f8fc",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "START",
+   "to": "UART",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "UART",
+   "to": "BTN",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e3",
+   "from": "BTN",
+   "to": "GUARD",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e4",
+   "from": "GUARD",
+   "to": "ACTION",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1318,
+     249
+    ],
+    [
+     1318,
+     188
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "GUARD",
+   "to": "REST",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1318,
+     249
+    ],
+    [
+     1318,
+     309
+    ]
+   ]
+  }
+ ]
+}

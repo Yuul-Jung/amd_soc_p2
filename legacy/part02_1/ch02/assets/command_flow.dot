@@ -1,0 +1,20 @@
+digraph P2Flow {
+ graph [rankdir=TB, bgcolor="transparent", nodesep="0.50", ranksep="0.65", pad="0.30", splines=polyline];
+ node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=12, margin="0.20,0.13", fillcolor="#f1efff", color="#8172b9", fontcolor="#27233b"];
+ edge [color="#8579ad", penwidth=1.3, arrowsize=0.7];
+ start [label="main() → read_command_line()", fillcolor="#e5f1ff", color="#6c98bf"];
+ choice [label="result > 0 ?", shape=diamond, fillcolor="#fff8ea", color="#c29b63"];
+ cmd [label="handle_command(line)"];
+ invalid [label="invalid / overflow / empty\nerror or no-op", fillcolor="#fff1ee", color="#d29281"];
+ led [label="LED ON / LED OFF\nXil_Out32(LED_REG0)"];
+ fnd [label="DISP dddd\nparse_disp_digits()\nXil_Out32(REG0, REG1)"];
+ off [label="DISP OFF\nXil_Out32(REG1, 0)"];
+ state [label="STATUS\nreport_led() + report_fnd()"];
+ err [label="unknown command / ERROR", fillcolor="#fff1ee", color="#d29281"];
+ send [label="UART response → next command", fillcolor="#e7f5ee", color="#77a78d"];
+ start -> choice;
+ choice -> cmd [label="yes", fontname="DejaVu Sans", fontsize=10];
+ choice -> invalid [label="no", fontname="DejaVu Sans", fontsize=10];
+ cmd -> {led fnd off state err};
+ {led fnd off state err invalid} -> send;
+}

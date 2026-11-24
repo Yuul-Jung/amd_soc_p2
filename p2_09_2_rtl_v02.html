@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 09.2장 · RTL · AXI 풀이">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 09.2장 · RTL · AXI 풀이 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-09-2">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 09.2장 <span class="vbadge">v02</span></p>
+    <h1>제2부 09.2장 · RTL · AXI 풀이</h1>
+    <p>새 RTL 없이 08장 기존 IP를 재사용하고 AXI INTC 인터럽트와 AXI GPIO LED14/15 경로를 정확히 연결</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+ <section class="section" id="overview">
+<h2><span class="num">00</span>이 장의 목표</h2>
+<p>새 RTL 없이 08장 기존 IP를 재사용하고 AXI INTC 인터럽트와 AXI GPIO LED14/15 경로를 정확히 연결</p>
+<ul aria-label="핵심 용어" class="chips"><li>Basys3 XC7A35T</li><li>Vivado/Vitis 2024.2</li><li>AXI Timer + GPIO + INTC</li><li>UART ASCII 문자열</li></ul>
+</section>
+<section class="section" id="arch">
+<h2><span class="num">01</span>1. 09장 하드웨어 변경 범위</h2>
+<span>HARDWARE</span><p>이번 장의 기능 추가는 CPU의 C 프로그램과 기존 AXI INTC의 <b>두 인터럽트 소스 동시 연결</b>입니다. 새 사용자 AXI IP, 새 보드 핀, 새 센서 RTL은 만들지 않습니다.</p><figure class="fig"><img alt="09장 기능별 구조도" class="zoom" loading="lazy" src="diagrams/p2_09_architecture.svg"/></figure><p>기존 GPIO·Timer·UART·Buttons·FND·PWM·CdS·SONIC·Motor·XADC는 08장 IP를 재사용합니다.</p>
+</section>
+<section class="section" id="irq">
+<h2><span class="num">02</span>인터럽트 라인과 주소 계약</h2>
+<span>HARDWARE</span><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>장치</th><th>하드웨어 경로</th><th>CPU 소프트웨어</th></tr></thead><tbody><tr><td>BTNU/BTND/BTNL/BTNR</td><td>P2-03 버튼 IP → INTC IRQ 슬롯</td><td><code>btn_irq_handler()</code> W1C + 이벤트 카운트</td></tr><tr><td>AXI Timer</td><td>Timer interrupt → INTC 다른 IRQ 슬롯</td><td><code>XTmrCtr_InterruptHandler</code> → <code>timer_callback()</code></td></tr><tr><td>AXI UART Lite</td><td>기존 USB-UART → RX FIFO</td><td><code>poll_uart()</code> Polling. UART IRQ 미사용</td></tr><tr><td>AXI GPIO</td><td>기존 LED 상위 GPIO 출력</td><td>LED14 활동·LED15 heartbeat</td></tr></tbody></table></div><p>실제 <code>xlconcat</code> 입력 순서, IRQ 슬롯 번호와 BSP의 <code>P2_03_BTN_INTR_ID</code> 및 <code>P2_09_TIMER_INTR_ID</code>를 일치시켜야 합니다. <b>이미 연결되어 있다면 중복 IP를 추가하지 않습니다.</b></p>
+</section>
+<section class="section" id="led">
+<h2><span class="num">03</span>LED0~15 출력 소유권</h2>
+<span>HARDWARE</span><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>출력</th><th>단일 소유권</th><th>기준</th></tr></thead><tbody><tr><td>LED0</td><td>P2-01 사용자 LED AXI IP</td><td>LED ON/OFF</td></tr><tr><td>LED1</td><td>P2-05 auto_light_controller</td><td>PWM 0..100 · CdS AUTO</td></tr><tr><td>LED2</td><td>P2-06 sonic_alert</td><td>경고 출력</td></tr><tr><td>LED3~13</td><td>기존 AXI GPIO 경로</td><td>09장 C는 0으로 구동; 신규 기능을 배정하지 않음</td></tr><tr><td>LED14</td><td>기존 AXI GPIO bit14</td><td>명령 행 활동 토글</td></tr><tr><td>LED15</td><td>기존 AXI GPIO bit15</td><td>Timer IRQ heartbeat</td></tr></tbody></table></div><p>GPIO bit14/15 출력 경로가 실제로 기존 Top의 <code>gpio_led[15:3]</code>로 연결되어 있는지 Sources 및 Implemented Schematic을 대조합니다. 실제 출력 소유권 두 곳이 겹치면 구현 전 수정합니다.</p>
+</section>
+<section class="section" id="top">
+<h2><span class="num">04</span>4. 08장 사용자 Top 기존 그대로 보존</h2>
+<span>HARDWARE</span><p><a href="#f-part02_1_ch09_rtl_basys3_soc11_top_p2_08_v">Top Verilog</a> (09장 재사용, 내용 변경 없음)</p><div class="codeblock" id="f-part02_1_ch09_rtl_basys3_soc11_top_p2_08_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>// P2-08 USER TOP: Shell/Wrapper ONLY. No always/FSM/policy expressions.
+// (유지) LED0 P2-01; LED1 P2-05 AUTO/PWM controller;
+// (변경) LED2 P2-06 sonic_alert, LED3~15 old GPIO.
+// WARNING: generated BD Wrapper must expose vauxp6/vauxn6 before this file can elaborate.
+module basys3_soc11_top (
+    input wire clk, input wire btnC,
+    input wire btnU, input wire btnD, input wire btnL, input wire btnR,
+    input wire cds_digital, // JA1, J1 (P2-05)
+    output wire sonic_trig, // JA2, L2; see level-shifting note
+    input wire sonic_echo,  // JA3, J2; external 5V-&gt;3.3V conversion required
+    output wire motor_in1, output wire motor_in2, output wire motor_ena,
+    input wire [15:0] sw, output wire [15:0] led,
+    // (추가) JXADC1(P)·JXADC7(N) : VAUX6 쌍, 디지털 I/O 아님.
+    input wire vauxp6, input wire vauxn6,
+    input wire RsRx, output wire RsTx,
+    output wire [6:0] seg, output wire [3:0] an, output wire dp
+);
+    wire [15:0] gpio_led;
+    wire p2_led0;
+    wire pwm_led1;
+    wire auto_enable, cds_dark, cds_valid;
+    wire light_led1;
+    wire sonic_alert, sonic_unsafe;
+    auto_light_controller u_light_controller (
+        .pwm_led_i(pwm_led1),.auto_enable_i(auto_enable),
+        .sensor_dark_i(cds_dark),.sensor_valid_i(cds_valid),
+        .led1_o(light_led1)
+    );
+    // (변경) Pure board-bit wiring; LED2 has exactly one source.
+    assign led = {gpio_led[15:3], sonic_alert, light_led1, p2_led0};
+    soc11_integration_wrapper u_soc11 (
+        .clk(clk),.btnC(btnC),
+        .btnU(btnU),.btnD(btnD),.btnL(btnL),.btnR(btnR),
+        .sw_tri_i(sw),.led_tri_o(gpio_led),
+        .UART_0_rxd(RsRx),.UART_0_txd(RsTx),
+        .p2_led_o(p2_led0),.pwm_led1(pwm_led1),
+        .fnd_seg(seg),.fnd_an(an),.fnd_dp(dp),
+        .cds_digital(cds_digital),
+        .cds_dark(cds_dark),.cds_valid(cds_valid),
+        .cds_auto_enable(auto_enable),
+        .sonic_trig(sonic_trig),.sonic_echo(sonic_echo),
+        .sonic_alert(sonic_alert),.sonic_unsafe(sonic_unsafe),
+        .motor_in1(motor_in1),.motor_in2(motor_in2),
+        .motor_ena(motor_ena),
+        // (추가) BD XADC Wizard Vaux6를 Make External 후 wrapper 포트 재생성.
+        .vauxp6(vauxp6),.vauxn6(vauxn6)
+    );
+endmodule
+</code></pre></div><p>실제 자동 생성 Wrapper는 사용자의 Vivado 프로젝트에서 재생성해야 하며, 08장 예제 포트가 그대로 존재한다고 보증하지 않습니다. 기존 생성 Wrapper 파일은 직접 수정하지 않습니다.</p>
+</section>
+<section class="section" id="sources">
+<h2><span class="num">05</span>RTL 재사용 및 파일 경로</h2>
+<span>HARDWARE</span><p>다음 파일은 이전 장에서 작성한 재사용 IP이며, 09장에서는 기능을 새로 재구현하지 않습니다.</p><ul><li><a href="#f-part02_1_ch09_reuse_p2_02_fnd_scan_controller_v">02장 · fnd_scan_controller.v</a></li><li><a href="#f-part02_1_ch09_reuse_p2_03_button_event_core_v">03장 · button_event_core.v</a></li><li><a href="#f-part02_1_ch09_reuse_p2_04_pwm_core_v">04장 · pwm_core.v</a></li><li><a href="#f-part02_1_ch09_reuse_p2_05_cds_digital_core_v">05장 · cds_digital_core.v</a></li><li><a href="#f-part02_1_ch09_reuse_p2_05_auto_light_controller_v">05장 · auto_light_controller.v</a></li><li><a href="#f-part02_1_ch09_reuse_p2_06_hc_sr04_core_v">06장 · hc_sr04_core.v</a></li><li><a href="#f-part02_1_ch09_reuse_p2_07_motor_controller_v">07장 · motor_controller.v</a></li></ul><p>기존 02~07장의 각 AXI Slave·Wrapper 소스 전체는 <code>reuse/</code> 폴더에 포함합니다. 08장의 AMD XADC Wizard는 Vivado 프로젝트에서 생성합니다.</p>
+</section>
+<section class="section" id="safety">
+<h2><span class="num">06</span>성능·안전 경계</h2>
+<span>HARDWARE</span><p>모터 보호는 기존 <code>motor_controller</code>에서 센서 freshness·근접·방향 전환 Deadtime을 판단합니다. MODE AUTO의 C 명령 거부는 별도 상위 정책이며, 비정상 CPU나 다른 AXI Master의 직접 레지스터 쓰기까지 막는 하드웨어 장치가 아닙니다.</p><div class="callout warn">HC-SR04 5V ECHO의 레벨 변환과 XADC 0~1V 입력 제한은 그대로 필수입니다.</div>
+</section>
+    <section class="section" id="files">
+      <h2><span class="num">07</span>실습 파일</h2>
+      <div class="codeblock" id="f-part02_1_ch09_reuse_p2_02_fnd_scan_controller_v"><div class="codebar"><span>fnd_scan_controller.v · Verilog</span></div><pre tabindex="0"><code>`timescale 1ns / 1ps
+// P2-02: Basys3 four-digit seven-segment scanning controller.
+// This module has no AXI or board pin names; it is reusable.
+module fnd_scan_controller #(
+    parameter integer TICKS_PER_DIGIT = 100000
+)(
+    input  wire        clk,
+    input  wire        resetn,
+    input  wire [15:0] display_bcd,    // [15:12] leftmost .. [3:0] rightmost
+    input  wire        display_enable,
+    output wire [6:0]  seg,            // {g,f,e,d,c,b,a}, active low
+    output wire [3:0]  an,             // an[0] rightmost, active low
+    output wire        dp              // decimal point off, active low
+);
+    localparam integer COUNT_WIDTH = (TICKS_PER_DIGIT &gt; 1) ?
+        $clog2(TICKS_PER_DIGIT) : 1;
+
+    reg [COUNT_WIDTH-1:0] divider_count;
+    reg [1:0] scan_index;
+    reg [15:0] frame_bcd;
+    reg frame_enable;
+    reg [3:0] current_digit;
+    reg [6:0] seg_mux;
+    reg [3:0] an_mux;
+
+    assign dp = 1&#x27;b1; // decimal point is always off
+    // 첫 리셋 클록 전에도 외부 핀에 X가 노출되지 않게 즉시 소등한다.
+    assign seg = resetn ? seg_mux : 7&#x27;b1111111;
+    assign an  = resetn ? an_mux  : 4&#x27;b1111;
+
+    // Latch all four digits only at a scan-frame boundary.
+    // One write to REG0 can never tear individual digits within a frame.
+    always @(posedge clk) begin
+        if (!resetn) begin
+            divider_count &lt;= {COUNT_WIDTH{1&#x27;b0}};
+            scan_index    &lt;= 2&#x27;d0;
+            frame_bcd     &lt;= 16&#x27;h0000;
+            frame_enable  &lt;= 1&#x27;b0;
+        end else if (divider_count == TICKS_PER_DIGIT - 1) begin
+            divider_count &lt;= {COUNT_WIDTH{1&#x27;b0}};
+            scan_index &lt;= scan_index + 2&#x27;d1;
+            if (scan_index == 2&#x27;d3) begin
+                frame_bcd &lt;= display_bcd;
+                frame_enable &lt;= display_enable;
+            end
+        end else begin
+            divider_count &lt;= divider_count + 1&#x27;b1;
+        end
+    end
+
+    // Basys3 AN0 is the rightmost digit; AN3 is the leftmost.
+    always @(*) begin
+        case (scan_index)
+            2&#x27;d0: current_digit = frame_bcd[3:0];
+            2&#x27;d1: current_digit = frame_bcd[7:4];
+            2&#x27;d2: current_digit = frame_bcd[11:8];
+            default: current_digit = frame_bcd[15:12];
+        endcase
+
+        // seg[0] is segment &#x27;a&#x27;; 0 lights a segment.
+        case (current_digit)
+            4&#x27;d0: seg_mux = 7&#x27;b1000000;
+            4&#x27;d1: seg_mux = 7&#x27;b1111001;
+            4&#x27;d2: seg_mux = 7&#x27;b0100100;
+            4&#x27;d3: seg_mux = 7&#x27;b0110000;
+            4&#x27;d4: seg_mux = 7&#x27;b0011001;
+            4&#x27;d5: seg_mux = 7&#x27;b0010010;
+            4&#x27;d6: seg_mux = 7&#x27;b0000010;
+            4&#x27;d7: seg_mux = 7&#x27;b1111000;
+            4&#x27;d8: seg_mux = 7&#x27;b0000000;
+            4&#x27;d9: seg_mux = 7&#x27;b0010000;
+            default: seg_mux = 7&#x27;b1111111; // invalid BCD nibble -&gt; blank
+        endcase
+
+        if (!frame_enable) begin
+            an_mux = 4&#x27;b1111; // OFF: disable all digits
+            seg_mux = 7&#x27;b1111111;
+        end else begin
+            case (scan_index)
+                2&#x27;d0: an_mux = 4&#x27;b1110;
+                2&#x27;d1: an_mux = 4&#x27;b1101;
+                2&#x27;d2: an_mux = 4&#x27;b1011;
+                default: an_mux = 4&#x27;b0111;
+            endcase
+        end
+    end
+endmodule
+</code></pre></div>
+      <div class="codeblock" id="f-part02_1_ch09_reuse_p2_03_button_event_core_v"><div class="codebar"><span>button_event_core.v · Verilog</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-03: reusable four-button synchronizer, debounce, short/long event generator.
+// btn_raw[0]=UP, [1]=DOWN, [2]=LEFT, [3]=RIGHT; active high.
+// event_pulse[0..3]=short on debounced release;
+// event_pulse[4..7]=long once at threshold, while held.
+module button_event_core #(
+    parameter integer DEBOUNCE_CYCLES = 2000000, // 20 ms at 100 MHz
+    parameter integer LONG_CYCLES = 500000000    // 5 s at 100 MHz
+)(
+    input  wire       clk,
+    input  wire       resetn,
+    input  wire [3:0] btn_raw,
+    output reg  [7:0] event_pulse,
+    output wire [3:0] pressed
+);
+    // $clog2 helps keep a small counter for accelerated TB parameters.
+    localparam integer DB_W   = (DEBOUNCE_CYCLES &lt; 2) ? 1 : $clog2(DEBOUNCE_CYCLES+1);
+    localparam integer LONG_W = (LONG_CYCLES &lt; 2) ? 1 : $clog2(LONG_CYCLES+1);
+    genvar k;
+    generate for (k=0; k&lt;4; k=k+1) begin: g_button
+        (* ASYNC_REG = &quot;TRUE&quot; *) reg meta;
+        (* ASYNC_REG = &quot;TRUE&quot; *) reg synced;
+        reg debounced;
+        reg [DB_W-1:0] db_ticks;
+        reg [LONG_W-1:0] hold_ticks;
+        reg long_sent;
+
+        assign pressed[k] = debounced;
+
+        always @(posedge clk) begin
+            if (!resetn) begin
+                meta       &lt;= 1&#x27;b0;
+                synced     &lt;= 1&#x27;b0;
+                debounced  &lt;= 1&#x27;b0;
+                db_ticks   &lt;= {DB_W{1&#x27;b0}};
+                hold_ticks &lt;= {LONG_W{1&#x27;b0}};
+                long_sent  &lt;= 1&#x27;b0;
+                event_pulse[k]   &lt;= 1&#x27;b0;
+                event_pulse[k+4] &lt;= 1&#x27;b0;
+            end else begin
+                // Two-register synchronizer for asynchronous button input.
+                meta &lt;= btn_raw[k];
+                synced &lt;= meta;
+                event_pulse[k]   &lt;= 1&#x27;b0;
+                event_pulse[k+4] &lt;= 1&#x27;b0;
+
+                // Count only when the sampled value disagrees with stable state.
+                if (synced == debounced) begin
+                    db_ticks &lt;= {DB_W{1&#x27;b0}};
+                end else if (db_ticks == DEBOUNCE_CYCLES-1) begin
+                    db_ticks  &lt;= {DB_W{1&#x27;b0}};
+                    debounced &lt;= synced;
+                    if (synced) begin
+                        hold_ticks &lt;= {LONG_W{1&#x27;b0}};
+                        long_sent  &lt;= 1&#x27;b0;
+                    end else begin
+                        // No short pulse after a long event on the same press.
+                        if (!long_sent) event_pulse[k] &lt;= 1&#x27;b1;
+                        hold_ticks &lt;= {LONG_W{1&#x27;b0}};
+                        long_sent  &lt;= 1&#x27;b0;
+                    end
+                end else begin
+                    db_ticks &lt;= db_ticks + 1&#x27;b1;
+                end
+
+                // Freeze time while synchronized input is low; avoids a
+                // false 5-second event during release debounce.
+                if (debounced &amp;&amp; synced &amp;&amp; !long_sent) begin
+                    if (hold_ticks == LONG_CYCLES-1) begin
+                        event_pulse[k+4] &lt;= 1&#x27;b1;
+                        long_sent &lt;= 1&#x27;b1;
+                    end else begin
+                        hold_ticks &lt;= hold_ticks + 1&#x27;b1;
+                    end
+                end
+            end
+        end
+    end endgenerate
+endmodule
+</code></pre></div>
+      <div class="codeblock" id="f-part02_1_ch09_reuse_p2_04_pwm_core_v"><div class="codebar"><span>pwm_core.v · Verilog</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-04: 보드와 무관한 단일 채널 범용 PWM 코어.
+// (추가) period와 duty는 클록 횟수 단위. 0%/100%는 지속 LOW/HIGH.
+// (추가) 설정은 주기 마지막 경계에서만 활성값으로 반영.
+module pwm_core #(
+    parameter [31:0] RESET_PERIOD = 32&#x27;d100000
+)(
+    input  wire        clk,
+    input  wire        resetn,
+    input  wire        cfg_apply,
+    input  wire [31:0] cfg_period,
+    input  wire [31:0] cfg_duty,
+    input  wire        cfg_enable,
+    input  wire        cfg_polarity,
+    output wire        pwm_out,
+    output reg         pending,
+    output reg [31:0] active_period,
+    output reg [31:0] active_duty,
+    output reg         active_enable,
+    output reg         active_polarity
+);
+    reg [31:0] counter;
+    reg [31:0] shadow_period;
+    reg [31:0] shadow_duty;
+    reg        shadow_enable;
+    reg        shadow_polarity;
+
+    wire boundary = (counter &gt;= active_period - 32&#x27;d1);
+    wire duty_high = (counter &lt; active_duty);
+
+    // (주의) enable=0이면 polarity와 관계없이 LOW로 차단.
+    // (설명) 기본 polarity에서 active_duty=0이면 항상 LOW,
+    //         active_duty=active_period이면 항상 HIGH.
+    assign pwm_out = resetn &amp;&amp; active_enable &amp;&amp;
+                     (active_polarity ? !duty_high : duty_high);
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            counter         &lt;= 32&#x27;d0;
+            active_period   &lt;= RESET_PERIOD;
+            active_duty     &lt;= 32&#x27;d0;
+            active_enable   &lt;= 1&#x27;b0;
+            active_polarity &lt;= 1&#x27;b0;
+            shadow_period   &lt;= RESET_PERIOD;
+            shadow_duty     &lt;= 32&#x27;d0;
+            shadow_enable   &lt;= 1&#x27;b0;
+            shadow_polarity &lt;= 1&#x27;b0;
+            pending         &lt;= 1&#x27;b0;
+        end else begin
+            if (boundary) begin
+                counter &lt;= 32&#x27;d0;
+                if (pending) begin
+                    active_period   &lt;= shadow_period;
+                    active_duty     &lt;= shadow_duty;
+                    active_enable   &lt;= shadow_enable;
+                    active_polarity &lt;= shadow_polarity;
+                    pending         &lt;= 1&#x27;b0;
+                end
+            end else begin
+                counter &lt;= counter + 32&#x27;d1;
+            end
+            // (추가) 경계와 APPLY가 겹치면 새 값은 다음 경계에 적용.
+            // 여러 APPLY가 겹치면 최종 요청값을 우선하는 단일 Shadow 구조.
+            if (cfg_apply) begin
+                shadow_period   &lt;= cfg_period;
+                shadow_duty     &lt;= cfg_duty;
+                shadow_enable   &lt;= cfg_enable;
+                shadow_polarity &lt;= cfg_polarity;
+                pending         &lt;= 1&#x27;b1;
+            end
+        end
+    end
+endmodule
+</code></pre></div>
+      <div class="codeblock" id="f-part02_1_ch09_reuse_p2_05_cds_digital_core_v"><div class="codebar"><span>cds_digital_core.v · Verilog</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-05 reusable digital CdS core. DO is an asynchronous 3.3V-safe input.
+// 2FF synchronization -&gt; programmable interpretation -&gt; stable-count filter.
+// FILTER_CYCLES=2,000,000 at a VERIFIED 100MHz AXI clock means about 20ms.
+module cds_digital_core #(
+    parameter integer FILTER_CYCLES = 2000000
+)(
+    input  wire clk,
+    input  wire resetn,
+    input  wire cds_digital_i,
+    input  wire dark_when_low,
+    output wire raw_sync,
+    output reg  stable_dark,
+    output reg  stable_valid
+);
+    localparam integer CNT_W = (FILTER_CYCLES &lt;= 2) ? 1 : $clog2(FILTER_CYCLES + 1);
+    reg sync_meta, sync_data;
+    reg polarity_q;
+    reg candidate_q;
+    reg [CNT_W-1:0] stable_count;
+    wire candidate = dark_when_low ? ~sync_data : sync_data;
+
+    // (추가) Two registers reduce metastability propagation probability.
+    // Neither filter nor 2FF replaces board-level 3.3V electrical protection.
+    always @(posedge clk) begin
+        if (!resetn) begin
+            sync_meta &lt;= 1&#x27;b1;
+            sync_data &lt;= 1&#x27;b1;
+        end else begin
+            sync_meta &lt;= cds_digital_i;
+            sync_data &lt;= sync_meta;
+        end
+    end
+    assign raw_sync = sync_data;
+
+    // (추가) On polarity changes, invalidate old interpretation and re-filter.
+    // Until valid, the automatic light gate will remain OFF (fail-off).
+    always @(posedge clk) begin
+        if (!resetn) begin
+            polarity_q   &lt;= 1&#x27;b1;
+            candidate_q  &lt;= 1&#x27;b0;
+            stable_count &lt;= {CNT_W{1&#x27;b0}};
+            stable_dark  &lt;= 1&#x27;b0;
+            stable_valid &lt;= 1&#x27;b0;
+        end else begin
+            polarity_q &lt;= dark_when_low;
+            if (polarity_q != dark_when_low) begin
+                candidate_q  &lt;= candidate;
+                stable_count &lt;= {CNT_W{1&#x27;b0}};
+                stable_dark  &lt;= 1&#x27;b0;
+                stable_valid &lt;= 1&#x27;b0;
+            end else if (candidate != candidate_q) begin
+                candidate_q  &lt;= candidate;
+                stable_count &lt;= {CNT_W{1&#x27;b0}};
+            end else if (!stable_valid || candidate != stable_dark) begin
+                if (stable_count &gt;= FILTER_CYCLES - 1) begin
+                    stable_dark  &lt;= candidate;
+                    stable_valid &lt;= 1&#x27;b1;
+                    stable_count &lt;= {CNT_W{1&#x27;b0}};
+                end else begin
+                    stable_count &lt;= stable_count + 1&#x27;b1;
+                end
+            end else begin
+                stable_count &lt;= {CNT_W{1&#x27;b0}};
+            end
+        end
+    end
+endmodule
+</code></pre></div>
+      <div class="codeblock" id="f-part02_1_ch09_reuse_p2_05_auto_light_controller_v"><div class="codebar"><span>auto_light_controller.v · Verilog</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-05 board-independent LED PWM gate. Input/output polarities are active-high.
+// MANUAL (AUTO=0): retain P2-04 PWM output unmodified.
+// AUTO=1: allow configured PWM only after stable dark is confirmed.
+// If PWM=0%, AUTO ON does NOT force light on: user sets PWM brightness first.
+module auto_light_controller (
+    input  wire pwm_led_i,
+    input  wire auto_enable_i,
+    input  wire sensor_dark_i,
+    input  wire sensor_valid_i,
+    output wire led1_o
+);
+    assign led1_o = pwm_led_i &amp;
+                    (~auto_enable_i | (sensor_valid_i &amp; sensor_dark_i));
+endmodule
+</code></pre></div>
+      <div class="codeblock" id="f-part02_1_ch09_reuse_p2_06_hc_sr04_core_v"><div class="codebar"><span>hc_sr04_core.v · Verilog</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-06 HC-SR04 reusable timing core; no board pins or AXI dependency.
+// (추가) 2FF Echo synchronizer, microsecond tick, bounded waits, cooldown.
+// 100 MHz AXI clock -&gt; 100 clocks / 1 us; 12 us TRIG, &gt;=60 ms cooldown.
+// Result is the last COMPLETED reading. valid_o and fault flags persist.
+module hc_sr04_core #(
+    parameter integer CLK_HZ = 100000000,
+    parameter integer TRIG_US = 12,
+    parameter integer TIMEOUT_US = 38000,
+    parameter integer COOLDOWN_US = 60000
+)(
+    input wire clk, input wire resetn,
+    input wire echo_i, input wire start_i,
+    output reg trig_o, output wire ready_o, output wire busy_o,
+    output reg done_pulse_o,
+    output reg [15:0] distance_cm_o,
+    output reg [31:0] echo_us_o,
+    output reg valid_o, output reg timeout_o, output reg out_range_o
+);
+    localparam integer TICK_CYCLES = CLK_HZ / 1000000;
+    localparam [2:0] S_IDLE=3&#x27;d0, S_TRIG=3&#x27;d1,
+                     S_WAIT=3&#x27;d2, S_ECHO=3&#x27;d3, S_COOL=3&#x27;d4;
+    reg [2:0] state;
+    reg [31:0] div_count, us_count, high_us;
+    reg echo_meta, echo_sync, echo_prev;
+    wire tick_us = (div_count == TICK_CYCLES-1);
+    wire echo_rise = echo_sync &amp;&amp; !echo_prev;
+    reg echo_rise_pending; // Catch sub-us rising edges until the next us tick.
+    assign ready_o = (state == S_IDLE);
+    assign busy_o = !ready_o;
+
+    // (추가) FPGA input can be asynchronous. Metastability cannot be
+    // eliminated absolutely; this 2FF path lowers the risk.
+    always @(posedge clk) begin
+        if (!resetn) begin
+            echo_meta &lt;= 1&#x27;b0;
+            echo_sync &lt;= 1&#x27;b0;
+            echo_prev &lt;= 1&#x27;b0;
+        end else begin
+            echo_meta &lt;= echo_i;
+            echo_sync &lt;= echo_meta;
+            echo_prev &lt;= echo_sync;
+        end
+    end
+
+    always @(posedge clk) begin
+        if (!resetn || state != S_WAIT) echo_rise_pending &lt;= 1&#x27;b0;
+        else if (echo_rise) echo_rise_pending &lt;= 1&#x27;b1;
+        else if (tick_us) echo_rise_pending &lt;= 1&#x27;b0;
+    end
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            div_count &lt;= 32&#x27;d0;
+            state &lt;= S_IDLE;
+            us_count &lt;= 32&#x27;d0;
+            high_us &lt;= 32&#x27;d0;
+            trig_o &lt;= 1&#x27;b0;
+            done_pulse_o &lt;= 1&#x27;b0;
+            distance_cm_o &lt;= 16&#x27;d0;
+            echo_us_o &lt;= 32&#x27;d0;
+            valid_o &lt;= 1&#x27;b0;
+            timeout_o &lt;= 1&#x27;b0;
+            out_range_o &lt;= 1&#x27;b0;
+        end else begin
+            done_pulse_o &lt;= 1&#x27;b0;
+            if (tick_us) div_count &lt;= 32&#x27;d0;
+            else div_count &lt;= div_count + 32&#x27;d1;
+
+            case (state)
+            S_IDLE: begin
+                if (start_i) begin
+                    trig_o &lt;= 1&#x27;b1;
+                    us_count &lt;= 32&#x27;d0;
+                    high_us &lt;= 32&#x27;d0;
+                    state &lt;= S_TRIG;
+                end
+            end
+            S_TRIG: if (tick_us) begin
+                if (us_count + 32&#x27;d1 &gt;= TRIG_US) begin
+                    trig_o &lt;= 1&#x27;b0;
+                    us_count &lt;= 32&#x27;d0;
+                    state &lt;= S_WAIT;
+                end else us_count &lt;= us_count + 32&#x27;d1;
+            end
+            S_WAIT: if (tick_us) begin
+                if (echo_rise_pending || echo_rise) begin
+                    // Edge latched at 100MHz to avoid missing it on us tick.
+                    high_us &lt;= 32&#x27;d1;
+                    us_count &lt;= 32&#x27;d0;
+                    state &lt;= S_ECHO;
+                end else if (us_count + 32&#x27;d1 &gt;= TIMEOUT_US) begin
+                    valid_o &lt;= 1&#x27;b0;
+                    timeout_o &lt;= 1&#x27;b1;
+                    out_range_o &lt;= 1&#x27;b0;
+                    distance_cm_o &lt;= 16&#x27;d0;
+                    echo_us_o &lt;= 32&#x27;d0;
+                    done_pulse_o &lt;= 1&#x27;b1;
+                    us_count &lt;= 32&#x27;d0;
+                    state &lt;= S_COOL;
+                end else us_count &lt;= us_count + 32&#x27;d1;
+            end
+            S_ECHO: if (tick_us) begin
+                if (!echo_sync) begin
+                    echo_us_o &lt;= high_us;
+                    // D(cm) ~= EchoHigh(us)/58 at nominal room temperature.
+                    if (high_us &gt;= 32&#x27;d116 &amp;&amp; high_us &lt;= 32&#x27;d23200) begin
+                        distance_cm_o &lt;= (high_us + 32&#x27;d29) / 32&#x27;d58;
+                        valid_o &lt;= 1&#x27;b1;
+                        timeout_o &lt;= 1&#x27;b0;
+                        out_range_o &lt;= 1&#x27;b0;
+                    end else begin
+                        distance_cm_o &lt;= 16&#x27;d0;
+                        valid_o &lt;= 1&#x27;b0;
+                        timeout_o &lt;= 1&#x27;b0;
+                        out_range_o &lt;= 1&#x27;b1;
+                    end
+                    done_pulse_o &lt;= 1&#x27;b1;
+                    us_count &lt;= 32&#x27;d0;
+                    state &lt;= S_COOL;
+                end else if (high_us &gt;= TIMEOUT_US) begin
+                    echo_us_o &lt;= high_us;
+                    distance_cm_o &lt;= 16&#x27;d0;
+                    valid_o &lt;= 1&#x27;b0;
+                    timeout_o &lt;= 1&#x27;b1;
+                    out_range_o &lt;= 1&#x27;b0;
+                    done_pulse_o &lt;= 1&#x27;b1;
+                    us_count &lt;= 32&#x27;d0;
+                    state &lt;= S_COOL;
+                end else high_us &lt;= high_us + 32&#x27;d1;
+            end
+            S_COOL: if (tick_us) begin
+                if (us_count + 32&#x27;d1 &gt;= COOLDOWN_US) begin
+                    us_count &lt;= 32&#x27;d0;
+                    state &lt;= S_IDLE;
+                end else us_count &lt;= us_count + 32&#x27;d1;
+            end
+            default: state &lt;= S_IDLE;
+            endcase
+        end
+    end
+endmodule
+</code></pre></div>
+      <div class="codeblock" id="f-part02_1_ch09_reuse_p2_07_motor_controller_v"><div class="codebar"><span>motor_controller.v · Verilog</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-07 reusable motor controller; no AXI or board-specific pins.
+// (추가) Valid, recent HC-SR04 data + AUTO must exist before any drive.
+// (추가) Near/fault/timeout immediately disables ENA via combinational gating.
+// (추가) Fault while commanded latches TRIP; MOTOR STOP clears, FWD/REV re-arms.
+module motor_controller #(
+    parameter integer DEADTIME_CYCLES = 10000000, // 100 ms at 100MHz
+    parameter integer FRESH_CYCLES    = 25000000  // 250 ms at 100MHz
+)(
+    input wire clk, input wire resetn,
+    input wire [1:0] request_i, // 0 STOP, 1 FWD, 2 REV
+    input wire stop_clear_i,   // One-clock pulse on MOTOR STOP write
+    input wire sonic_auto_i, input wire sonic_done_i,
+    input wire sonic_valid_i, input wire sonic_unsafe_i,
+    output wire motor_in1_o, output wire motor_in2_o, output wire motor_ena_o,
+    output wire [1:0] active_dir_o,
+    output wire sensor_safe_o, output wire fresh_o,
+    output reg trip_latched_o, output wire deadtime_o
+);
+    reg [31:0] fresh_count, dead_count;
+    reg [1:0] drive_dir;
+    // Always gate the physical outputs, even before the next clock edge.
+    assign fresh_o = (fresh_count != 32&#x27;d0);
+    assign sensor_safe_o = sonic_auto_i &amp;&amp; fresh_o &amp;&amp;
+                           sonic_valid_i &amp;&amp; !sonic_unsafe_i;
+    wire output_allowed = sensor_safe_o &amp;&amp; !trip_latched_o &amp;&amp;
+                          !stop_clear_i &amp;&amp; (request_i != 2&#x27;d0);
+    assign motor_in1_o = output_allowed &amp;&amp; (drive_dir == 2&#x27;d1);
+    assign motor_in2_o = output_allowed &amp;&amp; (drive_dir == 2&#x27;d2);
+    assign motor_ena_o = motor_in1_o || motor_in2_o;
+    assign active_dir_o = motor_ena_o ? drive_dir : 2&#x27;d0;
+    assign deadtime_o = (dead_count != 32&#x27;d0);
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            fresh_count &lt;= 32&#x27;d0;
+            dead_count &lt;= 32&#x27;d0;
+            drive_dir &lt;= 2&#x27;d0;
+            trip_latched_o &lt;= 1&#x27;b0;
+        end else begin
+            // Stale/invalid/off -&gt; stop. Periodic successful DONE re-arms freshness.
+            if (!sonic_auto_i || !sonic_valid_i || sonic_unsafe_i)
+                fresh_count &lt;= 32&#x27;d0;
+            else if (sonic_done_i)
+                fresh_count &lt;= FRESH_CYCLES;
+            else if (fresh_count != 32&#x27;d0)
+                fresh_count &lt;= fresh_count - 32&#x27;d1;
+
+            if (stop_clear_i)
+                trip_latched_o &lt;= 1&#x27;b0;
+            else if (request_i != 2&#x27;d0 &amp;&amp; !sensor_safe_o)
+                trip_latched_o &lt;= 1&#x27;b1;
+
+            if (!sensor_safe_o || trip_latched_o || stop_clear_i ||
+                request_i == 2&#x27;d0 || request_i == 2&#x27;d3) begin
+                drive_dir &lt;= 2&#x27;d0;
+                // (변경) STOP after motion must not bypass reversal dead-time.
+                if (drive_dir != 2&#x27;d0)
+                    dead_count &lt;= DEADTIME_CYCLES;
+                else if (dead_count != 32&#x27;d0)
+                    dead_count &lt;= dead_count - 32&#x27;d1;
+            end else if (drive_dir != 2&#x27;d0 &amp;&amp; drive_dir != request_i) begin
+                // Disable bridge, then enforce a direction-change dead time.
+                drive_dir &lt;= 2&#x27;d0;
+                dead_count &lt;= DEADTIME_CYCLES;
+            end else if (drive_dir == 2&#x27;d0) begin
+                if (dead_count != 32&#x27;d0)
+                    dead_count &lt;= dead_count - 32&#x27;d1;
+                else
+                    drive_dir &lt;= request_i;
+            end
+        end
+    end
+endmodule
+</code></pre></div>
+    </section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

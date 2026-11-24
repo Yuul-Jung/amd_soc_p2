@@ -1,0 +1,17 @@
+digraph {
+ graph [rankdir=LR, bgcolor="white", pad="0.3", nodesep="0.35", ranksep="0.52", fontname="Noto Sans CJK KR", splines=polyline];
+ node [shape=box,style="rounded,filled",fontname="Noto Sans CJK KR",fontsize=11,margin="0.16,0.12",color="#BFC7D9",fillcolor="#F6F7FB"];
+ edge [fontname="Noto Sans CJK KR",fontsize=10,color="#767BA0",arrowsize=.66];
+ input [label="poll_uart()\nEnter로 문자열 완성"];
+ parse [label="motor_parse_command(line)",fillcolor="#E8E3F8"];
+ stop [label="MOTOR STOP\nCMD=0 · TRIP 해제"];
+ cmd [label="MOTOR FWD / REV\n안전 상태 조회"];
+ blocked [label="안전하지 않음 / TRIP\nBLOCKED 표시",fillcolor="#FFF1E5"];
+ request [label="CMD=1 / CMD=2\n요청만 등록",fillcolor="#E8F3EC"];
+ status [label="MOTOR STATUS\n요청/실제/보호 출력"];
+ other [label="기존 01~06장\n문자열 명령 처리"];
+ hw [label="motor_controller\n센서+신선도+방향 대기",fillcolor="#E8E3F8"];
+ out [label="실제 IN1/IN2/ENA\n구동 또는 안전 정지",fillcolor="#E8F3EC"];
+ input->parse;parse->stop [label="STOP"]; parse->cmd [label="FWD/REV"];parse->status [label="STATUS"];parse->other [label="기타"];
+ cmd->blocked [label="위험"];cmd->request [label="안전"];request->hw;stop->hw;hw->out;
+}

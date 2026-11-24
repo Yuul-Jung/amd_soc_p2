@@ -1,0 +1,14 @@
+digraph G {
+  graph [rankdir=LR, bgcolor="transparent", pad=0.22, nodesep=0.75, ranksep=1.0, splines=polyline];
+  node [shape=box, style="rounded,filled", color="#cfd5de", fillcolor="#f7f8fc", fontname="DejaVu Sans", fontsize=13, margin="0.22,0.16"];
+  edge [color="#6a6e8c", penwidth=1.6, arrowsize=0.75, fontname="DejaVu Sans", fontsize=10];
+  uart [label="PC Terminal\nPWM 50 + Enter",fillcolor="#eeebfc"];
+  cpu [label="MicroBlaze V\nC command parser",fillcolor="#dce6f8"];
+  bus [label="AXI4-Lite\nAddress Editor",fillcolor="#eaf1ff"];
+  pwm [label="P2-04 AXI PWM\nCFG / APPLY / STATUS",fillcolor="#e6def7"];
+  core [label="pwm_core\nperiod-boundary update",fillcolor="#e2f3eb"];
+  led [label="Basys3 LED1\nE19 / PWM",fillcolor="#fff2d0"];
+  uart -> cpu -> bus -> pwm -> core -> led;
+  legacy [label="P2-01 LED0\nP2-02 FND\nP2-03 Buttons/IRQ",fillcolor="#f3f4f6"];
+  bus -> legacy [style=dashed, label="reuse"];
+}

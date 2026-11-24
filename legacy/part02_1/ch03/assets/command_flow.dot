@@ -1,0 +1,15 @@
+digraph G {
+ graph [rankdir=LR, bgcolor="white", pad="0.25", nodesep="0.55", ranksep="1.0", splines=polyline, fontname="Noto Sans CJK KR"];
+ node [shape=box, style="rounded,filled", fontsize=12, fontname="Noto Sans CJK KR", fillcolor="#f7f7fb", color="#aeaaba", fontcolor="#23242a", margin="0.26,0.15"];
+ edge [color="#6b60a8", arrowsize=.68, penwidth=1.45];
+ START [label="main()\nIRQ 등록 · ENABLE", fillcolor="#eae5fc"];
+ LOOP [label="main() 반복", fillcolor="#f0edff"];
+ UART [label="poll_uart()\n수신 버퍼 · Enter"];
+ CMD [label="handle_line() (Enter 때)\nLED / DISP / STATUS"];
+ EVENT [label="service_button_events()\nirq_counts[] 조회"];
+ APPLY [label="p2_apply_button() (이벤트 때)\n값 · 모드 · 표시 허용"];
+ COMMIT [label="fnd_commit()\nREG0 BCD / REG1 ON"];
+ ISR [label="btn_irq_handler()\nPENDING → W1C → count++", fillcolor="#eaf5ee"];
+ START -> LOOP -> UART -> CMD -> EVENT -> APPLY -> COMMIT;
+ ISR -> EVENT;
+}

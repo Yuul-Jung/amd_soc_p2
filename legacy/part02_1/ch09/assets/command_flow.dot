@@ -1,0 +1,14 @@
+digraph Control {
+ graph [rankdir=LR,bgcolor="white",pad=.28,nodesep=.85,ranksep=1.05,splines=polyline,fontname="DejaVu Sans"];
+ node [shape=box,style="rounded,filled",fillcolor="#F6F3FF",color="#8879BE",fontname="DejaVu Sans",fontsize=13,margin=".3,.25"];
+ edge [color="#556477",penwidth=1.6,arrowsize=.65];
+ A[label="poll_uart()\nEnter 후 handle_line(line)"];
+ B[label="p2_09_parse_command()\n문자열 전체 비교"];
+ C[shape=diamond,label="명령 분기",fillcolor="#FFF8DF"];
+ D[label="MODE AUTO\nenter_auto_mode()\nSTOP → SONIC ON → CdS AUTO ON"];
+ E[label="MODE MANUAL\nenter_manual_mode()\nCdS AUTO OFF / SONIC 감시 유지"];
+ F[label="MODE STATUS\n운전 정책·모터 요청 읽기"];
+ G[label="IRQ STATUS\nprint_irq_status()"];
+ H[label="기존 01~08 명령\np2_09_allowed_in_auto()\n기존 개별 파서로 전달"];
+ A->B->C;C->D;C->E;C->F;C->G;C->H;
+}

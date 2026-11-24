@@ -1,0 +1,193 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>제2부 02장 | C 프로그램 코드 풀이</title><style>
+:root{--bg:#F1F2EE;--paper:#fff;--text:#15171C;--muted:#58616D;--accent:#4635B1;--line:#DCDFE5;--ok:#24704E;--warn:#8b5c19}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.75 "Noto Sans KR","Malgun Gothic",sans-serif}a{color:var(--accent)}.top{background:white;border-bottom:1px solid var(--line);padding:12px max(24px,calc((100vw - 1470px)/2));font-size:13px}.hero{background:#181920;color:#fff;padding:48px max(24px,calc((100vw - 1470px)/2)) 42px}.hero small{color:#FFD24A;font-weight:800;letter-spacing:2px}.hero h1{font-size:clamp(27px,3vw,43px);margin:13px 0 6px;line-height:1.28}.hero p{color:#D5D8E1;max-width:880px}.pills{display:flex;flex-wrap:wrap;gap:9px}.pills span{font-size:12px;border:1px solid #5A5A6A;padding:3px 10px}.layout{max-width:1530px;margin:0 auto;display:grid;grid-template-columns:260px minmax(0,1fr);gap:30px;padding:25px}.side{position:sticky;top:12px;max-height:calc(100vh - 25px);overflow:auto;padding:15px 17px;background:white;border:1px solid var(--line)}.side h2{font-size:16px;color:var(--accent)}.side a{display:block;border-bottom:1px solid #EEE;font-size:13px;text-decoration:none;padding:7px}.side a:hover{text-decoration:underline}.side h3{color:#767F8C;font-size:11px;letter-spacing:1px;margin:22px 0 3px}.content{min-width:0}.section{background:white;padding:28px 34px;margin-bottom:15px;border:1px solid var(--line);scroll-margin-top:18px}.section h2{font-size:24px;margin:4px 0 14px}.section h3{font-size:17px;margin-top:23px}.section p{color:#424957}.tag{font-size:12px;color:var(--accent);font-weight:800;letter-spacing:.06em}.lead{font-size:16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel{background:#F9FAFC;border:1px solid var(--line);padding:14px 17px}.panel h3{margin:0 0 6px}.panel p{margin:0}.flowline{background:#F7F6FF;border-left:4px solid var(--accent);padding:13px;margin:15px 0;overflow-x:auto;white-space:nowrap}.tablewrap{overflow:auto;margin:15px 0}table{border-collapse:collapse;width:100%;min-width:630px}th,td{border-bottom:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;font-size:13px}th{background:#F5F6F8}code,pre{font-family:Consolas, "Liberation Mono",monospace}code{background:#F3F4F7;padding:2px 4px}pre{background:#F3F5F8;color:#27313D;border:1px solid #DEE2E7;padding:17px;overflow:auto;max-height:740px;font-size:12px;line-height:1.6}pre code{background:none;padding:0}.steps{list-style:none;counter-reset:step;padding:0}.steps li{counter-increment:step;border:1px solid var(--line);margin:10px 0;padding:13px 15px 13px 55px;position:relative;background:#FCFCFD}.steps li::before{content:counter(step,decimal-leading-zero);position:absolute;left:13px;top:13px;color:var(--accent);font-weight:900}.steps li strong{display:block;font-size:15px}.steps li p{margin:5px 0}.ok{background:#F1F8F4;border-left:4px solid var(--ok);padding:12px 15px;color:#1A5E40;margin:14px 0}.caution{background:#FFF8E9;border-left:4px solid #BA8C35;padding:12px 15px;color:#6A4E1B;margin:14px 0}.links{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0}.links a{border:1px solid #B8B3DE;background:#F5F3FD;padding:7px 11px;text-decoration:none;font-size:13px;font-weight:700}.links a:hover{text-decoration:underline}.figure{padding:17px;background:#fff;border:1px solid var(--line);margin:15px 0}.figure img{display:block;max-width:100%;height:auto;margin:auto}.figure figcaption{text-align:center;color:#66717C;font-size:12px;margin-top:10px}.fullcode{max-height:780px}.footer{font-size:12px;color:#78818B;padding:16px}.mini{font-size:13px}.red{color:#AC3636}.checklist label{display:block;margin:6px 0}.checklist input{accent-color:var(--accent)}
+@media(max-width:950px){.layout{display:block;padding:15px}.side{position:static;max-height:230px;margin-bottom:14px}.section{padding:18px}.grid{grid-template-columns:1fr}.hero{padding:38px 18px}}
+
+.code-note{font-weight:700}.section pre{white-space:pre;overflow-x:auto}.section .tablewrap{overflow-x:auto}.section .figure img{max-width:100%;max-height:500px;object-fit:contain}.section .steps li{overflow-wrap:anywhere}.section code{overflow-wrap:anywhere}
+
+.procedure{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.procedure>div{border:1px solid var(--line);background:#FCFCFD;padding:13px 15px}
+.procedure h4{color:#4635B1;margin:0 0 5px;font-size:13px}.procedure p{margin:0;font-size:13px}
+details{border:1px solid #dedce9;background:#fdfcff;padding:10px 15px;margin:11px 0}
+summary{cursor:pointer;color:#39288f;font-weight:800}.wide-note{border-left:4px solid #7665a4;background:#F6F4FC;padding:12px 16px;margin:12px 0}
+.emph{font-weight:750;color:#39288f}.tiny{font-size:12px;color:#65707c}.mono{font-family:Consolas,monospace}
+@media(max-width:850px){.procedure{grid-template-columns:1fr}}
+</style></head><body><div class="top"><a href="P2_02_Study_Guide.html">02장 학습안내서</a> / C 코드 해설</div><header class="hero"><small>P2-02 · C LANGUAGE</small><h1>UART → 문자열 → BCD → AXI 레지스터</h1><p>전체 실행 코드와 AMD 전용 API·4자리 숫자 표현·실행 값을 함께 풀이합니다.</p></header><div class="layout"><nav class="side"><h2>C 코드 해설</h2><a href="#goal">명령과 예상 UART 출력</a><a href="#types">특수 자료형·함수·문법</a><a href="#flow">함수별 실행 흐름</a><a href="#trace">DISP 0050 실제 값 추적</a><a href="#faults">오류 경계·오해 방지</a><a href="#source">main_p2_02.c 전체 실행 소스</a></nav><main class="content"><section class="section" id="goal"><div class="tag">C 코드 이해</div><h2>명령과 예상 UART 출력</h2><div class="tablewrap"><table><thead><tr><th>입력</th><th>원인 → 결과</th></tr></thead><tbody><tr><td><code>DISP 0050</code></td><td>문자 네 자리 → 0x0050 → REG0에 기록 → REG1=1 → 출력 FND 0050</td></tr><tr><td><code>DISP OFF</code></td><td>REG1=0, REG0은 유지 → 모든 AN 비활성</td></tr><tr><td><code>LED ON</code></td><td>기존 P2-01 REG0 bit0=1 → LED0 ON</td></tr><tr><td><code>STATUS</code></td><td>기존 LED와 신규 FND 레지스터 읽기, 쓰기 없음</td></tr></tbody></table></div></section><section class="section" id="types"><div class="tag">C 코드 이해</div><h2>특수 자료형·함수·문법</h2><div class="tablewrap"><table><thead><tr><th>표현</th><th>의미</th><th>이 코드에서의 실제 역할</th></tr></thead><tbody><tr><td><code>u8</code></td><td>AMD/Xilinx 8비트 부호 없는 정수 (<code>uint8_t</code>와 대응)</td><td>UART 한 바이트 수신, 문자를 한 바이트 송신</td></tr><tr><td><code>u32</code></td><td>AMD/Xilinx 32비트 부호 없는 정수</td><td>AXI 32비트 레지스터값·BCD 계산</td></tr><tr><td><code>Xil_In32(addr)</code></td><td>메모리 주소에 매핑된 32비트 I/O 읽기</td><td>LED/FND 레지스터의 설정값을 가져옴</td></tr><tr><td><code>Xil_Out32(addr,value)</code></td><td>32비트 MMIO 쓰기</td><td>REG0의 BCD 값, REG1의 enable 기록</td></tr><tr><td><code>XUartLite_RecvByte</code></td><td>UART Lite에서 1바이트를 대기 수신</td><td>Enter까지 ASCII 문자를 조립</td></tr><tr><td><code>XUartLite_SendByte</code></td><td>UART Lite로 1바이트 송신</td><td>상태 메시지를 문자 단위로 PC에 표시</td></tr><tr><td><code>XPAR_...BASEADDR</code></td><td>Vitis BSP가 하드웨어에서 생성한 매크로</td><td>실제 UART·AXI 주소 확인의 근거</td></tr><tr><td><code>#define</code> / <code>#error</code></td><td>컴파일 전 상수 정의 / 의도적인 오류 중단</td><td>주소 미설정·중복일 때 잘못된 접근 예방</td></tr><tr><td><code>strlen / memcmp / strcmp</code></td><td>문자열 길이·앞부분·완전 일치 비교</td><td><code>DISP dddd</code> 및 기존 명령 엄격 검사</td></tr><tr><td><code>'\0'</code> / <code>'\r'</code> / <code>'\n'</code></td><td>C 문자열 종료 / CR / LF</td><td>명령을 Enter 단위로 안전하게 처리</td></tr><tr><td><code>0x50U</code> / <code>&amp;</code> / <code>&lt;&lt;</code></td><td>16진수+unsigned / 비트마스크 / 비트 이동</td><td>각 자리 4비트 BCD 결합 및 검사</td></tr></tbody></table></div></section><section class="section" id="flow"><div class="tag">C 코드 이해</div><h2>함수별 실행 흐름</h2><figure class="figure"><img src="assets/command_flow.svg" alt="UART 명령 해석 흐름"></figure><div class="tablewrap"><table><thead><tr><th>함수</th><th>동작</th></tr></thead><tbody><tr><td><code>main()</code></td><td>명령 버퍼 생성, 초기 상태 출력, 반복 수신</td></tr><tr><td><code>read_command_line()</code></td><td>CR/LF까지 입력하며 길이·제어문자를 검사</td></tr><tr><td><code>handle_command()</code></td><td>LED·FND·STATUS와 그 외 문자열 구분</td></tr><tr><td><code>parse_disp_digits()</code></td><td>정확히 4개의 0~9 숫자를 4니블 BCD로 결합</td></tr><tr><td><code>report_fnd()</code></td><td>FND REG0/REG1을 읽고 4자리로 해석해 출력</td></tr></tbody></table></div></section><section class="section" id="trace"><div class="tag">C 코드 이해</div><h2>DISP 0050 실제 값 추적</h2><ol class="steps"><li><strong>문자 수신</strong><p><code>D I S P [공백] 0 0 5 0</code> 총 9문자가 <code>line[0..8]</code>에 저장되고, 종료문자 <code>'\0'</code>가 <code>line[9]</code>에 들어갑니다.</p></li><li><strong>문자열 검증</strong><p><code>strlen(line)==9</code>, <code>memcmp(line,"DISP ",5)==0</code>, 5~8번째 위치가 모두 십진 숫자인지 검사합니다.</p></li><li><strong>BCD 조립</strong><p>초기값 <code>0x0000</code>에서 각 숫자마다 4비트 왼쪽 이동 → 0, 0, 5, 0을 순서대로 결합하여 <strong><code>0x0050</code></strong>이 됩니다.</p></li><li><strong>AXI 쓰기</strong><p><code>Xil_Out32(FND_IP_BASEADDR+0x00,0x0050)</code>, 이후 <code>Xil_Out32(FND_IP_BASEADDR+0x04,1)</code>.</p></li><li><strong>RTL FND 표시</strong><p>다음 스캔 프레임에서 <code>an[3]</code>→0, <code>an[2]</code>→0, <code>an[1]</code>→5, <code>an[0]</code>→0 순으로 각 자리 구간을 반복합니다.</p></li><li><strong>결과 읽기</strong><p>CPU가 REG0/REG1의 <em>요청된 설정값</em>을 읽어 <code>OK DISP=0050 ...</code>을 출력합니다. 물리적 FND 파형이 관찰되었다는 뜻은 아닙니다.</p></li></ol></section><section class="section" id="faults"><div class="tag">C 코드 이해</div><h2>오류 경계·오해 방지</h2><div class="tablewrap"><table><thead><tr><th>입력/조건</th><th>처리</th></tr></thead><tbody><tr><td><code>DISP 50</code></td><td>4자리가 아니므로 거절</td></tr><tr><td><code>DISP 00A0</code></td><td>십진 숫자가 아니므로 거절</td></tr><tr><td><code>disp 0050</code></td><td>대소문자 불일치로 거절</td></tr><tr><td>32자 이상</td><td>명령 입력을 폐기하고 Enter까지 동기화</td></tr><tr><td>NUL 제어문자</td><td>명령 전체를 거절하고 이전 상태 유지</td></tr><tr><td><code>USER_IP_BASEADDR</code>/<code>FND_IP_BASEADDR</code> 미설정</td><td>컴파일 <code>#error</code>; 실제 주소 입력 전 빌드 금지</td></tr><tr><td><code>STATUS DISP=0050</code> 출력</td><td>레지스터 설정 확인. 실물 4자리 확인과 별개</td></tr><tr><td><code>DISP OFF</code></td><td>REG0 숫자는 그대로, REG1 bit0만 0으로 전환</td></tr></tbody></table></div></section><section class="section" id="source"><div class="tag">C 코드 이해</div><h2>main_p2_02.c 전체 실행 소스</h2><p>아래는 배포한 <code>sw/main_p2_02.c</code>와 동일한 전체 코드입니다.</p><pre><code>/* P2-02: UART string commands -&gt; P2-01 LED IP + P2-02 FND IP. */
+#include &quot;xparameters.h&quot;  /* Actual address constants from Vitis BSP */
+#include &quot;xil_types.h&quot;    /* u8 and u32 fixed-width Xilinx types */
+#include &quot;xil_io.h&quot;       /* Xil_In32 / Xil_Out32: memory-mapped I/O */
+#include &quot;xuartlite_l.h&quot;  /* XUartLite_RecvByte / SendByte */
+#include &lt;string.h&gt;       /* strcmp, memcmp, strlen */
+
+/* Fill from CURRENT Address Editor/BSP; never guess physical addresses. */
+#ifndef USER_IP_BASEADDR
+#define USER_IP_BASEADDR 0xFFFFFFFFU
+#endif
+#ifndef FND_IP_BASEADDR
+#define FND_IP_BASEADDR 0xFFFFFFFFU
+#endif
+#if USER_IP_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set USER_IP_BASEADDR to the P2-01 AXI LED Base Address&quot;
+#endif
+#if FND_IP_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set FND_IP_BASEADDR to the P2-02 AXI FND Base Address&quot;
+#endif
+#if USER_IP_BASEADDR == FND_IP_BASEADDR
+#error &quot;AXI LED and AXI FND Base Addresses must be different&quot;
+#endif
+
+#define LED_REG0       0x00U  /* P2-01 LED bit0 */
+#define FND_VALUE_REG  0x00U  /* P2-02 four packed BCD digits */
+#define FND_CTRL_REG   0x04U  /* P2-02 bit0: display enable */
+#define LINE_CAPACITY  32U    /* at most 31 ASCII characters + NUL */
+
+#if defined(XPAR_XUARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_XUARTLITE_0_BASEADDR
+#elif defined(XPAR_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_UARTLITE_0_BASEADDR
+#elif defined(XPAR_AXI_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_AXI_UARTLITE_0_BASEADDR
+#else
+#error &quot;Find the UART Lite BASEADDR macro in generated xparameters.h&quot;
+#endif
+
+/* Send a NUL-terminated string through the existing UART Lite. */
+static void uart_puts(const char *text)
+{
+    while (*text != &#x27;\0&#x27;) {
+        XUartLite_SendByte(UART_BASEADDR, (u8)*text);
+        text++;
+    }
+}
+
+/* Print a 32-bit unsigned value as exactly eight hex digits. */
+static void uart_hex32(u32 value)
+{
+    const char digits[] = &quot;0123456789ABCDEF&quot;;
+    int shift;
+    for (shift = 28; shift &gt;= 0; shift -= 4) {
+        u8 nibble = (u8)((value &gt;&gt; shift) &amp; 0x0FU);
+        XUartLite_SendByte(UART_BASEADDR, (u8)digits[nibble]);
+    }
+}
+
+/* Low four BCD nibbles map to digits from left to right. */
+static void uart_bcd4(u32 packed)
+{
+    int shift;
+    for (shift = 12; shift &gt;= 0; shift -= 4) {
+        u8 digit = (u8)((packed &gt;&gt; shift) &amp; 0x0FU);
+        XUartLite_SendByte(UART_BASEADDR,
+            (u8)((digit &lt;= 9U) ? (&#x27;0&#x27; + digit) : &#x27;?&#x27;));
+    }
+}
+
+static void report_led(const char *prefix)
+{
+    u32 value = Xil_In32(USER_IP_BASEADDR + LED_REG0);
+    uart_puts(prefix);
+    uart_puts((value &amp; 1U) ? &quot;LED=ON REG0=0x&quot; : &quot;LED=OFF REG0=0x&quot;);
+    uart_hex32(value);
+    uart_puts(&quot;\r\n&quot;);
+}
+
+static void report_fnd(const char *prefix)
+{
+    u32 digits = Xil_In32(FND_IP_BASEADDR + FND_VALUE_REG);
+    u32 ctrl = Xil_In32(FND_IP_BASEADDR + FND_CTRL_REG);
+    uart_puts(prefix);
+    uart_puts((ctrl &amp; 1U) ? &quot;DISP=&quot; : &quot;DISP=OFF VALUE=&quot;);
+    uart_bcd4(digits);
+    uart_puts(&quot; REG0=0x&quot;);
+    uart_hex32(digits);
+    uart_puts(&quot; REG1=0x&quot;);
+    uart_hex32(ctrl);
+    uart_puts(&quot;\r\n&quot;);
+}
+
+/* 1=valid line; 0=empty; -1=overflow; -2=nonprintable ASCII. */
+static int read_command_line(char *line, u32 capacity)
+{
+    u32 used = 0U;
+    int overflow = 0;
+    int invalid = 0;
+    while (1) {
+        u8 ch = XUartLite_RecvByte(UART_BASEADDR);
+        if (ch == (u8)&#x27;\r&#x27; || ch == (u8)&#x27;\n&#x27;) {
+            line[used] = &#x27;\0&#x27;;
+            if (overflow) return -1;
+            if (invalid) return -2;
+            return used ? 1 : 0;
+        }
+        if (ch &lt; (u8)0x20U || ch &gt; (u8)0x7EU) {
+            invalid = 1;
+            continue;
+        }
+        if (used &lt; capacity - 1U) {
+            line[used++] = (char)ch;
+        } else {
+            overflow = 1;
+        }
+    }
+}
+
+/* Require exactly 4 decimal digits: &quot;DISP 0050&quot; -&gt; 0x0050. */
+static int parse_disp_digits(const char *line, u32 *packed)
+{
+    u32 bcd = 0U;
+    int i;
+    if (strlen(line) != 9U || memcmp(line, &quot;DISP &quot;, 5U) != 0)
+        return 0;
+    for (i = 5; i &lt; 9; ++i) {
+        if (line[i] &lt; &#x27;0&#x27; || line[i] &gt; &#x27;9&#x27;) return 0;
+        bcd = (bcd &lt;&lt; 4) | (u32)(line[i] - &#x27;0&#x27;);
+    }
+    *packed = bcd;
+    return 1;
+}
+
+static void handle_command(const char *line)
+{
+    u32 packed = 0U;
+    if (strcmp(line, &quot;LED ON&quot;) == 0) {
+        Xil_Out32(USER_IP_BASEADDR + LED_REG0, 1U);
+        report_led(&quot;OK &quot;);
+    } else if (strcmp(line, &quot;LED OFF&quot;) == 0) {
+        Xil_Out32(USER_IP_BASEADDR + LED_REG0, 0U);
+        report_led(&quot;OK &quot;);
+    } else if (strcmp(line, &quot;STATUS&quot;) == 0) {
+        report_led(&quot;STATUS &quot;);
+        report_fnd(&quot;STATUS &quot;);
+    } else if (strcmp(line, &quot;DISP OFF&quot;) == 0) {
+        Xil_Out32(FND_IP_BASEADDR + FND_CTRL_REG, 0U);
+        report_fnd(&quot;OK &quot;);
+    } else if (parse_disp_digits(line, &amp;packed)) {
+        Xil_Out32(FND_IP_BASEADDR + FND_VALUE_REG, packed);
+        Xil_Out32(FND_IP_BASEADDR + FND_CTRL_REG, 1U);
+        report_fnd(&quot;OK &quot;);
+    } else {
+        uart_puts(&quot;ERROR: LED ON / LED OFF / DISP dddd / DISP OFF / STATUS\r\n&quot;);
+    }
+}
+
+int main(void)
+{
+    char line[LINE_CAPACITY];
+    int result;
+    uart_puts(&quot;\r\nP2-02 AXI FND CONTROL\r\n&quot;);
+    uart_puts(&quot;Commands: LED ON | LED OFF | DISP 1234 | DISP 0050 | DISP OFF | STATUS\r\n&quot;);
+    report_led(&quot;STATUS &quot;);
+    report_fnd(&quot;STATUS &quot;);
+
+    while (1) {
+        result = read_command_line(line, LINE_CAPACITY);
+        if (result &gt; 0) {
+            handle_command(line);
+        } else if (result == -2) {
+            uart_puts(&quot;ERROR: invalid character\r\n&quot;);
+        } else if (result &lt; 0) {
+            uart_puts(&quot;ERROR: command too long (max 31)\r\n&quot;);
+        }
+        /* Empty CR/LF lines are ignored (also handles CRLF terminals). */
+    }
+}</code></pre><p><a href="sw/main_p2_02.c">원본 C 파일</a></p></section></main></div></body></html>

@@ -1,0 +1,366 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 08장 · XADC C 프로그램 흐름도",
+ "title": "제2부 08장 · XADC C 프로그램 흐름도",
+ "subtitle": "",
+ "width": 2029,
+ "height": 614,
+ "headings": {
+  "title": {
+   "x": 1014.5,
+   "y": 44,
+   "w": 1949,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 1014.5,
+   "y": 90,
+   "w": 1949,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "rx",
+   "type": "rect",
+   "x": 135,
+   "y": 322,
+   "w": 150,
+   "h": 76,
+   "title": "poll_uart()",
+   "sub": "handle_line()",
+   "fill": "#f5f7ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "cmd",
+   "type": "diamond",
+   "x": 552,
+   "y": 322,
+   "w": 385,
+   "h": 92,
+   "title": "adc_parse_command()",
+   "sub": "",
+   "fill": "#f0e9ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "read",
+   "type": "rect",
+   "x": 1000,
+   "y": 188,
+   "w": 176,
+   "h": 76,
+   "title": "ADC READ",
+   "sub": "adc_print_reading()",
+   "fill": "#f5f7ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "pwm",
+   "type": "rect",
+   "x": 1000,
+   "y": 304,
+   "w": 210,
+   "h": 76,
+   "title": "ADC PWM",
+   "sub": "adc_percent_from_raw()",
+   "fill": "#f5f7ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "err",
+   "type": "rect",
+   "x": 1000,
+   "y": 410,
+   "w": 150,
+   "h": 56,
+   "title": "ERROR",
+   "sub": "",
+   "fill": "#ffe9e9",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "other",
+   "type": "rect",
+   "x": 1000,
+   "y": 506,
+   "w": 199,
+   "h": 56,
+   "title": "Legacy commands",
+   "sub": "",
+   "fill": "#f5f7ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "busy",
+   "type": "diamond",
+   "x": 1446,
+   "y": 304,
+   "w": 383,
+   "h": 92,
+   "title": "pwm_queue_percent()",
+   "sub": "",
+   "fill": "#f5f7ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "queue",
+   "type": "rect",
+   "x": 1864,
+   "y": 235,
+   "w": 151,
+   "h": 76,
+   "title": "PWM queued",
+   "sub": "LED1",
+   "fill": "#e9f7ed",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "retry",
+   "type": "rect",
+   "x": 1864,
+   "y": 341,
+   "w": 150,
+   "h": 56,
+   "title": "BUSY retry",
+   "sub": "",
+   "fill": "#fff3e4",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "rx",
+   "to": "cmd",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "cmd",
+   "to": "read",
+   "label": "READ",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     779,
+     322
+    ],
+    [
+     779,
+     188
+    ]
+   ]
+  },
+  {
+   "id": "e3",
+   "from": "cmd",
+   "to": "pwm",
+   "label": "PWM",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     779,
+     322
+    ],
+    [
+     779,
+     304
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "cmd",
+   "to": "err",
+   "label": "bad ADC",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     779,
+     322
+    ],
+    [
+     779,
+     410
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "cmd",
+   "to": "other",
+   "label": "other",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     779,
+     322
+    ],
+    [
+     779,
+     506
+    ]
+   ]
+  },
+  {
+   "id": "e6",
+   "from": "pwm",
+   "to": "busy",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e7",
+   "from": "busy",
+   "to": "queue",
+   "label": "accepted",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "top",
+   "tp": "left"
+  },
+  {
+   "id": "e8",
+   "from": "busy",
+   "to": "retry",
+   "label": "pending",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1672,
+     304
+    ],
+    [
+     1672,
+     341
+    ]
+   ]
+  }
+ ]
+}

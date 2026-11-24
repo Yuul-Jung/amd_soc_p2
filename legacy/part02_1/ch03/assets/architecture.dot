@@ -1,0 +1,20 @@
+digraph G {
+ graph [rankdir=LR, bgcolor="white", pad="0.26", nodesep="0.68", ranksep="1.1", splines=ortho, fontname="Noto Sans CJK KR"];
+ node [shape=box, style="rounded,filled", fontname="Noto Sans CJK KR", fontsize=13, color="#9d9ba7", fillcolor="#f8f8fb", fontcolor="#23242a", penwidth=1.2, margin="0.24,0.16"];
+ edge [color="#6659a9", arrowsize=.75, penwidth=1.55];
+ PC [label="PC 터미널\nLED / DISP / STATUS", fillcolor="#efedfa"];
+ UART [label="기존 AXI UART Lite"];
+ CPU [label="MicroBlaze V\nmain_p2_03.c", fillcolor="#eee9ff"];
+ BTN [label="BTNU / BTND\nBTNL / BTNR", fillcolor="#e6f4ed"];
+ CORE [label="button_event_core\n동기화 · 디바운스 · 5초"];
+ AXI [label="p2_03_axi_buttons\nPENDING / ENABLE / IRQ", fillcolor="#f3efff"];
+ INTC [label="기존 AXI INTC\nIRQ 입력 추가"];
+ FNDIP [label="기존 p2_02_axi_fnd"];
+ FND [label="Basys3 FND\n4자리", fillcolor="#e6f4ed"];
+ LEDIP [label="기존 p2_01_axi_led"];
+ LED [label="LED0", fillcolor="#e6f4ed"];
+ PC -> UART -> CPU;
+ BTN -> CORE -> AXI -> INTC -> CPU;
+ CPU -> FNDIP -> FND;
+ CPU -> LEDIP -> LED;
+}

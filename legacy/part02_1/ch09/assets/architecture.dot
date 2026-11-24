@@ -1,0 +1,14 @@
+digraph System {
+ graph [rankdir=LR,bgcolor="white",pad=0.25,nodesep=0.75,ranksep=1.15,splines=polyline,fontname="DejaVu Sans"];
+ node [shape=box,style="rounded,filled",fillcolor="#F6F6FB",color="#8B83B7",fontname="DejaVu Sans",fontsize=13,margin="0.35,0.25"];
+ edge [color="#555D70",penwidth=1.6,arrowsize=.7];
+ UART [label="PC UART 문자열\nLED / MODE / IRQ"];
+ CPU [label="MicroBlaze V\nmain_p2_09.c"];
+ MODE [label="p2_09_mode_logic.c\n자동/수동 명령 정책"];
+ ISR [label="setup_integrated_interrupts()\nbtn_irq_handler()\ntimer_callback()"];
+ GPIO [label="기존 AXI GPIO\nLED14 / LED15"];
+ DEV [label="기존 AXI IP 01~08\nCdS / SONIC / PWM / MOTOR / FND"];
+ IO [label="LED0~2 / FND / 모터\n외부 CdS · HC-SR04 · XADC"];
+ UART->CPU;
+ CPU->MODE;CPU->ISR;CPU->GPIO;CPU->DEV; DEV->IO;
+}

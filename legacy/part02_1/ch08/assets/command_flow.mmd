@@ -1,0 +1,9 @@
+flowchart LR
+  RX["poll_uart() → handle_line()"] --> CMD{"adc_parse_command(line)"}
+  CMD -->|"ADC READ"| READ["adc_sample_raw12() → adc_print_reading()"]
+  CMD -->|"ADC PWM"| MAP["adc_percent_from_raw()"]
+  MAP --> BUSY{"pwm_queue_percent()"}
+  BUSY -->|"대기 중"| RETRY["BUSY 반환 · 설정 미변경"]
+  BUSY -->|"수락"| QUEUE["PWM 설정 예약 · LED1"]
+  CMD -->|"ADC 잘못됨"| ERR["ERROR 반환"]
+  CMD -->|"기타"| LEGACY["기존 MOTOR/SONIC/CDS/PWM/LED/DISP/STATUS"]

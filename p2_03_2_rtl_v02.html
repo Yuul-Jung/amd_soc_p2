@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 03.2장 · RTL · AXI 풀이">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 03.2장 · RTL · AXI 풀이 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-03-2">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 03.2장 <span class="vbadge">v02</span></p>
+    <h1>제2부 03.2장 · RTL · AXI 풀이</h1>
+    <p>Verilog Core, AXI4-Lite 슬레이브, 사용자 Top과 테스트벤치</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+ <section class="section" id="overview">
+<h2><span class="num">00</span>이 장의 목표</h2>
+<p>Verilog Core, AXI4-Lite 슬레이브, 사용자 Top과 테스트벤치</p>
+</section>
+<section class="section" id="overview">
+<h2><span class="num">01</span>독립 Core → AXI 레지스터 → IRQ</h2>
+<div>RTL · 구조</div><figure class="fig"><img alt="버튼 동기화/이벤트와 CPU 제어·FND 표시가 분리된 구조" class="zoom" loading="lazy" src="diagrams/p2_03_architecture.svg"/><figcaption>버튼 동기화/이벤트와 CPU 제어·FND 표시가 분리된 구조</figcaption></figure><p>RTL(알티엘, 레지스터 전송 수준)은 버튼의 물리적 시간을 판정합니다. AXI4-Lite Slave는 이 사건을 레지스터에 래치하고, CPU는 인터럽트를 받아 값을 해석합니다.</p>
+</section>
+<section class="section" id="ports">
+<h2><span class="num">02</span>IP 포트·비트폭·Reset</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>신호</th><th>방향</th><th>역할</th></tr></thead><tbody><tr><td><code>btnU/D/L/R</code></td><td>입력 1비트×4</td><td>외부 기계식 버튼의 원시 신호</td></tr><tr><td><code>s00_axi_aclk</code></td><td>입력 1비트</td><td>버튼 판정 및 AXI 레지스터 공통 클록</td></tr><tr><td><code>s00_axi_aresetn</code></td><td>입력 1비트</td><td>Active-Low 동기 Reset</td></tr><tr><td><code>event_pulse[7:0]</code></td><td>내부 출력</td><td>SHORT[3:0] + LONG[7:4], 1클록 펄스</td></tr><tr><td><code>pressed[3:0]</code></td><td>내부 출력</td><td>디바운스된 안정된 버튼 현재 수준</td></tr><tr><td><code>irq</code></td><td>출력 1비트</td><td>PENDING과 ENABLE이 동시에 1인 비트가 있으면 HIGH</td></tr></tbody></table></div><p>각 버튼의 <code>meta</code>/<code>synced</code>에는 <code>ASYNC_REG</code> 속성을 적용했습니다. 최소 2단 동기화는 메타안정성 확률을 낮추지만 물리적인 비동기 입력의 위험을 완전히 없애지는 않습니다.</p>
+</section>
+<section class="section" id="axi">
+<h2><span class="num">03</span>독립 AW/W·WSTRB·R/B 응답</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>AXI 채널</th><th>약어 의미</th><th>이 코드에서 하는 일</th></tr></thead><tbody><tr><td>AW</td><td>Write Address(쓰기 주소)</td><td><code>awaddr_held</code>에 독립 저장</td></tr><tr><td>W</td><td>Write Data(쓰기 데이터)</td><td><code>wdata_held</code>, <code>wstrb_held</code>에 독립 저장</td></tr><tr><td>B</td><td>Write Response(쓰기 응답)</td><td>한 건 처리 뒤 OKAY/SLVERR 전송; BREADY까지 보존</td></tr><tr><td>AR</td><td>Read Address(읽기 주소)</td><td>요청 주소를 보고 레지스터 선택</td></tr><tr><td>R</td><td>Read Data(읽기 데이터)</td><td>RVALID/RRESP/RDATA를 RREADY 전까지 보존</td></tr></tbody></table></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>pending &lt;= (pending &amp; ~clear_mask) | event_pulse;
+coalesced &lt;= (coalesced &amp; ~clear_coalesced) |
+             (event_pulse &amp; pending &amp; ~clear_mask);</code></pre></div><p>같은 사이클에 W1C 해제와 신규 이벤트가 발생하면 <code>event_pulse</code>를 OR 하여 새 사건이 남습니다. 중복 사건은 <code>COALESCED</code>에 진단 비트만 기록하며 횟수를 재구성하지 않습니다.</p>
+</section>
+<section class="section" id="src-button_event_core_v">
+<h2><span class="num">04</span>button_event_core.v — 전체 RTL</h2>
+<div>전체 소스</div><p>4개 채널 독립 동기화/디바운스/홀드/SHORT/LONG 생성기. 5초 기준은 AXI 실제 클록에 맞춥니다.</p><p><a href="#f-part02_1_ch03_rtl_button_event_core_v">소스 파일 직접 열기</a></p><div class="codeblock" id="f-part02_1_ch03_rtl_button_event_core_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-03: reusable four-button synchronizer, debounce, short/long event generator.
+// btn_raw[0]=UP, [1]=DOWN, [2]=LEFT, [3]=RIGHT; active high.
+// event_pulse[0..3]=short on debounced release;
+// event_pulse[4..7]=long once at threshold, while held.
+module button_event_core #(
+    parameter integer DEBOUNCE_CYCLES = 2000000, // 20 ms at 100 MHz
+    parameter integer LONG_CYCLES = 500000000    // 5 s at 100 MHz
+)(
+    input  wire       clk,
+    input  wire       resetn,
+    input  wire [3:0] btn_raw,
+    output reg  [7:0] event_pulse,
+    output wire [3:0] pressed
+);
+    // $clog2 helps keep a small counter for accelerated TB parameters.
+    localparam integer DB_W   = (DEBOUNCE_CYCLES &lt; 2) ? 1 : $clog2(DEBOUNCE_CYCLES+1);
+    localparam integer LONG_W = (LONG_CYCLES &lt; 2) ? 1 : $clog2(LONG_CYCLES+1);
+    genvar k;
+    generate for (k=0; k&lt;4; k=k+1) begin: g_button
+        (* ASYNC_REG = "TRUE" *) reg meta;
+        (* ASYNC_REG = "TRUE" *) reg synced;
+        reg debounced;
+        reg [DB_W-1:0] db_ticks;
+        reg [LONG_W-1:0] hold_ticks;
+        reg long_sent;
+
+        assign pressed[k] = debounced;
+
+        always @(posedge clk) begin
+            if (!resetn) begin
+                meta       &lt;= 1'b0;
+                synced     &lt;= 1'b0;
+                debounced  &lt;= 1'b0;
+                db_ticks   &lt;= {DB_W{1'b0}};
+                hold_ticks &lt;= {LONG_W{1'b0}};
+                long_sent  &lt;= 1'b0;
+                event_pulse[k]   &lt;= 1'b0;
+                event_pulse[k+4] &lt;= 1'b0;
+            end else begin
+                // Two-register synchronizer for asynchronous button input.
+                meta &lt;= btn_raw[k];
+                synced &lt;= meta;
+                event_pulse[k]   &lt;= 1'b0;
+                event_pulse[k+4] &lt;= 1'b0;
+
+                // Count only when the sampled value disagrees with stable state.
+                if (synced == debounced) begin
+                    db_ticks &lt;= {DB_W{1'b0}};
+                end else if (db_ticks == DEBOUNCE_CYCLES-1) begin
+                    db_ticks  &lt;= {DB_W{1'b0}};
+                    debounced &lt;= synced;
+                    if (synced) begin
+                        hold_ticks &lt;= {LONG_W{1'b0}};
+                        long_sent  &lt;= 1'b0;
+                    end else begin
+                        // No short pulse after a long event on the same press.
+                        if (!long_sent) event_pulse[k] &lt;= 1'b1;
+                        hold_ticks &lt;= {LONG_W{1'b0}};
+                        long_sent  &lt;= 1'b0;
+                    end
+                end else begin
+                    db_ticks &lt;= db_ticks + 1'b1;
+                end
+
+                // Freeze time while synchronized input is low; avoids a
+                // false 5-second event during release debounce.
+                if (debounced &amp;&amp; synced &amp;&amp; !long_sent) begin
+                    if (hold_ticks == LONG_CYCLES-1) begin
+                        event_pulse[k+4] &lt;= 1'b1;
+                        long_sent &lt;= 1'b1;
+                    end else begin
+                        hold_ticks &lt;= hold_ticks + 1'b1;
+                    end
+                end
+            end
+        end
+    end endgenerate
+endmodule
+</code></pre></div>
+</section>
+<section class="section" id="src-p2_03_axi_buttons_v1_0_S00_AXI_v">
+<h2><span class="num">05</span>p2_03_axi_buttons_v1_0_S00_AXI.v — 전체 RTL</h2>
+<div>전체 소스</div><p>AXI 채널별 핸드셰이크와 EVENT/IRQ/W1C/중복 플래그 관리입니다.</p><p><a href="#f-part02_1_ch03_rtl_p2_03_axi_buttons_v1_0_S00_AXI_v">소스 파일 직접 열기</a></p><div class="codeblock" id="f-part02_1_ch03_rtl_p2_03_axi_buttons_v1_0_S00_AXI_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-03 AXI4-Lite slave. 32-bit data, one response outstanding.
+// 0x00 PENDING [7:0] read; W1C each bit, event SET wins over clear.
+// 0x04 ENABLE  [7:0] R/W; reset 0 (interrupts masked).
+// 0x08 PRESSED [3:0] read-only stable button states.
+// 0x0C ID = 0x00030001 read-only.
+// 0x10 COALESCED [7:0]: W1C flag when event arrives while same bit pending.
+// Event bit mapping: [0..3] U/D/L/R short, [4..7] U/D/L/R long.
+module p2_03_axi_buttons_v1_0_S00_AXI #(
+    parameter integer C_S_AXI_DATA_WIDTH = 32,
+    parameter integer C_S_AXI_ADDR_WIDTH = 6
+)(
+    input  wire                              S_AXI_ACLK,
+    input  wire                              S_AXI_ARESETN,
+    input  wire [C_S_AXI_ADDR_WIDTH-1:0]     S_AXI_AWADDR,
+    input  wire [2:0]                        S_AXI_AWPROT,
+    input  wire                              S_AXI_AWVALID,
+    output wire                              S_AXI_AWREADY,
+    input  wire [C_S_AXI_DATA_WIDTH-1:0]     S_AXI_WDATA,
+    input  wire [(C_S_AXI_DATA_WIDTH/8)-1:0] S_AXI_WSTRB,
+    input  wire                              S_AXI_WVALID,
+    output wire                              S_AXI_WREADY,
+    output reg  [1:0]                        S_AXI_BRESP,
+    output reg                               S_AXI_BVALID,
+    input  wire                              S_AXI_BREADY,
+    input  wire [C_S_AXI_ADDR_WIDTH-1:0]     S_AXI_ARADDR,
+    input  wire [2:0]                        S_AXI_ARPROT,
+    input  wire                              S_AXI_ARVALID,
+    output wire                              S_AXI_ARREADY,
+    output reg  [C_S_AXI_DATA_WIDTH-1:0]     S_AXI_RDATA,
+    output reg  [1:0]                        S_AXI_RRESP,
+    output reg                               S_AXI_RVALID,
+    input  wire                              S_AXI_RREADY,
+    input  wire [7:0]                        event_pulse,
+    input  wire [3:0]                        pressed,
+    output wire                              irq
+);
+    reg  [7:0] pending;
+    reg  [7:0] coalesced;
+    reg  [7:0] enable_mask;
+    reg aw_held, w_held;
+    reg [C_S_AXI_ADDR_WIDTH-1:0] awaddr_held;
+    reg [C_S_AXI_DATA_WIDTH-1:0] wdata_held;
+    reg [(C_S_AXI_DATA_WIDTH/8)-1:0] wstrb_held;
+
+    assign S_AXI_AWREADY = S_AXI_ARESETN &amp;&amp; !aw_held &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_WREADY  = S_AXI_ARESETN &amp;&amp; !w_held  &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_ARREADY = S_AXI_ARESETN &amp;&amp; !S_AXI_RVALID;
+    assign irq = |(pending &amp; enable_mask);  // Level interrupt until W1C.
+
+    // Dedicated combinational W1C mask; simultaneous pulse has SET priority.
+    wire complete_write = aw_held &amp;&amp; w_held &amp;&amp; !S_AXI_BVALID;
+    wire [7:0] clear_mask = (complete_write &amp;&amp; awaddr_held == 0 &amp;&amp; wstrb_held[0])
+                           ? wdata_held[7:0] : 8'h00;
+    wire [7:0] clear_coalesced = (complete_write &amp;&amp; awaddr_held == 16 &amp;&amp; wstrb_held[0])
+                                ? wdata_held[7:0] : 8'h00;
+
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            pending &lt;= 8'h00;
+            coalesced &lt;= 8'h00;
+            enable_mask &lt;= 8'h00;
+            aw_held &lt;= 1'b0;
+            w_held &lt;= 1'b0;
+            awaddr_held &lt;= {C_S_AXI_ADDR_WIDTH{1'b0}};
+            wdata_held &lt;= {C_S_AXI_DATA_WIDTH{1'b0}};
+            wstrb_held &lt;= {(C_S_AXI_DATA_WIDTH/8){1'b0}};
+            S_AXI_BRESP &lt;= 2'b00;
+            S_AXI_BVALID &lt;= 1'b0;
+            S_AXI_RDATA &lt;= {C_S_AXI_DATA_WIDTH{1'b0}};
+            S_AXI_RRESP &lt;= 2'b00;
+            S_AXI_RVALID &lt;= 1'b0;
+        end else begin
+            pending &lt;= (pending &amp; ~clear_mask) | event_pulse;
+            // Report duplicate-type events that a bitmask cannot count.
+            coalesced &lt;= (coalesced &amp; ~clear_coalesced) |
+                         (event_pulse &amp; pending &amp; ~clear_mask);
+            if (S_AXI_AWVALID &amp;&amp; S_AXI_AWREADY) begin
+                aw_held &lt;= 1'b1;
+                awaddr_held &lt;= S_AXI_AWADDR;
+            end
+            if (S_AXI_WVALID &amp;&amp; S_AXI_WREADY) begin
+                w_held &lt;= 1'b1;
+                wdata_held &lt;= S_AXI_WDATA;
+                wstrb_held &lt;= S_AXI_WSTRB;
+            end
+            if (complete_write) begin
+                S_AXI_BVALID &lt;= 1'b1;
+                S_AXI_BRESP &lt;= 2'b00; // OKAY
+                aw_held &lt;= 1'b0;
+                w_held &lt;= 1'b0;
+                case (awaddr_held)
+                    0: begin end // clear_mask applied above
+                    16: begin end // clear_coalesced applied above
+                    4: if (wstrb_held[0]) enable_mask &lt;= wdata_held[7:0];
+                    default: S_AXI_BRESP &lt;= 2'b10; // SLVERR
+                endcase
+            end
+            if (S_AXI_BVALID &amp;&amp; S_AXI_BREADY) S_AXI_BVALID &lt;= 1'b0;
+
+            if (S_AXI_ARVALID &amp;&amp; S_AXI_ARREADY) begin
+                S_AXI_RVALID &lt;= 1'b1;
+                S_AXI_RDATA &lt;= {C_S_AXI_DATA_WIDTH{1'b0}};
+                S_AXI_RRESP &lt;= 2'b00;
+                case (S_AXI_ARADDR)
+                    0:  S_AXI_RDATA &lt;= {{(C_S_AXI_DATA_WIDTH-8){1'b0}}, pending};
+                    4:  S_AXI_RDATA &lt;= {{(C_S_AXI_DATA_WIDTH-8){1'b0}}, enable_mask};
+                    8:  S_AXI_RDATA &lt;= {{(C_S_AXI_DATA_WIDTH-4){1'b0}}, pressed};
+                    12: S_AXI_RDATA &lt;= 32'h00030001;
+                    16: S_AXI_RDATA &lt;= {{(C_S_AXI_DATA_WIDTH-8){1'b0}}, coalesced};
+                    default: S_AXI_RRESP &lt;= 2'b10; // SLVERR
+                endcase
+            end
+            if (S_AXI_RVALID &amp;&amp; S_AXI_RREADY) S_AXI_RVALID &lt;= 1'b0;
+        end
+    end
+    // Protection fields are unused (educational slave, not security isolation).
+    wire unused_protection = &amp;{1'b0, S_AXI_AWPROT, S_AXI_ARPROT};
+endmodule
+</code></pre></div>
+</section>
+<section class="section" id="src-p2_03_axi_buttons_v1_0_v">
+<h2><span class="num">06</span>p2_03_axi_buttons_v1_0.v — 전체 RTL</h2>
+<div>전체 소스</div><p>버튼 Core와 AXI Slave를 조합하는 사용자 IP Top입니다.</p><p><a href="#f-part02_1_ch03_rtl_p2_03_axi_buttons_v1_0_v">소스 파일 직접 열기</a></p><div class="codeblock" id="f-part02_1_ch03_rtl_p2_03_axi_buttons_v1_0_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// AXI IP top: button synchronizer/debounce/event + AXI register/IRQ.
+// RTL test can shorten cycles; actual cycles must match S00_AXI clock.
+module p2_03_axi_buttons_v1_0 #(
+    parameter integer DEBOUNCE_CYCLES = 2000000,
+    parameter integer LONG_CYCLES = 500000000,
+    parameter integer C_S00_AXI_DATA_WIDTH = 32,
+    parameter integer C_S00_AXI_ADDR_WIDTH = 6
+)(
+    input wire btnU, input wire btnD, input wire btnL, input wire btnR,
+    output wire irq,
+    input  wire                                s00_axi_aclk,
+    input  wire                                s00_axi_aresetn,
+    input  wire [C_S00_AXI_ADDR_WIDTH-1:0]     s00_axi_awaddr,
+    input  wire [2:0]                          s00_axi_awprot,
+    input  wire                                s00_axi_awvalid,
+    output wire                                s00_axi_awready,
+    input  wire [C_S00_AXI_DATA_WIDTH-1:0]     s00_axi_wdata,
+    input  wire [(C_S00_AXI_DATA_WIDTH/8)-1:0] s00_axi_wstrb,
+    input  wire                                s00_axi_wvalid,
+    output wire                                s00_axi_wready,
+    output wire [1:0]                          s00_axi_bresp,
+    output wire                                s00_axi_bvalid,
+    input  wire                                s00_axi_bready,
+    input  wire [C_S00_AXI_ADDR_WIDTH-1:0]     s00_axi_araddr,
+    input  wire [2:0]                          s00_axi_arprot,
+    input  wire                                s00_axi_arvalid,
+    output wire                                s00_axi_arready,
+    output wire [C_S00_AXI_DATA_WIDTH-1:0]     s00_axi_rdata,
+    output wire [1:0]                          s00_axi_rresp,
+    output wire                                s00_axi_rvalid,
+    input  wire                                s00_axi_rready
+);
+    wire [7:0] event_pulse;
+    wire [3:0] pressed;
+    button_event_core #(
+        .DEBOUNCE_CYCLES(DEBOUNCE_CYCLES),
+        .LONG_CYCLES(LONG_CYCLES)
+    ) u_button_core (
+        .clk(s00_axi_aclk), .resetn(s00_axi_aresetn),
+        .btn_raw({btnR, btnL, btnD, btnU}),
+        .event_pulse(event_pulse), .pressed(pressed)
+    );
+    p2_03_axi_buttons_v1_0_S00_AXI #(
+        .C_S_AXI_DATA_WIDTH(C_S00_AXI_DATA_WIDTH),
+        .C_S_AXI_ADDR_WIDTH(C_S00_AXI_ADDR_WIDTH)
+    ) u_axi (
+        .S_AXI_ACLK(s00_axi_aclk), .S_AXI_ARESETN(s00_axi_aresetn),
+        .S_AXI_AWADDR(s00_axi_awaddr), .S_AXI_AWPROT(s00_axi_awprot),
+        .S_AXI_AWVALID(s00_axi_awvalid), .S_AXI_AWREADY(s00_axi_awready),
+        .S_AXI_WDATA(s00_axi_wdata), .S_AXI_WSTRB(s00_axi_wstrb),
+        .S_AXI_WVALID(s00_axi_wvalid), .S_AXI_WREADY(s00_axi_wready),
+        .S_AXI_BRESP(s00_axi_bresp), .S_AXI_BVALID(s00_axi_bvalid),
+        .S_AXI_BREADY(s00_axi_bready),
+        .S_AXI_ARADDR(s00_axi_araddr), .S_AXI_ARPROT(s00_axi_arprot),
+        .S_AXI_ARVALID(s00_axi_arvalid), .S_AXI_ARREADY(s00_axi_arready),
+        .S_AXI_RDATA(s00_axi_rdata), .S_AXI_RRESP(s00_axi_rresp),
+        .S_AXI_RVALID(s00_axi_rvalid), .S_AXI_RREADY(s00_axi_rready),
+        .event_pulse(event_pulse), .pressed(pressed), .irq(irq)
+    );
+endmodule
+</code></pre></div>
+</section>
+<section class="section" id="src-basys3_soc11_top_p2_03_v">
+<h2><span class="num">07</span>basys3_soc11_top.v — 전체 RTL</h2>
+<div>전체 소스</div><p>Top은 핀 연결만 담당합니다. 실제 Wrapper에 신규 포트가 생긴 뒤에만 적용합니다.</p><p><a href="#f-part02_1_ch03_rtl_basys3_soc11_top_p2_03_v">소스 파일 직접 열기</a></p><div class="codeblock" id="f-part02_1_ch03_rtl_basys3_soc11_top_p2_03_v"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>// P2-03: user board shell. Use only after BD regenerates wrapper ports.
+// (유지) BTN C is system reset, not an event input.
+// (유지) LED0 uses P2-01 IP; FND outputs use P2-02 IP.
+// (추가) Four separate button ports; IRQ stays inside BD -&gt; AXI INTC.
+module basys3_soc11_top (
+    input wire clk, input wire btnC,
+    input wire btnU, input wire btnD, input wire btnL, input wire btnR,
+    input wire [15:0] sw,
+    output wire [15:0] led,
+    input wire RsRx, output wire RsTx,
+    output wire [6:0] seg, output wire [3:0] an, output wire dp
+);
+    wire [15:0] gpio_led;
+    wire ip_led0;
+    assign led = {gpio_led[15:1], ip_led0}; // Shell-only bit connection.
+
+    soc11_integration_wrapper u_soc11 (
+        .clk(clk), .btnC(btnC),
+        .btnU(btnU), .btnD(btnD), .btnL(btnL), .btnR(btnR),
+        .sw_tri_i(sw), .led_tri_o(gpio_led),
+        .UART_0_rxd(RsRx), .UART_0_txd(RsTx),
+        .p2_led_o(ip_led0),
+        .fnd_seg(seg), .fnd_an(an), .fnd_dp(dp)
+    );
+endmodule
+</code></pre></div>
+</section>
+<section class="section" id="tests">
+<h2><span class="num">08</span>테스트벤치와 확인 항목</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>TB</th><th>확인해야 하는 조건</th></tr></thead><tbody><tr><td><code>tb_button_event_core.v</code></td><td>바운스 제거, 1회 SHORT, 5초 LONG 1회, LONG 뒤 SHORT 없음, 동시 버튼, Reset</td></tr><tr><td><code>tb_p2_03_axi_buttons.v</code></td><td>AW/W 순서, WSTRB, IRQ 마스크, W1C, 상태 읽기, ID, COALESCED</td></tr></tbody></table></div>
+</section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

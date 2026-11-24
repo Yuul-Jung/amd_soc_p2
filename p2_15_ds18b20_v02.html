@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 15장 · DS18B20 1-Wire 온도">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 15장 · DS18B20 1-Wire 온도 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-15">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 15장 <span class="vbadge">v02</span></p>
+    <h1>제2부 15장 · DS18B20 1-Wire 온도</h1>
+    <p>Reset/Presence → Scratchpad → CRC 검사</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+    <section class="section" id="overview">
+      <h2><span class="num">00</span>이 장의 목표</h2>
+      <p>Reset/Presence → Scratchpad → CRC 검사</p>
+    </section>
+    <section class="section" id="s00">
+      <h2><span class="num">01</span>개요</h2>
+<p>DS18B20(디에스18비20)은 1-Wire(원와이어, 단일 데이터선 통신) 디지털 온도 센서다. I²C처럼 클록선이 따로 없고, 하나의 <strong>DQ 데이터선</strong>을 LOW로 당겼다가 놓는 동작의 시간을 측정하여 리셋·명령·데이터를 전달한다.</p>
+<p><strong>최초 실습은 외부 3.3V 전원을 사용하는 센서 한 개</strong>를 대상으로 한다. Reset/Presence, Skip ROM, Convert T, Read Scratchpad, 9바이트 CRC 확인까지 단계적으로 실행한다.</p>
+<p class="callout warn">실행 결과는 모의 센서에 대한 Icarus Verilog RTL 시뮬레이션이다.</p>
+    </section>
+    <section class="section" id="s01">
+      <h2><span class="num">02</span>시스템 계층형 구조도</h2>
+<svg aria-label="CPU 명령, DS18B20 컨트롤러, 1-wire 슬롯 엔진, IOBUF, 센서의 계층 구조" role="img" viewbox="0 0 1030 325" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="a" markerheight="8" markerwidth="8" orient="auto" refx="8" refy="4"><path d="M0 0L8 4L0 8Z" fill="#4d8298"></path></marker></defs><rect fill="#f8fbfd" height="290" rx="12" stroke="#b9d5e2" stroke-width="2" width="1010" x="10" y="15"></rect>
+<g fill="#173d59" text-anchor="middle"><rect fill="#dceef8" height="84" rx="9" stroke="#6a9db7" width="168" x="27" y="52"></rect><text font-size="18" x="111" y="87">MicroBlaze V</text><text font-size="12" x="111" y="111">AXI 후속 통합</text>
+<rect fill="#d0e9e3" height="84" rx="9" stroke="#69a694" width="226" x="249" y="52"></rect><text font-size="17" x="362" y="87">ds18b20_controller</text><text font-size="12" x="362" y="111">온도 변환 · CRC8</text>
+<rect fill="#d0e9e3" height="84" rx="9" stroke="#69a694" width="225" x="529" y="52"></rect><text font-size="17" x="641" y="87">onewire_slot_master</text><text font-size="12" x="641" y="111">µs 타이머 · Reset · Bit</text>
+<rect fill="#f5e1bc" height="84" rx="9" stroke="#c49b57" width="181" x="815" y="52"></rect><text font-size="18" x="905" y="87">DS18B20</text><text font-size="12" x="905" y="111">DQ · VDD · GND</text>
+<path d="M195 94H249M475 94H529M754 94H815" fill="none" marker-end="url(#a)" stroke="#4d8298" stroke-width="3"></path>
+<rect fill="#e6e9f7" height="57" rx="9" stroke="#a7afd2" width="225" x="529" y="214"></rect><text font-size="15" x="641" y="238">ds18b20_open_drain_io</text><text font-size="12" x="641" y="255">Xilinx IOBUF · Hi-Z</text>
+<path d="M641 136V214" fill="none" marker-end="url(#a)" stroke="#4d8298" stroke-width="2"></path></g></svg>
+<p>컨트롤러는 센서 명령·데이터 확인, 슬롯 엔진은 시간 규칙, IOBUF는 실제 단일선의 0/High-Z 핀 동작을 전담한다. Top은 핀 연결만 수행한다.</p>
+    </section>
+    <section class="section" id="s02">
+      <h2><span class="num">03</span>DS18B20 1-Wire 시간 규칙</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><tr><th>동작</th><th>기본 타이밍</th><th>RTL 구현값</th></tr>
+<tr><td>Reset LOW</td><td>최소 480µs</td><td>480µs</td></tr>
+<tr><td>Presence 확인</td><td>Reset 해제 후 15~60µs에 시작, LOW 60~240µs</td><td>해제 약 70µs 후 LOW 샘플</td></tr>
+<tr><td>Write 1</td><td>짧게 LOW 후 해제</td><td>LOW 6µs, 해제 64µs</td></tr>
+<tr><td>Write 0</td><td>길게 LOW</td><td>LOW 60µs, 해제 10µs</td></tr>
+<tr><td>Read</td><td>LOW 시작 후 15µs 이내 샘플</td><td>LOW 6µs, 해제 9µs 뒤 샘플, 총 70µs</td></tr>
+<tr><td>12비트 온도 변환</td><td>최대 750ms</td><td>750,000µs 대기</td></tr></table></div>
+<p>모든 명령 바이트와 데이터 바이트는 <strong>LSB First(최하위 비트부터 전송)</strong> 방식이다. 앞선 SPI와 I²C의 MSB First 흐름과 구분해야 한다. <a href="https://www.analog.com/media/en/technical-documentation/data-sheets/DS18B20.pdf">Analog Devices DS18B20 공식 데이터시트</a>.</p>
+    </section>
+    <section class="section" id="s03">
+      <h2><span class="num">04</span>온도 측정 전체 알고리즘</h2>
+<div class="codeblock"><div class="codebar"><span>실습 명령 · Bash / 코드 실행 예시</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>START
+  ↓
+RESET 480µs LOW → Presence 확인
+  ↓
+0xCC · Skip ROM
+  ↓
+0x44 · Convert T
+  ↓
+최대 750ms 온도 변환 대기
+  ↓
+RESET → Presence 확인
+  ↓
+0xCC · Skip ROM
+  ↓
+0xBE · Read Scratchpad
+  ↓
+9바이트(72비트) 읽기 · LSB First
+  ↓
+처음 8바이트 CRC-8 계산
+  ↓
+마지막 9번째 바이트 CRC와 비교
+  ├─ 불일치 → error_code 2 / 유효 온도 미갱신
+  └─ 일치   → temperature_raw 갱신 / done_pulse</code></pre></div></div>
+<p>첫 Reset에서 센서가 Presence로 응답하지 않으면 오류 코드 1을 발생시킨다. 단일 센서라서 <code>Skip ROM(0xCC)</code>을 사용하며, 여러 센서가 연결된 환경에는 ROM Search/Match 명령이 필요하다.</p>
+    </section>
+    <section class="section" id="s04">
+      <h2><span class="num">05</span>온도 데이터 형식과 계산</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><tr><th>Raw(16비트)</th><th>의미</th><th>온도(°C)</th></tr><tr><td><code>0x0191</code></td><td>부호 있는 정수 401, 단위 1/16°C</td><td>+25.0625</td></tr><tr><td><code>0x0000</code></td><td>정수 0</td><td>0.0000</td></tr><tr><td><code>0xFF5E</code></td><td>16비트 signed 값 −162</td><td>−10.1250</td></tr></table></div>
+<p>12비트 모드에서 한 계수의 해상도는 <strong>0.0625°C</strong>이다. Scratchpad 0번 바이트는 온도의 하위 8비트, 1번 바이트는 상위 8비트다. 단순히 16비트 unsigned 숫자로 표시하지 않고 signed 값으로 해석해야 한다.</p>
+<p>CRC-8 다항식은 <code>x⁸+x⁵+x⁴+1</code>이고, LSB-first 구현은 비트 이동과 XOR 상수 <code>0x8C</code>를 활용한다. 9번째 바이트 CRC와 일치할 때에만 공개 온도 데이터를 갱신한다.</p>
+    </section>
+    <section class="section" id="s05">
+      <h2><span class="num">06</span>DS18B20 배선 및 안전</h2>
+<div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><tr><th>센서 핀</th><th>Basys3 기준</th><th>주의</th></tr><tr><td>VDD</td><td>3.3V 외부전원 공급</td><td>부품 버전·핀 배열 확인</td></tr><tr><td>GND</td><td>Basys3 GND와 공통</td><td>배선 전 전원 OFF</td></tr><tr><td>DQ</td><td>FPGA I/O 1개, Open-drain</td><td>약 4.7kΩ을 3.3V에 풀업</td></tr></table></div>
+<p class="callout warn">Basys3 FPGA 신호선에 5V를 연결하지 않는다. 전원 없이 DQ로 센서에 전류를 공급하는 기생전원 모드는 이 RTL에서 지원하지 않으며 별도 Strong Pullup 설계가 필요하다. XDC 핀은 현행 프로젝트의 기존 센서·서보·모터 핀 점유 상태를 확인할 때 확정한다.</p>
+    </section>
+    <section class="section" id="s06">
+      <h2><span class="num">07</span>RTL 전체 소스 및 자가확인 테스트벤치</h2>
+<p>아래 코드는 보드와 독립된 슬롯 엔진, 온도 컨트롤러, Vivado용 IOBUF 경계 및 self-checking 시뮬레이션 파일이다.</p><details><summary>rtl/onewire_slot_master.v — 전체 코드 열기</summary><div class="codeblock"><div class="codebar"><span>rtl/onewire_slot_master.v · VERILOG · 소스</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-15 1-Wire slot engine: reset/presence, write bit, read bit.
+// Single system clk, open-drain dq_drive_low (1=LOW; 0=Hi-Z).
+// CLK_HZ must be an integer multiple of 1 MHz.
+module onewire_slot_master #(
+    parameter integer CLK_HZ=100000000
+)(
+    input wire clk,input wire resetn,
+    input wire cmd_valid,output wire cmd_ready,
+    input wire [1:0] cmd_op, // 0=RESET, 1=WRITE, 2=READ
+    input wire cmd_bit,
+    input wire dq_in,output reg dq_drive_low,
+    output reg done_pulse,output reg presence,
+    output reg read_bit
+);
+    localparam integer CYCLES_PER_US=CLK_HZ/1000000;
+    localparam [2:0] IDLE=0, RESET_LOW=1, PRES_WAIT=2,
+        PRES_RECOVER=3, SLOT_LOW=4, READ_WAIT=5,
+        SLOT_RELEASE=6, FINISH=7;
+    reg [2:0] state;
+    reg [31:0] us_div;
+    reg [15:0] remain;
+    reg [1:0] op_q;
+    reg bit_q;
+    wire tick_us = (us_div == CYCLES_PER_US-1);
+    assign cmd_ready=(state==IDLE);
+    always @(posedge clk) begin
+        if(!resetn) begin
+            state&lt;=IDLE;us_div&lt;=0;remain&lt;=0;
+            op_q&lt;=0;bit_q&lt;=0;dq_drive_low&lt;=0;
+            done_pulse&lt;=0;presence&lt;=0;read_bit&lt;=1;
+        end else begin
+            done_pulse&lt;=0;
+            if(state==IDLE) us_div&lt;=0;
+            else if(tick_us) us_div&lt;=0;
+            else us_div&lt;=us_div+1;
+            if(state==IDLE) begin
+                dq_drive_low&lt;=0;
+                if(cmd_valid) begin
+                    op_q&lt;=cmd_op;bit_q&lt;=cmd_bit;
+                    if(cmd_op==0) begin
+                        presence&lt;=0;dq_drive_low&lt;=1;
+                        remain&lt;=16'd480;state&lt;=RESET_LOW;
+                    end else if(cmd_op==1 || cmd_op==2) begin
+                        dq_drive_low&lt;=1;
+                        remain&lt;= (cmd_op==2 || cmd_bit) ? 16'd6 : 16'd60;
+                        state&lt;=SLOT_LOW;
+                    end else begin
+                        state&lt;=FINISH;
+                    end
+                end
+            end else if(tick_us) begin
+                if(remain&gt;1) remain&lt;=remain-1;
+                else begin
+                    case(state)
+                    RESET_LOW: begin
+                        dq_drive_low&lt;=0;remain&lt;=16'd70;
+                        state&lt;=PRES_WAIT;
+                    end
+                    PRES_WAIT: begin
+                        presence&lt;=~dq_in;remain&lt;=16'd410;
+                        state&lt;=PRES_RECOVER;
+                    end
+                    PRES_RECOVER: state&lt;=FINISH;
+                    SLOT_LOW: begin
+                        dq_drive_low&lt;=0;
+                        if(op_q==2) begin
+                            remain&lt;=16'd9;state&lt;=READ_WAIT;
+                        end else begin
+                            remain&lt;=bit_q ? 16'd64 : 16'd10;
+                            state&lt;=SLOT_RELEASE;
+                        end
+                    end
+                    READ_WAIT: begin
+                        read_bit&lt;=dq_in;
+                        remain&lt;=16'd55;state&lt;=SLOT_RELEASE;
+                    end
+                    SLOT_RELEASE: state&lt;=FINISH;
+                    FINISH: state&lt;=IDLE;
+                    default: state&lt;=IDLE;
+                    endcase
+                end
+            end
+            if(state==FINISH &amp;&amp; tick_us) begin
+                done_pulse&lt;=1;
+                dq_drive_low&lt;=0;
+            end
+        end
+    end
+endmodule
+</code></pre></div></div></details>
+<details><summary>rtl/ds18b20_controller.v — 전체 코드 열기</summary><div class="codeblock"><div class="codebar"><span>rtl/ds18b20_controller.v · VERILOG · 소스</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// DS18B20 one externally-powered device on bus (VDD, DQ, GND).
+// Reset -&gt; Skip ROM(CC) -&gt; Convert T(44) -&gt; 750ms wait
+// -&gt; Reset -&gt; Skip ROM(CC) -&gt; Read Scratchpad(BE) -&gt; 9 bytes -&gt; CRC8.
+// No strong-pullup/parasite-power support, multi-drop addressing,
+// variable resolution, interrupt, or AXI interface in this version.
+module ds18b20_controller #(
+    parameter integer CLK_HZ=100000000,
+    parameter integer CONVERT_WAIT_US=750000
+)(
+    input wire clk,input wire resetn,input wire start_pulse,
+    input wire dq_in,output wire dq_drive_low,
+    output reg busy,output reg done_pulse,output reg error_pulse,
+    output reg [2:0] error_code, // 1=missing presence, 2=CRC
+    output reg signed [15:0] temperature_raw
+);
+    localparam [3:0] IDLE=0,ISSUE=1,WAIT_OP=2,
+        CHECK_RESET=3,WRITE_ADV=4,WAIT_CONVERT=5,
+        READ_ADV=6,COMPLETE=7,FAULT=8;
+    reg [3:0] state;
+    // phases: reset0, CC, 44, wait, reset1, CC, BE, read9
+    reg [2:0] phase;
+    reg [7:0] tx_data;
+    reg [3:0] bit_index;
+    reg [3:0] byte_index;
+    reg [7:0] scratchpad_byte;
+    reg [7:0] crc;
+    reg [7:0] low_temp;
+    reg [7:0] high_temp;
+    reg [31:0] conv_div;
+    reg [31:0] conv_remaining;
+    reg cmd_valid;
+    reg [1:0] cmd_op;
+    reg cmd_bit;
+    wire cmd_ready,slot_done,presence,read_bit;
+    onewire_slot_master #(.CLK_HZ(CLK_HZ)) u_slot (
+        .clk(clk),.resetn(resetn),.cmd_valid(cmd_valid),
+        .cmd_ready(cmd_ready),.cmd_op(cmd_op),.cmd_bit(cmd_bit),
+        .dq_in(dq_in),.dq_drive_low(dq_drive_low),
+        .done_pulse(slot_done),.presence(presence),.read_bit(read_bit)
+    );
+    function [7:0] crc_next;
+        input [7:0] old_crc;
+        input bit_value;
+        reg feedback;
+        begin
+            feedback=old_crc[0]^bit_value;
+            crc_next={1'b0,old_crc[7:1]} ^ (feedback ? 8'h8c : 8'h00);
+        end
+    endfunction
+    always @(posedge clk) begin
+        if(!resetn) begin
+            state&lt;=IDLE;phase&lt;=0;tx_data&lt;=0;bit_index&lt;=0;
+            byte_index&lt;=0;scratchpad_byte&lt;=0;crc&lt;=0;low_temp&lt;=0;high_temp&lt;=0;
+            conv_div&lt;=0;conv_remaining&lt;=0;
+            cmd_valid&lt;=0;cmd_op&lt;=0;cmd_bit&lt;=0;
+            busy&lt;=0;done_pulse&lt;=0;error_pulse&lt;=0;
+            error_code&lt;=0;temperature_raw&lt;=0;
+        end else begin
+            done_pulse&lt;=0;error_pulse&lt;=0;cmd_valid&lt;=0;
+            case(state)
+            IDLE: if(start_pulse) begin
+                busy&lt;=1;error_code&lt;=0;phase&lt;=0;
+                bit_index&lt;=0;byte_index&lt;=0;crc&lt;=0;
+                state&lt;=ISSUE;
+            end
+            ISSUE: if(cmd_ready) begin
+                cmd_valid&lt;=1;
+                if(phase==0 || phase==4) begin
+                    cmd_op&lt;=0;cmd_bit&lt;=0;
+                end else if(phase==7) begin
+                    cmd_op&lt;=2;cmd_bit&lt;=0;
+                end else begin
+                    cmd_op&lt;=1;cmd_bit&lt;=tx_data[bit_index];
+                end
+                state&lt;=WAIT_OP;
+            end
+            WAIT_OP: if(slot_done) begin
+                if(phase==0 || phase==4) state&lt;=CHECK_RESET;
+                else if(phase==7) state&lt;=READ_ADV;
+                else state&lt;=WRITE_ADV;
+            end
+            CHECK_RESET: begin
+                if(!presence) begin
+                    error_code&lt;=1;state&lt;=FAULT;
+                end else begin
+                    if(phase==0) begin phase&lt;=1;tx_data&lt;=8'hcc;end
+                    else begin phase&lt;=5;tx_data&lt;=8'hcc;end
+                    bit_index&lt;=0;state&lt;=ISSUE;
+                end
+            end
+            WRITE_ADV: begin
+                if(bit_index!=7) begin
+                    bit_index&lt;=bit_index+1;state&lt;=ISSUE;
+                end else begin
+                    bit_index&lt;=0;
+                    case(phase)
+                    1: begin phase&lt;=2;tx_data&lt;=8'h44;state&lt;=ISSUE;end
+                    2: begin
+                        phase&lt;=3;conv_div&lt;=0;
+                        conv_remaining&lt;=CONVERT_WAIT_US;
+                        state&lt;=WAIT_CONVERT;
+                    end
+                    5: begin phase&lt;=6;tx_data&lt;=8'hbe;state&lt;=ISSUE;end
+                    6: begin
+                        phase&lt;=7;byte_index&lt;=0;crc&lt;=0;
+                        scratchpad_byte&lt;=0;state&lt;=ISSUE;
+                    end
+                    default: state&lt;=FAULT;
+                    endcase
+                end
+            end
+            WAIT_CONVERT: begin
+                if(conv_remaining==0) begin
+                    phase&lt;=4;state&lt;=ISSUE;
+                end else if(conv_div==CLK_HZ/1000000-1) begin
+                    conv_div&lt;=0;
+                    conv_remaining&lt;=conv_remaining-1;
+                end else conv_div&lt;=conv_div+1;
+            end
+            READ_ADV: begin
+                scratchpad_byte[bit_index]&lt;=read_bit;
+                if(byte_index&lt;8) crc&lt;=crc_next(crc,read_bit);
+                if(bit_index!=7) begin
+                    bit_index&lt;=bit_index+1;state&lt;=ISSUE;
+                end else begin
+                    bit_index&lt;=0;
+                    if(byte_index==0) low_temp&lt;={read_bit,scratchpad_byte[6:0]};
+                    if(byte_index==1)
+                        high_temp&lt;={read_bit,scratchpad_byte[6:0]};
+                    if(byte_index==8) begin
+                        if({read_bit,scratchpad_byte[6:0]}==crc) begin
+                            // (변경) CRC 정상일 때에만 공개 온도 레지스터 갱신.
+                            temperature_raw&lt;={high_temp,low_temp};
+                            state&lt;=COMPLETE;
+                        end
+                        else begin
+                            error_code&lt;=2;state&lt;=FAULT;
+                        end
+                    end else begin
+                        byte_index&lt;=byte_index+1;
+                        scratchpad_byte&lt;=0;state&lt;=ISSUE;
+                    end
+                end
+            end
+            COMPLETE: begin busy&lt;=0;done_pulse&lt;=1;state&lt;=IDLE;end
+            FAULT: begin busy&lt;=0;error_pulse&lt;=1;state&lt;=IDLE;end
+            default: state&lt;=FAULT;
+            endcase
+        end
+    end
+endmodule
+</code></pre></div></div></details>
+<details><summary>rtl/ds18b20_open_drain_io.v — 전체 코드 열기</summary><div class="codeblock"><div class="codebar"><span>rtl/ds18b20_open_drain_io.v · VERILOG · 소스</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// Vivado-only 1-Wire IOBUF boundary. Separate from portable RTL tests.
+// dq_drive_low=1 drives logic LOW; 0 releases DQ to external 3.3V pullup.
+// Do not use 5V pullup on Basys3 FPGA input.
+module ds18b20_open_drain_io(
+    input wire dq_drive_low,
+    inout wire ds18b20_dq,
+    output wire dq_in
+);
+    IOBUF u_ds18b20_dq (
+        .I(1'b0),.T(~dq_drive_low),.O(dq_in),.IO(ds18b20_dq)
+    );
+endmodule
+</code></pre></div></div></details>
+<details><summary>tests/tb_ds18b20_controller.v — 전체 코드 열기</summary><div class="codeblock"><div class="codebar"><span>tests/tb_ds18b20_controller.v · VERILOG · 소스</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-15 self-checking simulated DS18B20, does NOT model analog bus.
+// Checks 2 resets/presence, CC/44/CC/BE TX, nine scratchpad bytes,
+// signed temperature_raw, CRC rejection, missing presence.
+module tb_ds18b20_controller;
+  reg clk=0;always #5 clk=~clk;
+  reg resetn=0,start=0,presence_enabled=1,corrupt_crc=0;
+  wire dq_drive_low,done,error,busy;
+  wire [2:0] error_code;
+  wire signed [15:0] temperature_raw;
+  reg [7:0] scratch[0:8];
+  reg [7:0] crc_local;
+  integer i,j,case_number=0,command_bits=0,reset_count=0;
+  reg [7:0] command_bytes[0:3];
+  reg [7:0] current_byte;
+  reg slave_low;
+  wire dq_in = !(dq_drive_low || slave_low);
+  ds18b20_controller #(
+      .CLK_HZ(1000000),.CONVERT_WAIT_US(20)
+  ) dut(
+    .clk(clk),.resetn(resetn),.start_pulse(start),
+    .dq_in(dq_in),.dq_drive_low(dq_drive_low),
+    .busy(busy),.done_pulse(done),.error_pulse(error),
+    .error_code(error_code),.temperature_raw(temperature_raw)
+  );
+  function [7:0] crc_byte;
+    input [7:0] crc_in;
+    input [7:0] b;
+    reg [7:0] c;
+    integer n;
+    begin
+      c=crc_in;
+      for(n=0;n&lt;8;n=n+1) begin
+        if(c[0]^b[n]) c=(c&gt;&gt;1)^8'h8c;
+        else c=c&gt;&gt;1;
+      end
+      crc_byte=c;
+    end
+  endfunction
+  task set_scratchpad;
+    input [15:0] raw;
+    begin
+      scratch[0]=raw[7:0];scratch[1]=raw[15:8];
+      scratch[2]=8'h4b;scratch[3]=8'h46;
+      scratch[4]=8'h7f;scratch[5]=8'hff;
+      scratch[6]=8'h0c;scratch[7]=8'h10;
+      crc_local=0;
+      for(i=0;i&lt;8;i=i+1)
+        crc_local=crc_byte(crc_local,scratch[i]);
+      scratch[8]=crc_local^(corrupt_crc ? 8'h01 : 8'h00);
+    end
+  endtask
+  // Simplified digital slave drives ACK-like presence and read-zero bits
+  // at the exact sampling state. This is a functional bus model, not a
+  // nanosecond jitter/timing compliance test.
+  always @(*) begin
+    slave_low=0;
+    if(presence_enabled &amp;&amp; dut.u_slot.state==3'd2)
+      slave_low=1;
+    if(dut.u_slot.state==3'd5 &amp;&amp; dut.phase==7 &amp;&amp;
+       !scratch[dut.byte_index][dut.bit_index])
+      slave_low=1;
+  end
+
+  // Collect commands only at slot transaction start, avoiding races
+  // between testbench and core's registered data pins.
+  always @(posedge clk) begin
+    if(resetn &amp;&amp; dut.u_slot.cmd_valid &amp;&amp; dut.u_slot.cmd_ready) begin
+      if(dut.u_slot.cmd_op==0) begin
+        reset_count=reset_count+1;
+      end else if(dut.u_slot.cmd_op==1) begin
+        current_byte[command_bits%8]=dut.u_slot.cmd_bit;
+        command_bits=command_bits+1;
+        if(command_bits%8==0)
+          command_bytes[command_bits/8-1]=current_byte;
+      end
+    end
+  end
+  task reset_test;
+    begin
+      resetn=0;start=0;
+      repeat(4) @(negedge clk);
+      resetn=1;command_bits=0;reset_count=0;
+    end
+  endtask
+  task kick;
+    begin
+      @(negedge clk);start=1;
+      @(negedge clk);start=0;
+    end
+  endtask
+  initial begin
+    corrupt_crc=0;set_scratchpad(16'h0191);
+    reset_test; kick;
+    wait(done); #1;
+    if(error || error_code || busy || temperature_raw!==16'h0191)
+      $fatal(1,"positive temp incorrect: %h",temperature_raw);
+    if(reset_count!=2 || command_bits!=32 ||
+       command_bytes[0]!==8'hcc || command_bytes[1]!==8'h44 ||
+       command_bytes[2]!==8'hcc || command_bytes[3]!==8'hbe)
+      $fatal(1,"command sequence wrong resets=%0d bits=%0d %h %h %h %h",
+             reset_count,command_bits,
+             command_bytes[0],command_bytes[1],
+             command_bytes[2],command_bytes[3]);
+    $display("P2_15_DS18B20_POSITIVE_CRC_COMMAND_PASS");
+
+    corrupt_crc=0;set_scratchpad(16'hff5e);
+    reset_test;kick;wait(done);#1;
+    if(busy || temperature_raw!==16'hff5e)
+      $fatal(1,"negative signed temperature wrong: %h",temperature_raw);
+    $display("P2_15_DS18B20_NEGATIVE_TEMP_PASS");
+
+    corrupt_crc=1;set_scratchpad(16'h0191);
+    reset_test;kick;wait(error);#1;
+    if(error_code!=2 || busy || temperature_raw!==16'h0000)
+      $fatal(1,"CRC error not rejected or untrusted temperature published");
+    $display("P2_15_DS18B20_CRC_REJECT_PASS");
+
+    corrupt_crc=0;set_scratchpad(16'h0191);presence_enabled=0;
+    reset_test;kick;wait(error);#1;
+    if(error_code!=1 || reset_count!=1 || busy)
+      $fatal(1,"missing presence not detected");
+    $display("P2_15_DS18B20_NO_PRESENCE_PASS");
+
+    $display("P2_15_DS18B20_CONTROLLER_RTL PASS");
+    $finish;
+  end
+  initial begin #4000000;$fatal(1,"TIMEOUT");end
+endmodule
+</code></pre></div></div></details>
+<h3>Ubuntu에서 실행</h3>
+<div class="codeblock"><div class="codebar"><span>실습 명령 · Bash / 코드 실행 예시</span></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code># 최초 1회: Ubuntu 패키지 목록 갱신 및 시뮬레이터 설치
+sudo apt update
+sudo apt install -y iverilog
+
+# 저장소 루트 폴더에서 RTL 시뮬레이션 실행
+bash part02/chapters/P2_15_Lesson/tests/run_rtl_tests.sh</code></pre></div></div>
+<p>현재의 CI 확인은 `CLK_HZ=1MHz`, `CONVERT_WAIT_US=20`으로 축소한 <em>교육용 디지털 모델</em>이다. 실물 750ms 변환 지연과 아날로그 상승시간·실제 DQ 전기적 임계값은 확인하지 않았다.</p>
+    </section>
+    <section class="section" id="s08">
+      <h2><span class="num">08</span>후속 과제</h2>
+<p>15.1 기본 리셋·1bit 슬롯 → 15.2 온도 변환·9바이트 읽기 → 15.3 CRC·오류 처리 → 15.4 AXI4-Lite Register Map·MicroBlaze V 연결로 확장한다. 단일 센서뿐 아니라 다중 DS18B20 ROM Search 및 기생전원 모드는 별도 고급 과제로 분리한다.</p><p><a href="https://github.com/Yuul-Jung/amd_soc/blob/work/part02-second-half-20261110/part02/chapters/P2_15_Lesson/README.md">15장 소스 구성</a> · <a href="p2_14_i2c_lcd_v02.html">14장 I²C LCD</a></p><nav aria-label="이전·다음 장" id="chapter-links"></nav>
+    </section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

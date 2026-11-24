@@ -1,0 +1,376 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 06장 · HC-SR04 초음파 C 프로그램 흐름도",
+ "title": "제2부 06장 · HC-SR04 초음파 C 프로그램 흐름도",
+ "subtitle": "",
+ "width": 1429,
+ "height": 884,
+ "headings": {
+  "title": {
+   "x": 714.5,
+   "y": 44,
+   "w": 1349,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 714.5,
+   "y": 90,
+   "w": 1349,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "a",
+   "type": "rect",
+   "x": 520,
+   "y": 188,
+   "w": 150,
+   "h": 76,
+   "title": "poll_uart()",
+   "sub": "문자열 + Enter",
+   "fill": "#e8e8fa",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "b",
+   "type": "rect",
+   "x": 520,
+   "y": 372,
+   "w": 154,
+   "h": 56,
+   "title": "handle_line()",
+   "sub": "",
+   "fill": "#f5f6fa",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "p",
+   "type": "diamond",
+   "x": 520,
+   "y": 564,
+   "w": 409,
+   "h": 92,
+   "title": "sonic_parse_command()",
+   "sub": "",
+   "fill": "#fff3cf",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "on",
+   "type": "rect",
+   "x": 165,
+   "y": 766,
+   "w": 150,
+   "h": 76,
+   "title": "SONIC ON",
+   "sub": "AUTO / 거리 표시",
+   "fill": "#e6f2e9",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "off",
+   "type": "rect",
+   "x": 361,
+   "y": 766,
+   "w": 150,
+   "h": 76,
+   "title": "SONIC OFF",
+   "sub": "기존 FND 복귀",
+   "fill": "#e6f2e9",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "read",
+   "type": "rect",
+   "x": 557,
+   "y": 766,
+   "w": 150,
+   "h": 76,
+   "title": "SONIC READ",
+   "sub": "상태 조회",
+   "fill": "#e6f2e9",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "shot",
+   "type": "rect",
+   "x": 753,
+   "y": 766,
+   "w": 150,
+   "h": 76,
+   "title": "SONIC SHOT",
+   "sub": "1회 시작",
+   "fill": "#e6f2e9",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "warn",
+   "type": "rect",
+   "x": 952,
+   "y": 766,
+   "w": 155,
+   "h": 76,
+   "title": "WARN n / OFF",
+   "sub": "임계값·경고 설정",
+   "fill": "#e6f2e9",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "old",
+   "type": "rect",
+   "x": 1207,
+   "y": 766,
+   "w": 264,
+   "h": 76,
+   "title": "기존 01~05 명령",
+   "sub": "LED / DISP / PWM / CDS / STATUS",
+   "fill": "#e6f2e9",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "a",
+   "to": "b",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top"
+  },
+  {
+   "id": "e2",
+   "from": "b",
+   "to": "p",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top"
+  },
+  {
+   "id": "e3",
+   "from": "p",
+   "to": "on",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top",
+   "bendPoints": [
+    [
+     520,
+     644
+    ],
+    [
+     165,
+     644
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "p",
+   "to": "off",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top",
+   "bendPoints": [
+    [
+     520,
+     644
+    ],
+    [
+     361,
+     644
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "p",
+   "to": "read",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top",
+   "bendPoints": [
+    [
+     520,
+     644
+    ],
+    [
+     557,
+     644
+    ]
+   ]
+  },
+  {
+   "id": "e6",
+   "from": "p",
+   "to": "shot",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top",
+   "bendPoints": [
+    [
+     520,
+     644
+    ],
+    [
+     753,
+     644
+    ]
+   ]
+  },
+  {
+   "id": "e7",
+   "from": "p",
+   "to": "warn",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top",
+   "bendPoints": [
+    [
+     520,
+     644
+    ],
+    [
+     952,
+     644
+    ]
+   ]
+  },
+  {
+   "id": "e8",
+   "from": "p",
+   "to": "old",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top",
+   "bendPoints": [
+    [
+     520,
+     644
+    ],
+    [
+     1207,
+     644
+    ]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,7 @@
+flowchart LR
+ A["main()"] --> B["poll_uart()"] --> C["service_button_events()"]
+ C --> D["service_capstone()"]
+ D --> E["p2_10_tick()"]
+ E -->|fault| F["cap_motor_stop() / FAULT"]
+ E -->|normal| G["service_sonic_display()"]
+ G --> H["service_legacy_gpio_leds()"]

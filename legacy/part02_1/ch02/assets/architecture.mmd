@@ -1,0 +1,10 @@
+flowchart LR
+    PC["PC UART 문자열 명령"] --> UART["기존 AXI UART Lite"]
+    UART --> CPU["MicroBlaze V / main()"]
+    CPU --> LED["P2-01 사용자 AXI LED IP"]
+    LED --> L0["LED0"]
+    CPU --> FND["p2_02_axi_fnd_v1_0"]
+    FND --> REGS["reg_disp_bcd / reg_disp_enable"]
+    REGS --> CORE["fnd_scan_controller"]
+    CORE --> PINS["seg[6:0], an[3:0], dp"]
+    PINS --> BOARD["Basys3 내장 4자리 FND"]

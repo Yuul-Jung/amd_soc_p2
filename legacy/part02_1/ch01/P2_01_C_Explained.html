@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>C 코드 이해 중심 해설</title><style>
+:root{--bg:#F1F2EE;--paper:#fff;--text:#15171C;--muted:#58616D;--accent:#4635B1;--line:#DCDFE5;--ok:#24704E;--warn:#8b5c19}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.75 "Noto Sans KR","Malgun Gothic",sans-serif}a{color:var(--accent)}.top{background:white;border-bottom:1px solid var(--line);padding:12px max(24px,calc((100vw - 1470px)/2));font-size:13px}.hero{background:#181920;color:#fff;padding:48px max(24px,calc((100vw - 1470px)/2)) 42px}.hero small{color:#FFD24A;font-weight:800;letter-spacing:2px}.hero h1{font-size:clamp(27px,3vw,43px);margin:13px 0 6px;line-height:1.28}.hero p{color:#D5D8E1;max-width:880px}.pills{display:flex;flex-wrap:wrap;gap:9px}.pills span{font-size:12px;border:1px solid #5A5A6A;padding:3px 10px}.layout{max-width:1530px;margin:0 auto;display:grid;grid-template-columns:260px minmax(0,1fr);gap:30px;padding:25px}.side{position:sticky;top:12px;max-height:calc(100vh - 25px);overflow:auto;padding:15px 17px;background:white;border:1px solid var(--line)}.side h2{font-size:16px;color:var(--accent)}.side a{display:block;border-bottom:1px solid #EEE;font-size:13px;text-decoration:none;padding:7px}.side a:hover{text-decoration:underline}.side h3{color:#767F8C;font-size:11px;letter-spacing:1px;margin:22px 0 3px}.content{min-width:0}.section{background:white;padding:28px 34px;margin-bottom:15px;border:1px solid var(--line);scroll-margin-top:18px}.section h2{font-size:24px;margin:4px 0 14px}.section h3{font-size:17px;margin-top:23px}.section p{color:#424957}.tag{font-size:12px;color:var(--accent);font-weight:800;letter-spacing:.06em}.lead{font-size:16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel{background:#F9FAFC;border:1px solid var(--line);padding:14px 17px}.panel h3{margin:0 0 6px}.panel p{margin:0}.flowline{background:#F7F6FF;border-left:4px solid var(--accent);padding:13px;margin:15px 0;overflow-x:auto;white-space:nowrap}.tablewrap{overflow:auto;margin:15px 0}table{border-collapse:collapse;width:100%;min-width:630px}th,td{border-bottom:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;font-size:13px}th{background:#F5F6F8}code,pre{font-family:Consolas, "Liberation Mono",monospace}code{background:#F3F4F7;padding:2px 4px}pre{background:#F3F5F8;color:#27313D;border:1px solid #DEE2E7;padding:17px;overflow:auto;max-height:740px;font-size:12px;line-height:1.6}pre code{background:none;padding:0}.steps{list-style:none;counter-reset:step;padding:0}.steps li{counter-increment:step;border:1px solid var(--line);margin:10px 0;padding:13px 15px 13px 55px;position:relative;background:#FCFCFD}.steps li::before{content:counter(step,decimal-leading-zero);position:absolute;left:13px;top:13px;color:var(--accent);font-weight:900}.steps li strong{display:block;font-size:15px}.steps li p{margin:5px 0}.ok{background:#F1F8F4;border-left:4px solid var(--ok);padding:12px 15px;color:#1A5E40;margin:14px 0}.caution{background:#FFF8E9;border-left:4px solid #BA8C35;padding:12px 15px;color:#6A4E1B;margin:14px 0}.links{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0}.links a{border:1px solid #B8B3DE;background:#F5F3FD;padding:7px 11px;text-decoration:none;font-size:13px;font-weight:700}.links a:hover{text-decoration:underline}.figure{padding:17px;background:#fff;border:1px solid var(--line);margin:15px 0}.figure img{display:block;max-width:100%;height:auto;margin:auto}.figure figcaption{text-align:center;color:#66717C;font-size:12px;margin-top:10px}.fullcode{max-height:780px}.footer{font-size:12px;color:#78818B;padding:16px}.mini{font-size:13px}.red{color:#AC3636}.checklist label{display:block;margin:6px 0}.checklist input{accent-color:var(--accent)}
+@media(max-width:950px){.layout{display:block;padding:15px}.side{position:static;max-height:230px;margin-bottom:14px}.section{padding:18px}.grid{grid-template-columns:1fr}.hero{padding:38px 18px}}
+</style></head><body><div class="top"><a href="P2_01_Study_Guide.html">제2부 01장 · 학습안내서</a> / C 코드 이해 중심 해설</div><header class="hero"><small>PART 02 · CHAPTER 01 · C CODE</small><h1>C 코드 이해 중심 해설</h1><p>u8·u32·메모리 주소·문자열 비교·UART 송수신·레지스터 읽기/쓰기를 실제 코드로 해설합니다.</p><div class="pills"><span>Basys3</span><span>MicroBlaze V</span><span>Vivado / Vitis 2024.2</span><span>AXI4-Lite</span></div></header><div class="layout"><nav class="side"><h2>절차 목차</h2><h3>코드의 동작</h3><a href="#route">실행 흐름</a><a href="#full">C 전체 소스</a><h3>기초 개념</h3><a href="#types">자료형 해설</a><a href="#io">AMD API 해설</a><h3>줄별 풀이</h3><a href="#line">문자열 수신</a><a href="#handler">명령 처리</a><a href="#run">동작 추적</a></nav><main class="content"><section class="section" id="route"><div class="tag">A · 코드 실행</div><h2>C 프로그램 전체 흐름</h2><div class="flowline">main() → read_command_line() → handle_command() → Xil_Out32()/report_status() → UART 응답</div><figure class="figure"><a href="P2_01_C_Flow.svg"><img alt="P2-01 C 함수 흐름도" src="P2_01_C_Flow.svg"/></a><figcaption>C 함수명·명령문·복귀 루프가 실제 코드와 대응합니다.</figcaption></figure></section><section class="section" id="full"><div class="tag">B · 원본 코드</div><h2>main.c 전체 소스</h2><p>아래 코드는 <a href="P2_01_main.c">다운로드 소스와 동일</a>합니다. <code>USER_IP_BASEADDR</code>를 실제 Address Editor 값으로 바꿉니다.</p><pre><code>/* P2-01: UART 문자열 명령으로 사용자 AXI IP의 LED0를 제어한다. */
+#include "xparameters.h"   /* Vitis BSP의 하드웨어 주소 정의 */
+#include "xil_types.h"     /* u8(8비트), u32(32비트) 자료형 */
+#include "xil_io.h"        /* Xil_In32(), Xil_Out32() */
+#include "xuartlite_l.h"   /* XUartLite_RecvByte(), SendByte() */
+#include &lt;string.h&gt;        /* strcmp(): 두 문자열 비교 */
+
+/* (필수 수정) Vivado Address Editor의 사용자 IP 주소를 입력한다. */
+#ifndef USER_IP_BASEADDR
+#define USER_IP_BASEADDR   0xFFFFFFFFU
+#endif
+#if USER_IP_BASEADDR == 0xFFFFFFFFU
+#error "USER_IP_BASEADDR를 실제 Vivado AXI IP Base Address로 수정하세요"
+#endif
+
+#define LED_REG_OFFSET    0x00U  /* slv_reg0: bit0가 LED0 출력 */
+#define LINE_CAPACITY     32U    /* 최대 31문자 + 종료문자 */
+
+/* 제1부에서 사용한 AXI UART Lite를 재사용한다. */
+#if defined(XPAR_XUARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_XUARTLITE_0_BASEADDR
+#elif defined(XPAR_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_UARTLITE_0_BASEADDR
+#elif defined(XPAR_AXI_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_AXI_UARTLITE_0_BASEADDR
+#else
+#error "xparameters.h에서 UART Lite BASEADDR 매크로를 확인하세요"
+#endif
+
+/* 문자열의 각 문자를 UART로 보낸다. */
+static void uart_puts(const char *text)
+{
+    while (*text != '\0') {  /* '\0': 문자열의 끝 */
+        XUartLite_SendByte(UART_BASEADDR, (u8)*text);
+        text++;
+    }
+}
+
+/* u32 값을 8자리 16진수 문자열로 출력한다. */
+static void uart_hex32(u32 value)
+{
+    const char digits[] = "0123456789ABCDEF";
+    int shift;
+    for (shift = 28; shift &gt;= 0; shift -= 4) {
+        u8 nibble = (u8)((value &gt;&gt; shift) &amp; 0x0FU);
+        XUartLite_SendByte(UART_BASEADDR, (u8)digits[nibble]);
+    }
+}
+
+/* REG0 읽기값에서 LED0 상태를 해석해 출력한다. */
+static void report_status(const char *prefix)
+{
+    u32 value = Xil_In32(USER_IP_BASEADDR + LED_REG_OFFSET);
+    uart_puts(prefix);
+    uart_puts((value &amp; 1U) ? "LED=ON REG0=0x" : "LED=OFF REG0=0x");
+    uart_hex32(value);
+    uart_puts("\r\n");
+}
+
+/* Enter까지 입력받는다. 반환: 1=명령, 0=빈 줄, -1=초과, -2=제어문자. */
+static int read_command_line(char *line, u32 capacity)
+{
+    u32 used = 0U;
+    int overflow = 0;
+    int invalid = 0;  /* NUL 등 제어문자 포함 명령 거부 */
+    while (1) {
+        u8 ch = XUartLite_RecvByte(UART_BASEADDR); /* 1바이트 대기 수신 */
+        if (ch == (u8)'\r' || ch == (u8)'\n') {
+            line[used] = '\0';       /* 항상 문자열을 종료한다. */
+            if (overflow) return -1; /* 버퍼 밖에 쓰지 않는다. */
+            if (invalid) return -2;  /* 제어문자가 포함되면 거부 */
+            return used ? 1 : 0;
+        }
+        if (ch &lt; (u8)0x20U || ch &gt; (u8)0x7EU) {
+            invalid = 1;  /* 출력 가능한 ASCII만 허용 */
+            continue;
+        }
+        if (used &lt; capacity - 1U) {
+            line[used++] = (char)ch;
+        } else {
+            overflow = 1; /* Enter 전까지 초과 문자를 버린다. */
+        }
+    }
+}
+
+/* 문자열을 비교한 후 AXI 레지스터에 기록하거나 읽는다. */
+static void handle_command(const char *line)
+{
+    if (strcmp(line, "LED ON") == 0) {
+        Xil_Out32(USER_IP_BASEADDR + LED_REG_OFFSET, 1U);
+        report_status("OK ");
+    } else if (strcmp(line, "LED OFF") == 0) {
+        Xil_Out32(USER_IP_BASEADDR + LED_REG_OFFSET, 0U);
+        report_status("OK ");
+    } else if (strcmp(line, "STATUS") == 0) {
+        report_status("STATUS ");
+    } else {
+        uart_puts("ERROR: use LED ON / LED OFF / STATUS\r\n");
+    }
+}
+
+int main(void)
+{
+    char line[LINE_CAPACITY]; /* ASCII 명령을 저장할 문자 배열 */
+    int result;
+    uart_puts("\r\nP2-01 AXI LED CONTROL\r\n");
+    uart_puts("Commands: LED ON | LED OFF | STATUS (Enter)\r\n");
+    report_status("STATUS ");
+
+    while (1) {
+        result = read_command_line(line, LINE_CAPACITY);
+        if (result &gt; 0) {
+            handle_command(line);
+        } else if (result == -2) {
+            uart_puts("ERROR: invalid character\r\n");
+        } else if (result &lt; 0) {
+            uart_puts("ERROR: command too long (max 31)\r\n");
+        }
+        /* 빈 줄 및 CRLF의 두 번째 줄바꿈은 무시한다. */
+    }
+}
+</code></pre></section><section class="section" id="types"><div class="tag">C · 자료형 해설</div><h2>표준 C와 AMD BSP의 차이</h2><div class="tablewrap"><table><thead><tr><th>실제 표현</th><th>자료형·명령의 의미</th><th>코드에서 하는 일</th></tr></thead><tbody><tr><td><code>u8</code></td><td>AMD <code>xil_types.h</code>에 정의된 부호 없는 8비트 정수. <code>uint8_t</code>에 대응</td><td>UART 문자를 1바이트 단위로 받는다.</td></tr><tr><td><code>u32</code></td><td>AMD 부호 없는 32비트 정수. <code>uint32_t</code>에 대응</td><td>레지스터 읽기값과 수신 길이를 보관한다.</td></tr><tr><td><code>char line[32]</code></td><td>C 표준 문자 배열 32바이트</td><td>31개 문자와 문자열 끝 <code>\0</code> 저장</td></tr><tr><td><code>strcmp()</code></td><td>표준 C 라이브러리 <code>string.h</code>의 문자열 비교</td><td>정확하게 일치하면 0 반환</td></tr><tr><td><code>0x...U</code></td><td>16진수 부호 없는 정수 상수</td><td>주소·마스크·데이터에 사용</td></tr><tr><td><code>(u8)</code></td><td>자료형 변환(Cast)</td><td>문자를 8비트 전송값으로 변환</td></tr></tbody></table></div></section><section class="section" id="io"><div class="tag">C · AMD 전용 API</div><h2>CPU가 하드웨어에 접근하는 과정</h2><div class="tablewrap"><table><thead><tr><th>실제 코드</th><th>동작</th><th>왜 필요한가</th></tr></thead><tbody><tr><td><code>XUartLite_RecvByte(UART_BASEADDR)</code></td><td>PC가 전송한 1바이트가 들어올 때까지 대기</td><td>문자열의 각 글자를 수신</td></tr><tr><td><code>XUartLite_SendByte(..., (u8)*text)</code></td><td>UART 송신 레지스터로 1바이트 전달</td><td>실행 결과를 PC로 표시</td></tr><tr><td><code>Xil_Out32(USER_IP_BASEADDR + 0x00, 1U)</code></td><td>사용자 IP의 REG0에 32비트 값 1 기록</td><td>LED0 켜기</td></tr><tr><td><code>Xil_In32(USER_IP_BASEADDR + 0x00)</code></td><td>REG0 32비트 읽기</td><td>실제 기록값을 읽어 확인</td></tr><tr><td><code>USER_IP_BASEADDR</code></td><td>Vivado에서 배정한 IP 시작 주소</td><td>CPU가 어떤 주변장치를 제어할지 결정</td></tr><tr><td><code>LED_REG_OFFSET</code></td><td>IP 시작 주소에서 REG0까지의 거리(0x00)</td><td>동일 IP 내부 레지스터 선택</td></tr></tbody></table></div><p>AXI 쓰기 데이터 1은 단순한 문자 <code>'1'</code>과 다릅니다. <code>'1'</code>의 ASCII 값은 <code>0x31</code>이지만, <code>1U</code>는 정수 1입니다. 이 코드는 한 줄을 문자열로 비교한 다음 정수 1을 레지스터에 씁니다.</p></section><section class="section" id="line"><div class="tag">D · 핵심 코드 풀이</div><h2>read_command_line() — Enter까지 수신</h2><pre><code>static int read_command_line(char *line, u32 capacity)
+{
+    u32 used = 0U;
+    int overflow = 0;
+    int invalid = 0;  /* NUL 등 제어문자 포함 명령 거부 */
+    while (1) {
+        u8 ch = XUartLite_RecvByte(UART_BASEADDR); /* 1바이트 대기 수신 */
+        if (ch == (u8)'\r' || ch == (u8)'\n') {
+            line[used] = '\0';       /* 항상 문자열을 종료한다. */
+            if (overflow) return -1; /* 버퍼 밖에 쓰지 않는다. */
+            if (invalid) return -2;  /* 제어문자가 포함되면 거부 */
+            return used ? 1 : 0;
+        }
+        if (ch &lt; (u8)0x20U || ch &gt; (u8)0x7EU) {
+            invalid = 1;  /* 출력 가능한 ASCII만 허용 */
+            continue;
+        }
+        if (used &lt; capacity - 1U) {
+            line[used++] = (char)ch;
+        } else {
+            overflow = 1; /* Enter 전까지 초과 문자를 버린다. */
+        }
+    }
+}</code></pre><div class="tablewrap"><table><thead><tr><th>구문</th><th>이해 중심 해설</th></tr></thead><tbody><tr><td><code>used &lt; capacity - 1U</code></td><td>종료문자 공간 1바이트를 남기므로 배열을 넘지 않는다.</td></tr><tr><td><code>\r</code>, <code>\n</code></td><td>각각 CR, LF. 터미널의 Enter를 나타내는 값이다.</td></tr><tr><td><code>\0</code></td><td>문자열의 끝 표시로 <code>strcmp</code>가 어디까지 비교할지 알려준다.</td></tr><tr><td><code>overflow</code></td><td>31자 초과 시 잘린 앞부분을 정상 명령으로 오해하지 않도록 막는다.</td></tr><tr><td><code>return 1 / 0 / -1</code></td><td>명령 정상 / 빈 줄 / 길이 초과를 구분하며, -2는 제어문자 오류다.</td></tr></tbody></table></div></section><section class="section" id="handler"><div class="tag">D · 핵심 코드 풀이</div><h2>handle_command() — 명령 비교·레지스터 제어</h2><pre><code>if (strcmp(line, "LED ON") == 0) {
+    Xil_Out32(USER_IP_BASEADDR + LED_REG_OFFSET, 1U);
+    report_status("OK ");
+} else if (strcmp(line, "LED OFF") == 0) {
+    Xil_Out32(USER_IP_BASEADDR + LED_REG_OFFSET, 0U);
+    report_status("OK ");
+} else if (strcmp(line, "STATUS") == 0) {
+    report_status("STATUS ");
+}</code></pre><p><code>strcmp()</code>가 0이면 문자열이 정확하게 일치합니다. <code>LED ON</code>·<code>LED OFF</code>는 쓰기 후 읽기, <code>STATUS</code>는 읽기만 합니다. 입력 오류는 어떤 레지스터도 변경하지 않습니다.</p><p><code>report_status()</code>가 읽은 32비트 값의 bit0을 검사해 <code>LED=ON</code> 또는 <code>LED=OFF</code>를 출력합니다. 이 값이 실제 LED 배선으로 전달되도록 Vivado의 <code>assign led_o = slv_reg0[0];</code>와 <code>.p2_led_o(ip_led0)</code>가 필요합니다.</p></section><section class="section" id="run"><div class="tag">E · 예제 추적</div><h2>명령 입력을 코드와 연결</h2><div class="tablewrap"><table><thead><tr><th>PC 입력</th><th>C 처리</th><th>AXI 읽기·쓰기</th><th>결과</th></tr></thead><tbody><tr><td><code>LED ON↵</code></td><td><code>strcmp</code>가 LED ON 분기 선택</td><td>REG0 ← 1 → 재읽기</td><td>LED0 ON</td></tr><tr><td><code>STATUS↵</code></td><td>STATUS 분기 선택</td><td>REG0 읽기만 수행</td><td>LED0 ON 유지</td></tr><tr><td><code>LED OFF↵</code></td><td>LED OFF 분기 선택</td><td>REG0 ← 0 → 재읽기</td><td>LED0 OFF</td></tr><tr><td><code>LEDON↵</code></td><td>불일치</td><td>AXI 접근 없음</td><td>ERROR 응답</td></tr></tbody></table></div></section><div class="footer">PART 02 · CHAPTER 01</div></main></div></body></html>

@@ -1,0 +1,19 @@
+digraph G {
+  graph [rankdir=LR, bgcolor="transparent", pad=0.22, nodesep=0.62, ranksep=0.85, splines=polyline];
+  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=12, color="#c9ccd6", fillcolor="#f7f8fc", margin="0.2,0.13"];
+  edge [color="#7772a6",penwidth=1.5,arrowsize=0.75,fontname="DejaVu Sans",fontsize=10];
+  poll [label="poll_uart()\nEnter completes line",fillcolor="#edf1fa"];
+  dispatch [label="handle_line()\npwm_parse_command()",fillcolor="#e7e0fa"];
+  valid [shape=diamond, label="PWM valid?",fillcolor="#fff4da"];
+  queue [label="pwm_queue_percent()\nCFG writes + APPLY",fillcolor="#d9f0e5"];
+  busy [label="BUSY / ERROR\nno update",fillcolor="#fce8e8"];
+  legacy [label="p2_parse_command()\nLED / DISP / STATUS",fillcolor="#eaf2fd"];
+  reply [label="UART reply\nmain loop",fillcolor="#edf1fa"];
+  poll -> dispatch -> valid;
+  valid -> queue [label="PWM 0..100"];
+  valid -> busy [label="invalid or busy"];
+  valid -> legacy [label="other command"];
+  queue -> reply;
+  busy -> reply;
+  legacy -> reply;
+}

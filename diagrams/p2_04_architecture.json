@@ -1,0 +1,272 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 04장 · AXI PWM 구조도",
+ "title": "제2부 04장 · AXI PWM 구조도",
+ "subtitle": "",
+ "width": 1980,
+ "height": 422,
+ "headings": {
+  "title": {
+   "x": 990.0,
+   "y": 44,
+   "w": 1900,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 990.0,
+   "y": 90,
+   "w": 1900,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "uart",
+   "type": "rect",
+   "x": 135,
+   "y": 279,
+   "w": 150,
+   "h": 76,
+   "title": "PC Terminal",
+   "sub": "PWM 50 + Enter",
+   "fill": "#eeebfc",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "cpu",
+   "type": "rect",
+   "x": 444,
+   "y": 279,
+   "w": 168,
+   "h": 76,
+   "title": "MicroBlaze V",
+   "sub": "C command parser",
+   "fill": "#dce6f8",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "bus",
+   "type": "rect",
+   "x": 753,
+   "y": 279,
+   "w": 150,
+   "h": 76,
+   "title": "AXI4-Lite",
+   "sub": "Address Editor",
+   "fill": "#eaf1ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "pwm",
+   "type": "rect",
+   "x": 1104,
+   "y": 188,
+   "w": 186,
+   "h": 76,
+   "title": "P2-04 AXI PWM",
+   "sub": "CFG / APPLY / STATUS",
+   "fill": "#e6def7",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "legacy",
+   "type": "rect",
+   "x": 1104,
+   "y": 304,
+   "w": 253,
+   "h": 76,
+   "title": "P2-01 LED0",
+   "sub": "P2-02 FND · P2-03 Buttons/IRQ",
+   "fill": "#f3f4f6",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "core",
+   "type": "rect",
+   "x": 1486,
+   "y": 188,
+   "w": 209,
+   "h": 76,
+   "title": "pwm_core",
+   "sub": "period-boundary update",
+   "fill": "#e2f3eb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "led",
+   "type": "rect",
+   "x": 1815,
+   "y": 188,
+   "w": 150,
+   "h": 76,
+   "title": "Basys3 LED1",
+   "sub": "E19 / PWM",
+   "fill": "#fff2d0",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "uart",
+   "to": "cpu",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "cpu",
+   "to": "bus",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e3",
+   "from": "bus",
+   "to": "pwm",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     862,
+     279
+    ],
+    [
+     862,
+     188
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "bus",
+   "to": "legacy",
+   "label": "reuse",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     862,
+     279
+    ],
+    [
+     862,
+     304
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "pwm",
+   "to": "core",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e6",
+   "from": "core",
+   "to": "led",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  }
+ ]
+}

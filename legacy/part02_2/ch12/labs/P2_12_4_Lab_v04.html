@@ -1,0 +1,750 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>제2부 12.4 가감속 제어 RTL 확장</title><style>*{box-sizing:border-box}body{margin:0;color:#1b3449;background:#f2f6fa;font:16px/1.85 system-ui,-apple-system,"Noto Sans KR",sans-serif}header{padding:42px max(22px,calc((100vw - 1050px)/2));background:linear-gradient(120deg,#174e71,#1b6789);color:white}header h1{margin:5px 0;font-size:clamp(25px,3vw,34px)}header p{color:#d9edf5;margin:0}main{max-width:1050px;margin:25px auto;padding:0 20px 70px}section{background:#fff;border:1px solid #d9e3ed;border-radius:11px;margin:17px 0;padding:24px 29px}h2{font-size:22px;color:#165576;margin:0 0 13px;border-bottom:2px solid #e3edf4;padding-bottom:7px}table{width:100%;border-collapse:collapse}th,td{padding:9px 11px;border:1px solid #d2e0e9;text-align:left}th{background:#e8f0f6}pre{background:#172a40;color:#e4f0f9;padding:17px;overflow:auto;border-radius:8px;font:13px/1.6 ui-monospace,Consolas,monospace}p code,li code,td code{background:#eaf3f8;padding:2px 5px;color:#0a527d;border-radius:3px}details{padding:11px;margin:12px 0;border:1px solid #cde0ed;border-radius:8px}summary{cursor:pointer;font-weight:700;color:#165c84}.warn{background:#fff6e7;border-left:4px solid #b78a35;padding:13px}.ok{background:#ebf7f0;border-left:4px solid #3b8a75;padding:13px}a{color:#155d8a}svg{max-width:100%;height:auto}footer{text-align:center;color:#627d90;padding:28px}@media(max-width:640px){section{padding:14px}table{font-size:13px}}</style></head><body><header><div style="letter-spacing:2px;font-weight:bold">BASYS3 · MICROBLAZE V · PART 02</div><h1>실습 12.4 · 스테핑 모터 가감속 제어</h1><p>Ramp Controller · 별도 AXI IP v1.1 · Verilog TB · Vitis C 예제</p></header><main><section><h2>1. 과제 개요</h2><p>제2부 12장의 <code>stepper_core.v</code>와 AXI v1.0을 변경하지 않고, 가감속 기능을 가진 신규 <code>stepper_ramp_core.v</code> 및 <code>p2_12_axi_stepper_v1_1.v</code>를 추가한다. 이로써 고정 주기 스텝 구동에서 <strong>저속 시작 → 가속 → 정속 → 감속 → 정지</strong>로 확장한다.</p><p class="warn"><strong>검증 완료 범위:</strong> C Host, Verilog RTL, 새 AXI4-Lite v1.1의 Icarus 시뮬레이션. <strong>미검증 범위:</strong> Vivado 실제 합성/타이밍, Vitis 타깃 C, ULN2003+모터 실물 가감속, 안전한 최대속도. 신규 v1.1의 IP 실물 배치는 아직 수행하지 않았다.</p></section><section><h2>2. 가감속 원리와 타이밍</h2><p>모터 코일 여자 상태 자체는 이전과 동일하다. 다음 스텝이 발생할 때까지 기다리는 <code>active_period</code>만 구간별로 변화한다.</p><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 990 272" role="img" aria-label="10개 스텝의 가속과 정속 감속을 나타내는 주기값"><rect x="14" y="12" width="962" height="246" rx="12" fill="#f8fbfd" stroke="#b7d4e3"/><path d="M100 32V224H910" fill="none" stroke="#6c91a9" stroke-width="2"/><g font-size="14" fill="#456278"><text x="17" y="47">주기 큼</text><text x="17" y="213">주기 작음</text><text x="408" y="251">스텝 번호 →</text></g><polyline points="125,52 208,94 291,135 374,177 457,177 540,177 623,177 706,135 789,94 872,52" fill="none" stroke="#147596" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><g fill="#147596"><circle cx="125" cy="52" r="5"/><circle cx="208" cy="94" r="5"/><circle cx="291" cy="135" r="5"/><circle cx="374" cy="177" r="5"/><circle cx="457" cy="177" r="5"/><circle cx="540" cy="177" r="5"/><circle cx="623" cy="177" r="5"/><circle cx="706" cy="135" r="5"/><circle cx="789" cy="94" r="5"/><circle cx="872" cy="52" r="5"/></g><g font-size="13" text-anchor="middle" fill="#2b536c"><text x="125" y="41">8</text><text x="208" y="82">6</text><text x="291" y="123">4</text><text x="374" y="165">2</text><text x="457" y="165">2</text><text x="540" y="165">2</text><text x="623" y="165">2</text><text x="706" y="123">4</text><text x="789" y="82">6</text><text x="872" y="41">8</text></g></svg><p>위의 8→6→4→2→2→2→2→4→6→8은 <strong>축척된 RTL 테스트 시계 수</strong>이다. 실제 100MHz 클록에서는 설정값을 밀리초에서 tick으로 변환한다. 주기가 짧아질수록 스텝 주파수는 증가하므로 가속 상태에 해당한다.</p><table><tr><th>파라미터</th><th>역할</th><th>실제 100MHz 예제</th></tr><tr><td>START_PERIOD</td><td>초기 느린 스텝 주기</td><td>10ms → 1,000,000 tick</td></tr><tr><td>CRUISE_PERIOD</td><td>정속 구간의 짧은 주기</td><td>4ms → 400,000 tick</td></tr><tr><td>RAMP_STEPS</td><td>가속·감속 각 구간의 스텝 수</td><td>12</td></tr><tr><td>DELTA_PERIOD</td><td>한 스텝마다 주기를 줄이거나 늘리는 크기</td><td>50,000 tick</td></tr><tr><td>STEP_COUNT</td><td>목표 스텝</td><td>128</td></tr></table><p><strong>조건:</strong> 시작 주기와 정속 주기의 차이는 <code>DELTA_PERIOD × RAMP_STEPS</code>로 정확하게 나누어져야 한다. 새로운 <code>stepper_ramp_make_config()</code> 함수가 이를 검사한다. 가감속 구간은 겹치지 않도록 <code>2 × RAMP_STEPS &lt; STEP_COUNT</code>로 제한한다.</p></section><section><h2>3. 전체 IP 구조</h2><pre><code>MicroBlaze V / AXI4-Lite
+       ↓
+p2_12_axi_stepper_v1_1
+  - STEP_COUNT / START_PERIOD
+  - CRUISE_PERIOD / DELTA_PERIOD / RAMP_STEPS
+  - CONTROL / START / STOP / STATUS
+       ↓
+stepper_ramp_core
+  - Ramp Period Scheduler
+  - Step Timer
+  - 4-Phase Sequence FSM
+       ↓
+stepper_coil_o[3:0]
+       ↓
+ULN2003 → 28BYJ-48</code></pre><p>기존 <code>p2_12_axi_stepper_v1_0</code>는 남겨둔다. 신규 v1.1을 새로운 IP 버전으로 패키징하고 기존 주소와 충돌하지 않도록 Address Editor에서 확인한다. 두 버전을 동시에 사용할 필요는 없다.</p></section><section><h2>4. v1.1 신규 Register Map</h2><table><tr><th>Offset</th><th>Register</th><th>사용</th></tr><tr><td>0x00</td><td>STEP_COUNT</td><td>128</td></tr><tr><td>0x04</td><td>START_PERIOD</td><td>1,000,000 (10ms/100MHz)</td></tr><tr><td>0x08</td><td>CONTROL</td><td>bit0 REVERSE, bit1 HALF_STEP</td></tr><tr><td>0x0C</td><td>COMMAND</td><td>1 START, 2 STOP</td></tr><tr><td>0x10</td><td>STATUS</td><td>busy / done / error</td></tr><tr><td>0x14</td><td>STEPS_DONE</td><td>회로가 출력한 스텝 수</td></tr><tr><td>0x18</td><td>ID</td><td><code>0x000C0002</code> (v1.1 식별)</td></tr><tr><td>0x1C</td><td>MIN_STEP_TICKS</td><td>최소 주기</td></tr><tr><td>0x20</td><td>CRUISE_PERIOD</td><td>400,000</td></tr><tr><td>0x24</td><td>DELTA_PERIOD</td><td>50,000</td></tr><tr><td>0x28</td><td>RAMP_STEPS</td><td>12</td></tr><tr><td>0x2C</td><td>ACTIVE_PERIOD</td><td>현재 주기 읽기 전용</td></tr></table><p>IP v1.0과 v1.1은 식별 값과 레지스터 확장이 다르다. 기존 12.3 보드 스모크 테스트 코드를 수정 없이 v1.1에 그대로 연결하지 않는다.</p></section><section><h2>5. 전체 소스 코드와 자가검증 테스트벤치</h2><p>아래 신규 RTL·C·AXI 확장·테스트벤치는 기존 정상 v1.0을 수정하지 않고 별도 파일로 저장되어 있다.</p><details><summary>rtl/stepper_ramp_core.v 전체 코드 보기</summary><pre><code>`timescale 1ns/1ps
+// P2-12.4: 기존 stepper_core.v를 보존하는 가감속 확장 코어.
+// (추가) 시작 저속 -&gt; 가속 -&gt; 정속 -&gt; 감속 -&gt; 정지.
+// (주의) 가감속은 스텝 간 간격을 계단식으로 조절하는 선형 주기 프로파일.
+// (주의) 속도/가속도가 실제 기계의 연속 선형 가속도가 되지는 않는다.
+// Clock Domain: clk 단일 도메인, AXI와 같은 클록 사용을 전제로 함.
+module stepper_ramp_core #(
+    parameter [31:0] MIN_STEP_CYCLES = 32'd200000
+)(
+    input wire clk, input wire resetn,
+    input wire start_pulse, input wire stop_pulse,
+    input wire [31:0] cfg_steps,
+    input wire [31:0] cfg_start_period,
+    input wire [31:0] cfg_cruise_period,
+    input wire [31:0] cfg_delta_period,
+    input wire [31:0] cfg_ramp_steps,
+    input wire cfg_reverse, input wire cfg_half_step,
+    output wire [3:0] coil_o,
+    output reg busy, output reg done_pulse, output reg error_pulse,
+    output reg [31:0] steps_done,
+    output reg [31:0] active_period
+);
+    reg [31:0] target_steps;
+    reg [31:0] cruise_period;
+    reg [31:0] start_period;
+    reg [31:0] delta_period;
+    reg [31:0] ramp_steps;
+    reg [31:0] ticks_left;
+    reg [2:0] phase;
+    reg reverse_q, half_q;
+    reg [3:0] coils_q;
+
+    function [3:0] pattern;
+        input [2:0] idx;
+        input       half;
+        begin
+            if(half) begin
+                case(idx)
+                3'd0:pattern=4'b0001;
+                3'd1:pattern=4'b0011;
+                3'd2:pattern=4'b0010;
+                3'd3:pattern=4'b0110;
+                3'd4:pattern=4'b0100;
+                3'd5:pattern=4'b1100;
+                3'd6:pattern=4'b1000;
+                default:pattern=4'b1001;
+                endcase
+            end else begin
+                case(idx[1:0])
+                2'd0:pattern=4'b0011;
+                2'd1:pattern=4'b0110;
+                2'd2:pattern=4'b1100;
+                default:pattern=4'b1001;
+                endcase
+            end
+        end
+    endfunction
+
+    // 실제 코일 출력은 STOP/RESET에서 즉시 차단.
+    assign coil_o = (resetn &amp;&amp; !stop_pulse) ? coils_q : 4'b0000;
+
+    // cfg_start_period = cfg_cruise_period + cfg_delta_period * cfg_ramp_steps
+    // 일치하도록 C Host 단계에서 사전 검증한다. RTL은 감산/가산 포화 적용.
+    always @(posedge clk) begin
+        if(!resetn) begin
+            busy &lt;= 1'b0;
+            done_pulse &lt;= 1'b0;
+            error_pulse &lt;= 1'b0;
+            steps_done &lt;= 32'd0;
+            active_period &lt;= MIN_STEP_CYCLES;
+            target_steps &lt;= 32'd0;
+            cruise_period &lt;= MIN_STEP_CYCLES;
+            start_period &lt;= MIN_STEP_CYCLES;
+            delta_period &lt;= 32'd0;
+            ramp_steps &lt;= 32'd0;
+            ticks_left &lt;= 32'd0;
+            phase &lt;= 3'd0;
+            reverse_q &lt;= 1'b0;
+            half_q &lt;= 1'b1;
+            coils_q &lt;= 4'b0000;
+        end else begin
+            done_pulse &lt;= 1'b0;
+            error_pulse &lt;= 1'b0;
+            if(stop_pulse) begin
+                busy &lt;= 1'b0;
+                coils_q &lt;= 4'b0000;
+                ticks_left &lt;= 32'd0;
+            end else if(start_pulse) begin
+                // 2*R &lt; N 필수: 가속/감속 구간이 겹치지 않도록 제한.
+                if(busy || cfg_steps &lt; 3 ||
+                   cfg_ramp_steps == 0 ||
+                   cfg_ramp_steps &gt; ((cfg_steps - 32'd1) &gt;&gt; 1) ||
+                   cfg_start_period &lt;= cfg_cruise_period ||
+                   cfg_cruise_period &lt; MIN_STEP_CYCLES ||
+                   cfg_delta_period == 0 ||
+                   cfg_start_period &lt; cfg_delta_period) begin
+                    error_pulse &lt;= 1'b1;
+                end else begin
+                    busy &lt;= 1'b1;
+                    steps_done &lt;= 32'd0;
+                    target_steps &lt;= cfg_steps;
+                    start_period &lt;= cfg_start_period;
+                    cruise_period &lt;= cfg_cruise_period;
+                    delta_period &lt;= cfg_delta_period;
+                    ramp_steps &lt;= cfg_ramp_steps;
+                    active_period &lt;= cfg_start_period;
+                    ticks_left &lt;= cfg_start_period - 32'd1;
+                    reverse_q &lt;= cfg_reverse;
+                    half_q &lt;= cfg_half_step;
+                    phase &lt;= 3'd0;
+                    coils_q &lt;= 4'b0000;
+                end
+            end else if(busy) begin
+                if(ticks_left != 0) begin
+                    ticks_left &lt;= ticks_left - 32'd1;
+                end else begin
+                    coils_q &lt;= pattern(phase,half_q);
+                    steps_done &lt;= steps_done + 32'd1;
+                    // 다음 step 주기값이 갱신되어도 지금 수행한 step은 유지.
+                    if(steps_done + 32'd1 == target_steps) begin
+                        busy &lt;= 1'b0;
+                        done_pulse &lt;= 1'b1;
+                    end else begin
+                        if(reverse_q)
+                            phase &lt;= half_q ? (phase - 3'd1)
+                                            : {1'b0,(phase[1:0] - 2'd1)};
+                        else
+                            phase &lt;= half_q ? (phase + 3'd1)
+                                            : {1'b0,(phase[1:0] + 2'd1)};
+                        // next_index = steps_done+1, 0부터 시작.
+                        if(steps_done + 32'd1 &lt; ramp_steps) begin
+                            // 가속 구간: period를 작은 값으로.
+                            if(active_period &gt; cruise_period &amp;&amp;
+                               active_period - cruise_period &gt; delta_period)
+                                active_period &lt;= active_period - delta_period;
+                            else
+                                active_period &lt;= cruise_period;
+                        end else if(steps_done + 32'd1 &gt;= target_steps-ramp_steps) begin
+                            // 감속 구간: period를 큰 값으로.
+                            if(active_period &lt; start_period &amp;&amp;
+                               start_period - active_period &gt; delta_period)
+                                active_period &lt;= active_period + delta_period;
+                            else
+                                active_period &lt;= start_period;
+                        end else begin
+                            active_period &lt;= cruise_period;
+                        end
+                        // 아래 구간에서 update된 active_period는 NBA이므로
+                        // 타이머에는 다음 주기 길이가 필요하다.
+                        // 다음 주기 tick 로드는 분기별로 직접 계산한다.
+                        if(steps_done + 32'd1 &lt; ramp_steps) begin
+                            ticks_left &lt;= ((active_period &gt; cruise_period &amp;&amp;
+                               active_period - cruise_period &gt; delta_period)
+                                          ? active_period-delta_period
+                                          : cruise_period) - 32'd1;
+                        end else if(steps_done + 32'd1 &gt;= target_steps-ramp_steps) begin
+                            ticks_left &lt;= ((active_period &lt; start_period-delta_period)
+                                          ? active_period+delta_period
+                                          : start_period) - 32'd1;
+                        end else begin
+                            ticks_left &lt;= cruise_period - 32'd1;
+                        end
+                    end
+                end
+            end else begin
+                coils_q &lt;= 4'b0000;
+            end
+        end
+    end
+endmodule
+</code></pre></details>
+<details><summary>rtl/p2_12_axi_stepper_v1_1.v 전체 코드 보기</summary><pre><code>`timescale 1ns/1ps
+// (추가) P2-12.4 전용 가감속 AXI4-Lite v1_1: 기존 v1_0 변경 없음.
+// 확장 레지스터 0x20 CRUISE, 0x24 DELTA, 0x28 RAMP_STEPS, 0x2C ACTIVE_PERIOD.
+// Original P2-01~10 AXI IPs are not modified.
+// Registers: 0x00 STEPS, 0x04 PERIOD_TICKS, 0x08 CONTROL,
+//            0x0C CMD, 0x10 STATUS, 0x14 DONE_STEPS,
+//            0x18 ID, 0x1C MIN_STEP_TICKS.
+// CONTROL bit0=reverse, bit1=half_step. CMD bit0=START, bit1=STOP.
+// STATUS bit0=BUSY, bit1=DONE_STICKY, bit2=ERROR_STICKY.
+module p2_12_axi_stepper_v1_1 #(
+    parameter integer C_S_AXI_DATA_WIDTH = 32,
+    parameter integer C_S_AXI_ADDR_WIDTH = 6,
+    parameter [31:0] MIN_STEP_CYCLES = 32'd200000,
+    parameter [31:0] RESET_STEP_PERIOD = 32'd500000
+)(
+    input wire S_AXI_ACLK, input wire S_AXI_ARESETN,
+    input wire [C_S_AXI_ADDR_WIDTH-1:0] S_AXI_AWADDR,
+    input wire [2:0] S_AXI_AWPROT,
+    input wire S_AXI_AWVALID, output wire S_AXI_AWREADY,
+    input wire [C_S_AXI_DATA_WIDTH-1:0] S_AXI_WDATA,
+    input wire [(C_S_AXI_DATA_WIDTH/8)-1:0] S_AXI_WSTRB,
+    input wire S_AXI_WVALID, output wire S_AXI_WREADY,
+    output reg [1:0] S_AXI_BRESP, output reg S_AXI_BVALID,
+    input wire S_AXI_BREADY,
+    input wire [C_S_AXI_ADDR_WIDTH-1:0] S_AXI_ARADDR,
+    input wire [2:0] S_AXI_ARPROT,
+    input wire S_AXI_ARVALID, output wire S_AXI_ARREADY,
+    output reg [C_S_AXI_DATA_WIDTH-1:0] S_AXI_RDATA,
+    output reg [1:0] S_AXI_RRESP, output reg S_AXI_RVALID,
+    input wire S_AXI_RREADY,
+    output wire [3:0] stepper_coil_o
+);
+    localparam [1:0] OKAY = 2'b00, SLVERR = 2'b10;
+    localparam [31:0] ID = 32'h000C0002;
+    reg [31:0] cfg_steps;
+    reg [31:0] cfg_period;
+    // (추가) 가감속을 위한 확장 설정값.
+    reg [31:0] cfg_cruise_period, cfg_delta_period, cfg_ramp_steps;
+    reg [31:0] cfg_control;
+    reg start_strobe, stop_strobe;
+    wire busy, done_pulse, error_pulse;
+    wire [31:0] steps_done;
+    wire [31:0] active_period;
+    reg done_sticky, error_sticky;
+    reg aw_hold, w_hold;
+    reg [C_S_AXI_ADDR_WIDTH-1:0] saved_awaddr;
+    reg [31:0] saved_wdata;
+    reg [3:0] saved_wstrb;
+    reg [31:0] merged;
+    integer b;
+
+    stepper_ramp_core #(.MIN_STEP_CYCLES(MIN_STEP_CYCLES)) u_core (
+        .clk(S_AXI_ACLK), .resetn(S_AXI_ARESETN),
+        .start_pulse(start_strobe), .stop_pulse(stop_strobe),
+        .cfg_steps(cfg_steps), .cfg_start_period(cfg_period),
+        .cfg_cruise_period(cfg_cruise_period),
+        .cfg_delta_period(cfg_delta_period),
+        .cfg_ramp_steps(cfg_ramp_steps),
+        .cfg_reverse(cfg_control[0]),.cfg_half_step(cfg_control[1]),
+        .coil_o(stepper_coil_o), .busy(busy),
+        .done_pulse(done_pulse),.error_pulse(error_pulse),
+        .steps_done(steps_done),.active_period(active_period)
+    );
+    // 각 AW/W 채널 버퍼 한 건 + 응답 한 건만 보관.
+    assign S_AXI_AWREADY = S_AXI_ARESETN &amp;&amp; !aw_hold &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_WREADY  = S_AXI_ARESETN &amp;&amp; !w_hold  &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_ARREADY = S_AXI_ARESETN &amp;&amp; !S_AXI_RVALID;
+
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            cfg_steps     &lt;= 32'd128;
+            cfg_period    &lt;= RESET_STEP_PERIOD;
+            cfg_cruise_period &lt;= 32'd200000;
+            cfg_delta_period &lt;= 32'd100000;
+            cfg_ramp_steps &lt;= 32'd3;
+            cfg_control   &lt;= 32'd2; // default HALF, forward
+            aw_hold       &lt;= 1'b0;
+            w_hold        &lt;= 1'b0;
+            saved_awaddr  &lt;= {C_S_AXI_ADDR_WIDTH{1'b0}};
+            saved_wdata   &lt;= 32'd0;
+            saved_wstrb   &lt;= 4'd0;
+            S_AXI_BVALID  &lt;= 1'b0;
+            S_AXI_BRESP   &lt;= OKAY;
+            start_strobe  &lt;= 1'b0;
+            stop_strobe   &lt;= 1'b0;
+            done_sticky   &lt;= 1'b0;
+            error_sticky  &lt;= 1'b0;
+        end else begin
+            start_strobe &lt;= 1'b0;
+            stop_strobe  &lt;= 1'b0;
+            if (done_pulse) done_sticky &lt;= 1'b1;
+            if (error_pulse) error_sticky &lt;= 1'b1;
+            if (S_AXI_AWVALID &amp;&amp; S_AXI_AWREADY) begin
+                saved_awaddr &lt;= S_AXI_AWADDR;
+                aw_hold &lt;= 1'b1;
+            end
+            if (S_AXI_WVALID &amp;&amp; S_AXI_WREADY) begin
+                saved_wdata &lt;= S_AXI_WDATA;
+                saved_wstrb &lt;= S_AXI_WSTRB;
+                w_hold &lt;= 1'b1;
+            end
+            if (S_AXI_BVALID &amp;&amp; S_AXI_BREADY)
+                S_AXI_BVALID &lt;= 1'b0;
+            if (aw_hold &amp;&amp; w_hold &amp;&amp; !S_AXI_BVALID) begin
+                aw_hold &lt;= 1'b0;
+                w_hold &lt;= 1'b0;
+                S_AXI_BVALID &lt;= 1'b1;
+                S_AXI_BRESP &lt;= OKAY;
+                case (saved_awaddr)
+                6'h00: begin
+                    merged=cfg_steps;
+                    for (b=0;b&lt;4;b=b+1)
+                        if(saved_wstrb[b])
+                            merged[8*b +:8]=saved_wdata[8*b +:8];
+                    cfg_steps &lt;= merged;
+                end
+                6'h04: begin
+                    merged=cfg_period;
+                    for (b=0;b&lt;4;b=b+1)
+                        if(saved_wstrb[b])
+                            merged[8*b +:8]=saved_wdata[8*b +:8];
+                    cfg_period &lt;= merged;
+                end
+                6'h08: begin
+                    merged=cfg_control;
+                    for (b=0;b&lt;4;b=b+1)
+                        if(saved_wstrb[b])
+                            merged[8*b +:8]=saved_wdata[8*b +:8];
+                    cfg_control &lt;= (merged &amp; 32'h3);
+                end
+                6'h0C: begin
+                    // 반드시 낮은 바이트 스트로브와 명령 비트가 있어야 함.
+                    if (!saved_wstrb[0]) begin
+                        S_AXI_BRESP &lt;= SLVERR;
+                    end else if (saved_wdata[1] &amp;&amp; !saved_wdata[0]) begin
+                        stop_strobe &lt;= 1'b1;
+                    end else if (saved_wdata[0] &amp;&amp; !saved_wdata[1]) begin
+                        if (busy || start_strobe || cfg_steps &lt; 3 ||
+                            cfg_ramp_steps == 0 ||
+                            cfg_ramp_steps &gt; ((cfg_steps - 32'd1) &gt;&gt; 1) ||
+                            cfg_period &lt;= cfg_cruise_period ||
+                            cfg_cruise_period &lt; MIN_STEP_CYCLES ||
+                            cfg_delta_period == 0) begin
+                            S_AXI_BRESP &lt;= SLVERR;
+                            error_sticky &lt;= 1'b1;
+                        end else begin
+                            start_strobe &lt;= 1'b1;
+                            done_sticky &lt;= 1'b0;
+                            error_sticky &lt;= 1'b0;
+                        end
+                    end else S_AXI_BRESP &lt;= SLVERR;
+                end
+                // (추가) 확장 Configuration: 저장용 Shadow, START 때 래치.
+                6'h20: begin
+                    merged=cfg_cruise_period;
+                    for(b=0;b&lt;4;b=b+1)
+                        if(saved_wstrb[b])
+                            merged[8*b +:8]=saved_wdata[8*b +:8];
+                    cfg_cruise_period&lt;=merged;
+                end
+                6'h24: begin
+                    merged=cfg_delta_period;
+                    for(b=0;b&lt;4;b=b+1)
+                        if(saved_wstrb[b])
+                            merged[8*b +:8]=saved_wdata[8*b +:8];
+                    cfg_delta_period&lt;=merged;
+                end
+                6'h28: begin
+                    merged=cfg_ramp_steps;
+                    for(b=0;b&lt;4;b=b+1)
+                        if(saved_wstrb[b])
+                            merged[8*b +:8]=saved_wdata[8*b +:8];
+                    cfg_ramp_steps&lt;=merged;
+                end
+                default: S_AXI_BRESP &lt;= SLVERR;
+                endcase
+            end
+        end
+    end
+
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            S_AXI_RVALID &lt;= 1'b0;
+            S_AXI_RDATA  &lt;= 32'd0;
+            S_AXI_RRESP  &lt;= OKAY;
+        end else begin
+            if (S_AXI_RVALID &amp;&amp; S_AXI_RREADY)
+                S_AXI_RVALID &lt;= 1'b0;
+            if (S_AXI_ARVALID &amp;&amp; S_AXI_ARREADY) begin
+                S_AXI_RVALID &lt;= 1'b1;
+                S_AXI_RRESP &lt;= OKAY;
+                case (S_AXI_ARADDR)
+                6'h00: S_AXI_RDATA &lt;= cfg_steps;
+                6'h04: S_AXI_RDATA &lt;= cfg_period;
+                6'h08: S_AXI_RDATA &lt;= cfg_control;
+                6'h0C: S_AXI_RDATA &lt;= 32'd0;
+                6'h10: S_AXI_RDATA &lt;= {29'd0,error_sticky,done_sticky,busy};
+                6'h14: S_AXI_RDATA &lt;= steps_done;
+                6'h18: S_AXI_RDATA &lt;= ID;
+                6'h1C: S_AXI_RDATA &lt;= MIN_STEP_CYCLES;
+                6'h20: S_AXI_RDATA &lt;= cfg_cruise_period;
+                6'h24: S_AXI_RDATA &lt;= cfg_delta_period;
+                6'h28: S_AXI_RDATA &lt;= cfg_ramp_steps;
+                6'h2C: S_AXI_RDATA &lt;= active_period;
+                default: begin
+                    S_AXI_RDATA &lt;= 32'd0;
+                    S_AXI_RRESP &lt;= SLVERR;
+                end
+                endcase
+            end
+        end
+    end
+endmodule
+</code></pre></details>
+<details><summary>sw/stepper_ramp_logic.c 전체 코드 보기</summary><pre><code>#include "stepper_ramp_logic.h"
+#include &lt;stdint.h&gt;
+#include &lt;limits.h&gt;
+int stepper_ramp_make_config(uint32_t clock_hz, uint32_t steps,
+    uint32_t start_ms, uint32_t cruise_ms, uint32_t ramp_steps,
+    int reverse, int half_step, stepper_ramp_cfg_t *out)
+{
+    uint64_t slow,fast,diff;
+    if(!out || clock_hz &lt; 1000000u || clock_hz &gt; 200000000u ||
+       steps &lt; 3u || steps &gt; 100000u ||
+       ramp_steps == 0u || ramp_steps &gt; (steps-1u)/2u ||
+       start_ms &lt; 2u || start_ms &gt; 100u ||
+       cruise_ms &lt; 2u || cruise_ms &gt;= start_ms ||
+       (reverse != 0 &amp;&amp; reverse != 1) ||
+       (half_step != 0 &amp;&amp; half_step != 1)) return -1;
+    slow=((uint64_t)clock_hz * start_ms) / 1000u;
+    fast=((uint64_t)clock_hz * cruise_ms) / 1000u;
+    if(slow &gt; UINT32_MAX || fast &gt; UINT32_MAX || fast &lt; 2u)
+        return -1;
+    diff=slow-fast;
+    // 매 스텝 간격 차이가 정수 tick으로 정확하게 일치해야 한다.
+    if(diff &lt; ramp_steps || diff % ramp_steps != 0u)
+        return -1;
+    if(diff/ramp_steps &gt; UINT32_MAX)
+        return -1;
+    out-&gt;steps=steps;
+    out-&gt;start_ticks=(uint32_t)slow;
+    out-&gt;cruise_ticks=(uint32_t)fast;
+    out-&gt;delta_ticks=(uint32_t)(diff/ramp_steps);
+    out-&gt;ramp_steps=ramp_steps;
+    out-&gt;control=(uint32_t)reverse | ((uint32_t)half_step &lt;&lt; 1);
+    return 0;
+}
+</code></pre></details>
+<details><summary>sw/stepper_ramp_logic.h 전체 코드 보기</summary><pre><code>#ifndef P2_12_STEPPER_RAMP_LOGIC_H
+#define P2_12_STEPPER_RAMP_LOGIC_H
+#include &lt;stdint.h&gt;
+// P2-12.4 별도 확장 코어의 설정. 기존 stepper_logic.*는 변경하지 않는다.
+typedef struct {
+    uint32_t steps;
+    uint32_t start_ticks;
+    uint32_t cruise_ticks;
+    uint32_t delta_ticks;
+    uint32_t ramp_steps;
+    uint32_t control; // bit0 reverse, bit1 half
+} stepper_ramp_cfg_t;
+// 0 정상, -1 범위/구간/정밀도 오류.
+int stepper_ramp_make_config(uint32_t clock_hz, uint32_t steps,
+    uint32_t start_ms, uint32_t cruise_ms, uint32_t ramp_steps,
+    int reverse, int half_step, stepper_ramp_cfg_t *out);
+#endif
+</code></pre></details>
+<details><summary>tests/tb_stepper_ramp_core.v 전체 코드 보기</summary><pre><code>`timescale 1ns/1ps
+// P2-12.4 self-checking 가감속 코어 TB.
+// N=10, R=3, START=8 tick, CRUISE=2, DELTA=2
+// 기대 각 스텝 간격: 8,6,4,2,2,2,2,4,6,8
+module tb_stepper_ramp_core;
+    reg clk=0; always #5 clk=~clk;
+    reg resetn=0,start=0,stop=0;
+    reg [31:0] steps=10,start_period=8,cruise_period=2;
+    reg [31:0] delta=2,ramp_steps=3;
+    reg reverse=0,half=1;
+    wire [3:0] coil;
+    wire busy,done,error;
+    wire [31:0] completed,period_active;
+    reg [31:0] expected [0:9];
+    reg [3:0] phases [0:7];
+    integer i;
+    stepper_ramp_core #(.MIN_STEP_CYCLES(32'd2)) dut(
+        .clk(clk),.resetn(resetn),.start_pulse(start),.stop_pulse(stop),
+        .cfg_steps(steps),.cfg_start_period(start_period),
+        .cfg_cruise_period(cruise_period),
+        .cfg_delta_period(delta),.cfg_ramp_steps(ramp_steps),
+        .cfg_reverse(reverse),.cfg_half_step(half),
+        .coil_o(coil),.busy(busy),.done_pulse(done),
+        .error_pulse(error),.steps_done(completed),
+        .active_period(period_active)
+    );
+    task begin_run;
+        input rev;
+        begin
+            @(negedge clk); reverse=rev;start=1;
+            @(negedge clk);start=0;
+            if(!busy || completed!=0) $fatal(1,"start failed");
+        end
+    endtask
+    initial begin
+        phases[0]=4'b0001;phases[1]=4'b0011;
+        phases[2]=4'b0010;phases[3]=4'b0110;
+        phases[4]=4'b0100;phases[5]=4'b1100;
+        phases[6]=4'b1000;phases[7]=4'b1001;
+        expected[0]=8;expected[1]=6;expected[2]=4;
+        expected[3]=2;expected[4]=2;expected[5]=2;
+        expected[6]=2;expected[7]=4;expected[8]=6;
+        expected[9]=8;
+        repeat(3) @(negedge clk);resetn=1;
+        begin_run(0);
+        for(i=0;i&lt;10;i=i+1) begin
+            if(period_active!==expected[i])
+                $fatal(1,"FWD index %0d period expected %0d got %0d",
+                       i,expected[i],period_active);
+            wait(completed == i+1);#1;
+            if(coil !== phases[i%8])
+                $fatal(1,"FWD index %0d coil expected %b got %b",
+                       i, phases[i%8],coil);
+        end
+        if(!done || busy) $fatal(1,"done/busy");
+        repeat(2) @(negedge clk);
+        if(coil !== 0 || done) $fatal(1,"idle coil release");
+        $display("P2_12_4_RAMP_FWD PASS");
+
+        begin_run(1);
+        for(i=0;i&lt;10;i=i+1) begin
+            if(period_active!==expected[i])
+                $fatal(1,"REV period index=%0d",i);
+            wait(completed == i+1);#1;
+            if(coil !== phases[(8-(i%8))%8])
+                $fatal(1,"REV index %0d actual=%b",i,coil);
+        end
+        repeat(2) @(negedge clk);
+        if(coil !== 0 || busy) $fatal(1,"REV idle");
+        $display("P2_12_4_RAMP_REV PASS");
+
+        // STOP 즉시 출력 차단, Busy 동기 정지
+        begin_run(0);
+        wait(completed&gt;=1); #1;stop=1;#1;
+        if(coil!==0) $fatal(1,"stop output still on");
+        // STOP을 적어도 한 번의 clk 상승 에지까지 유지해야 상태가 동기 갱신됨.
+        @(posedge clk);
+        @(negedge clk);stop=0;
+        if(busy || coil!==0) $fatal(1,"stop state");
+        $display("P2_12_4_STOP PASS");
+
+        // 잘못된 설정을 거부
+        @(negedge clk);steps=4;ramp_steps=3;start=1;
+        @(negedge clk);start=0;
+        if(!error || busy) $fatal(1,"invalid overlap accepted");
+        @(negedge clk);steps=10;ramp_steps=3;cruise_period=1;start=1;
+        @(negedge clk);start=0;
+        if(!error || busy) $fatal(1,"invalid min accepted");
+        $display("P2_12_4_INVALID_CONFIG PASS");
+        $display("P2_12_4_RAMP_CORE PASS");
+        $finish;
+    end
+    initial begin #200000; $fatal(1,"TIMEOUT"); end
+endmodule
+</code></pre></details>
+<details><summary>tests/tb_p2_12_4_axi_ramp.v 전체 코드 보기</summary><pre><code>`timescale 1ns/1ps
+// P2-12 AXI IP 회귀: AW/W 독립 도착, WSTRB, 레지스터, 모터 출력,
+// BUSY/완료/오류/STOP을 포함한 self-checking testbench.
+module tb_p2_12_4_axi_ramp;
+    reg clk=0; always #5 clk=~clk;
+    reg resetn=0;
+    reg [5:0] awaddr=0,araddr=0;
+    reg [2:0] awprot=0,arprot=0;
+    reg awvalid=0,wvalid=0,bready=0,arvalid=0,rready=0;
+    reg [31:0] wdata=0;
+    reg [3:0] wstrb=4'hf;
+    wire awready,wready,bvalid,arready,rvalid;
+    wire [1:0] bresp,rresp;
+    wire [31:0] rdata;
+    wire [3:0] coil;
+    reg [31:0] read_value;
+    p2_12_axi_stepper_v1_1 #(
+        .MIN_STEP_CYCLES(32'd2),
+        .RESET_STEP_PERIOD(32'd3)
+    ) dut (
+        .S_AXI_ACLK(clk),.S_AXI_ARESETN(resetn),
+        .S_AXI_AWADDR(awaddr),.S_AXI_AWPROT(awprot),
+        .S_AXI_AWVALID(awvalid),.S_AXI_AWREADY(awready),
+        .S_AXI_WDATA(wdata),.S_AXI_WSTRB(wstrb),
+        .S_AXI_WVALID(wvalid),.S_AXI_WREADY(wready),
+        .S_AXI_BRESP(bresp),.S_AXI_BVALID(bvalid),
+        .S_AXI_BREADY(bready),
+        .S_AXI_ARADDR(araddr),.S_AXI_ARPROT(arprot),
+        .S_AXI_ARVALID(arvalid),.S_AXI_ARREADY(arready),
+        .S_AXI_RDATA(rdata),.S_AXI_RRESP(rresp),
+        .S_AXI_RVALID(rvalid),.S_AXI_RREADY(rready),
+        .stepper_coil_o(coil)
+    );
+    task wr;
+        input [5:0] addr;
+        input [31:0] data;
+        input [3:0] strobe;
+        input integer w_first;
+        input [1:0] expected;
+        begin
+            @(negedge clk);
+            if(w_first) begin
+                wdata=data; wstrb=strobe; wvalid=1;
+                do @(posedge clk); while(!wready);
+                @(negedge clk); wvalid=0;
+                repeat(2) @(negedge clk);
+                awaddr=addr; awvalid=1;
+                do @(posedge clk); while(!awready);
+                @(negedge clk); awvalid=0;
+            end else begin
+                awaddr=addr; awvalid=1;
+                do @(posedge clk); while(!awready);
+                @(negedge clk); awvalid=0;
+                repeat(2) @(negedge clk);
+                wdata=data; wstrb=strobe; wvalid=1;
+                do @(posedge clk); while(!wready);
+                @(negedge clk); wvalid=0;
+            end
+            wait(bvalid); @(negedge clk);
+            if(bresp !== expected)
+                $fatal(1,"write 0x%h bresp=%b expected=%b",addr,bresp,expected);
+            bready=1;
+            @(negedge clk); bready=0;
+        end
+    endtask
+    task rd;
+        input [5:0] addr;
+        input [1:0] expected;
+        begin
+            @(negedge clk); araddr=addr; arvalid=1;
+            do @(posedge clk); while(!arready);
+            @(negedge clk); arvalid=0;
+            wait(rvalid); @(negedge clk);
+            if(rresp!==expected) $fatal(1,"read 0x%h rresp",addr);
+            read_value=rdata;
+            rready=1;
+            @(negedge clk); rready=0;
+        end
+    endtask
+    initial begin
+        repeat(3) @(negedge clk); resetn=1;
+        rd(6'h18,2'b00); if(read_value!==32'h000c0002) $fatal(1,"ID");
+        rd(6'h1c,2'b00); if(read_value!==32'd2) $fatal(1,"MIN");
+        wr(6'h00,32'd4,4'hf,1,2'b00);
+        wr(6'h04,32'd3,4'hf,0,2'b00);
+        wr(6'h20,32'd2,4'hf,0,2'b00); // CRUISE=2
+        wr(6'h24,32'd1,4'hf,0,2'b00); // DELTA=1
+        wr(6'h28,32'd1,4'hf,0,2'b00); // RAMP_STEPS=1
+        wr(6'h08,32'd2,4'hf,1,2'b00); // Half Step
+        wr(6'h08,32'd0,4'h8,0,2'b00); // WSTRB upper byte only
+        rd(6'h08,2'b00);
+        if(read_value !== 2) $fatal(1,"WSTRB control");
+        wr(6'h0c,32'd1,4'h1,0,2'b00);
+        wait(dut.u_core.steps_done &gt;= 1); #1;
+        if(coil !== 4'b0001) $fatal(1,"step1 pattern %b",coil);
+        wait(dut.done_sticky == 1); #1;
+        rd(6'h14,2'b00);
+        if(read_value!==4) $fatal(1,"completed 4 steps");
+        rd(6'h10,2'b00);
+        if(read_value[1]!==1 || read_value[0]!==0) $fatal(1,"status done/busy");
+        if(coil!==4'b0000) $fatal(1,"coil not released");
+        rd(6'h20,2'b00); if(read_value!==2) $fatal(1,"cruise reg");
+        rd(6'h24,2'b00); if(read_value!==1) $fatal(1,"delta reg");
+        rd(6'h28,2'b00); if(read_value!==1) $fatal(1,"ramp reg");
+        rd(6'h2c,2'b00); if(read_value!==3) $fatal(1,"active at end");
+        $display("P2_12_4_AXI_RAMP_BASIC PASS");
+
+        wr(6'h00,32'd0,4'hf,0,2'b00);
+        wr(6'h0c,32'd1,4'h1,1,2'b10);
+        rd(6'h10,2'b00);
+        if(read_value[2]!==1) $fatal(1,"error sticky");
+        wr(6'h04,32'd1,4'hf,0,2'b00);
+        wr(6'h00,32'd5,4'hf,0,2'b00);
+        wr(6'h0c,32'd1,4'h1,0,2'b10);
+        $display("P2_12_4_AXI_INVALID_CONFIG PASS");
+
+        wr(6'h04,32'd3,4'hf,0,2'b00);
+        wr(6'h0c,32'd1,4'h1,0,2'b00);
+        wait(dut.u_core.busy); #1;
+        // 코일 출력 중 STOP에서 모든 출력을 제어 레벨로 차단.
+        wait(dut.u_core.steps_done &gt;= 1); #1;
+        wr(6'h0c,32'd2,4'h1,1,2'b00);
+        repeat(3) @(negedge clk);
+        if(coil!==0 || dut.u_core.busy) $fatal(1,"STOP coils");
+        $display("P2_12_4_AXI_STOP PASS");
+        rd(6'h3c,2'b10);
+        wr(6'h3c,32'd1,4'hf,0,2'b10);
+        wr(6'h18,32'd1,4'hf,0,2'b10); // ID is read-only
+        wr(6'h0c,32'd3,4'h1,0,2'b10); // simultaneous start/stop invalid
+        $display("P2_12_4_AXI_ERROR_RESP PASS");
+        $display("P2_12_4_AXI_STEPPER PASS");
+        $finish;
+    end
+    initial begin #1000000; $fatal(1,"TIMEOUT"); end
+endmodule
+</code></pre></details>
+<details><summary>labs/12_4_ramp_vitis_example.c 전체 코드 보기</summary><pre><code>// P2-12.4 Vitis Ramp AXI v1.1 사용 예시.
+// 원본 P2-12 V1.0 AXI IP 주소를 사용하지 않는다.
+// 실제 하드웨어에서 별도 P2-12.4 IP v1.1을 패키징한 경우에만 사용한다.
+#include "xparameters.h"
+#include "xil_io.h"
+#include "xil_printf.h"
+#include "../sw/stepper_ramp_logic.h"
+
+#ifndef P2_12_RAMP_BASEADDR
+#error "Set P2_12_RAMP_BASEADDR using actual XSA Address Editor"
+#endif
+#ifndef P2_12_AXI_CLOCK_HZ
+#error "Set P2_12_AXI_CLOCK_HZ using actual Block Design clock"
+#endif
+
+#define R_STEPS      0x00u
+#define R_START      0x04u
+#define R_CONTROL    0x08u
+#define R_COMMAND    0x0Cu
+#define R_STATUS     0x10u
+#define R_DONE       0x14u
+#define R_ID         0x18u
+#define R_MIN_PERIOD 0x1Cu
+#define R_CRUISE     0x20u
+#define R_DELTA      0x24u
+#define R_RAMP_STEPS 0x28u
+#define R_ACTIVE     0x2Cu
+
+int p2_12_4_start_ramp_example(void)
+{
+    const UINTPTR base = (UINTPTR)P2_12_RAMP_BASEADDR;
+    stepper_ramp_cfg_t c;
+    uint32_t status;
+    // 예제: 128 step, 10 ms → 4 ms, 가속 12 step, 감속 12 step.
+    if (stepper_ramp_make_config(
+            P2_12_AXI_CLOCK_HZ, 128u, 10u, 4u, 12u, 0, 1, &amp;c) != 0) {
+        xil_printf("ERR ramp config\r\n");
+        return -1;
+    }
+    if (Xil_In32(base + R_ID) != 0x000C0002u ||
+        c.cruise_ticks &lt; Xil_In32(base + R_MIN_PERIOD)) {
+        xil_printf("ERR wrong IP or too-fast ramp\r\n");
+        return -1;
+    }
+    status = Xil_In32(base + R_STATUS);
+    if (status &amp; 1u) {
+        xil_printf("ERR busy\r\n");
+        return -1;
+    }
+    Xil_Out32(base + R_STEPS, c.steps);
+    Xil_Out32(base + R_START, c.start_ticks);
+    Xil_Out32(base + R_CRUISE, c.cruise_ticks);
+    Xil_Out32(base + R_DELTA, c.delta_ticks);
+    Xil_Out32(base + R_RAMP_STEPS, c.ramp_steps);
+    Xil_Out32(base + R_CONTROL, c.control);
+    Xil_Out32(base + R_COMMAND, 1u); // START: Vitis register write, not a completion
+    xil_printf("RAMP issued. Poll STATUS, ACTIVE_PERIOD, DONE.\r\n");
+    return 0;
+}
+
+void p2_12_4_stop_ramp_example(void)
+{
+    const UINTPTR base = (UINTPTR)P2_12_RAMP_BASEADDR;
+    Xil_Out32(base + R_COMMAND, 2u); // STOP
+}
+</code></pre></details><h3>시뮬레이션 명령</h3><pre><code>cd part02/chapters/P2_12_Lesson
+bash tests/run_ramp_host_tests.sh
+bash tests/run_ramp_tests.sh</code></pre><p>첫 명령은 GCC(지씨씨, C 컴파일러) 기반 구성 함수 검사이고, 두 번째는 Icarus Verilog의 코어 및 AXI4-Lite 확장 IP 시뮬레이션이다.</p></section><section><h2>6. Vivado/Vitis 실제 확장 절차</h2><ol><li>12.1에서 검증한 기존 프로젝트를 다시 별도로 Save As 하여 <code>soc_ip_design_12_4</code>로 만든다.</li><li>IP Packager에서 <code>stepper_ramp_core.v</code>와 <code>p2_12_axi_stepper_v1_1.v</code>를 패키징하고 신규 v1.1 IP와 원본 v1.0이 구분되게 한다.</li><li>기존 Stepper AXI v1.0을 직접 삭제하거나 덮어쓰지 않고 복제 프로젝트에서 신버전 인스턴스를 배치한다. 주소가 겹치지 않는지 확인한다.</li><li>IP의 <code>stepper_coil_o[3:0]</code>는 ULN2003의 기존 실물 신호 배치를 따르되 출력 소유권을 이중으로 연결하지 않는다.</li><li>새 XSA와 BSP로 Vitis 재설정 후 <code>12_4_ramp_vitis_example.c</code>에서 요구하는 BaseAddr/Clock을 실제 환경 값으로 제공한다.</li><li>실물은 128스텝, START 10ms, CRUISE 4ms, RAMP_STEPS 12부터 무부하로 시작한다. 가속 중 탈조·전원 강하·모터 발열을 실제 점검한다.</li></ol><p class="warn">실제 AXI IP Packager 단계, XSA, Vivado WNS/TNS, Vitis ELF 및 모터 가감속 실측은 **NOT_RUN**. 이 페이지의 통과 결과는 Verilog RTL/AXI 유닛 시뮬레이션에 한정된다.</p></section><section><h2>7. 검증 판정 및 제한</h2><table><tr><th>구분</th><th>현재 결과</th><th>증거</th></tr><tr><td>Host C Config</td><td>PASS</td><td>GitHub Actions #42937205860</td></tr><tr><td>RTL_SIM Ramp Core</td><td>PASS</td><td>가속/정속/감속/정역/STOP/설정 오류</td></tr><tr><td>AXI_SIM v1.1</td><td>PASS</td><td>메모리맵 확장, 상태, START/STOP/응답</td></tr><tr><td>Vivado IP/Synthesis/Timing</td><td>NOT_RUN</td><td>실제 프로젝트 미검증</td></tr><tr><td>Vitis Target</td><td>NOT_RUN</td><td>실제 BSP·ELF 미빌드</td></tr><tr><td>Basys3 실제 모터</td><td>NOT_RUN</td><td>실물 전원/회전/안전 측정 미실시</td></tr><tr><td>UVM</td><td>NOT_RUN</td><td>현재는 자가검증 Verilog TB</td></tr></table><p class="ok"><a href="https://github.com/Yuul-Jung/amd_soc/actions/runs/42937205860">실제 12.4 C/RTL/AXI 검증 PASS 실행 로그</a>를 참조한다. 가감속은 <em>스텝 주기 선형 조절</em>이며 토크/부하·실제 가속도·탈조 여부를 자동 검증하는 기능은 아니다.</p></section><section><h2>8. 최종 핵심 정리</h2><p>기존 12장의 고정 주기 오픈 루프 모터 제어는 보존하고, 12.4에서 주기 스케줄러만 확장한 신버전 IP를 도입한다. 정지/설정 오류 및 UART 제어 정책은 통합 SoC에서 다시 검증해야 한다.</p><p><a href="P2_12_1_Lab_v04.html">12.1 Vivado</a> · <a href="P2_12_2_Lab_v04.html">12.2 배선</a> · <a href="P2_12_3_Lab_v04.html">12.3 실물 검증</a> · <a href="../README.md">12장 README</a></p></section></main><footer>제2부 실습 12.4 · 2026-11-11 · Host/RTL/AXI 시뮬레이션 확인 · 실제 보드 미확인</footer></body></html>

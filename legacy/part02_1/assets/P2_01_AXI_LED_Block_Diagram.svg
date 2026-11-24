@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="680" viewBox="0 0 1320 680" role="img" aria-label="제2부 01장 AXI LED IP 전체 동작 구조">
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L8 4 L0 8 Z" fill="#38536f"/></marker></defs>
+<style>
+  text{font-family:'Noto Sans KR','DejaVu Sans',sans-serif;fill:#1c3045}
+  .heading{font-size:27px;font-weight:700}.subtitle{font-size:15px;fill:#52677c}
+  .box{fill:#fff;stroke:#8aa2b6;stroke-width:2;rx:12}
+  .cpu{fill:#f2f6fc}.ip{fill:#eff8f5}.out{fill:#fff8ec}.existing{fill:#f4f5f8}
+  .boxhead{font-size:19px;font-weight:700;text-anchor:middle}.desc{font-size:14px;text-anchor:middle;fill:#4b6075}
+  .wire{fill:none;stroke:#38536f;stroke-width:2.5;marker-end:url(#arrow)}
+  .label{font-size:13px;fill:#4b6075;text-anchor:middle}.section{font-size:14px;font-weight:700;fill:#687b90}
+</style>
+<rect width="1320" height="680" fill="#fff"/>
+<text x="48" y="58" class="heading">제2부 01장 · 사용자 AXI LED IP 동작 구조</text>
+<text x="48" y="89" class="subtitle">PC 명령 → MicroBlaze V → AXI4-Lite → REG0[0] → Basys3 LED0</text>
+<line x1="48" y1="108" x2="1272" y2="108" stroke="#c9d5e2" stroke-width="2"/>
+<rect class="box" x="48" y="206" width="192" height="132"/>
+<text class="boxhead" x="144" y="245">PC 터미널</text><text class="desc" x="144" y="274">LED ON / LED OFF</text><text class="desc" x="144" y="295">STATUS</text>
+<rect class="box cpu" x="308" y="206" width="220" height="132"/>
+<text class="boxhead" x="418" y="245">MicroBlaze V</text><text class="desc" x="418" y="273">Vitis C 명령 처리</text><text class="desc" x="418" y="295">Xil_Out32 / Xil_In32</text>
+<rect class="box cpu" x="598" y="206" width="168" height="132"/>
+<text class="boxhead" x="682" y="247">AXI4-Lite</text><text class="desc" x="682" y="276">인터커넥트</text>
+<rect class="box ip" x="836" y="206" width="214" height="132"/>
+<text class="boxhead" x="943" y="243">p2_01_axi_led</text><text class="desc" x="943" y="273">S00_AXI · REG0</text><text class="desc" x="943" y="294">slv_reg0[0] → led_o</text>
+<rect class="box out" x="1118" y="206" width="154" height="132"/>
+<text class="boxhead" x="1195" y="244">Basys3 LED0</text><text class="desc" x="1195" y="275">led[0]</text><text class="desc" x="1195" y="296">켜짐 / 꺼짐</text>
+<path class="wire" d="M240 270 H308"/><text class="label" x="274" y="183">UART RX</text><text class="label" x="274" y="201">RsRx</text>
+<path class="wire" d="M528 270 H598"/><text class="label" x="563" y="191">메모리 맵 I/O</text>
+<path class="wire" d="M766 270 H836"/><text class="label" x="801" y="189">AXI 쓰기·읽기</text>
+<path class="wire" d="M1050 270 H1118"/><text class="label" x="1084" y="181">p2_led_o</text><text class="label" x="1084" y="199">Top 배선</text>
+<path class="wire" d="M418 338 V389 H144 V338"/><text class="label" x="280" y="379">UART TX (RsTx) · STATUS / OK 응답</text>
+<text class="section" x="48" y="468">기존 기능 유지</text>
+<rect class="box existing" x="598" y="486" width="214" height="106"/>
+<text class="boxhead" x="705" y="524">기존 AXI GPIO</text><text class="desc" x="705" y="552">gpio_led[15:1]</text>
+<rect class="box existing" x="947" y="486" width="325" height="106"/>
+<text class="boxhead" x="1109" y="523">basys3_soc11_top</text><text class="desc" x="1109" y="552">gpio_led[15:1] → led[15:1]</text>
+<path class="wire" d="M682 338 V447 H705 V486"/><path class="wire" d="M812 539 H947"/>
+<text class="label" x="880" y="524">기존 LED 1~15</text>
+<text x="48" y="641" class="subtitle">LED0은 신규 AXI IP의 출력만 연결하고, LED1~15는 기존 GPIO 출력을 유지합니다.</text>
+</svg>

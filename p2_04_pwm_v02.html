@@ -1,0 +1,1159 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 04장 · AXI PWM LED 밝기">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 04장 · AXI PWM LED 밝기 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-04">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 04장 <span class="vbadge">v02</span></p>
+    <h1>제2부 04장 · AXI PWM LED 밝기</h1>
+    <p>MicroBlaze V에서 PWM 0~100 문자열 명령을 받아 사용자 AXI4-Lite 레지스터를 설정하고, 범용 pwm_core가 LED1을 구동합니다.</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+ <section class="section" id="overview">
+<h2><span class="num">00</span>이 장의 목표</h2>
+<p>MicroBlaze V에서 PWM 0~100 문자열 명령을 받아 사용자 AXI4-Lite 레지스터를 설정하고, 범용 pwm_core가 LED1을 구동합니다.</p>
+<ul aria-label="핵심 용어" class="chips"><li>PWM 0/50/100</li><li>LED1 E19</li><li>AXI4-Lite</li><li>Vivado/Vitis 2024.2</li><li>P2-01~03 기능 보존</li></ul>
+</section>
+<section class="section" id="goal">
+<h2><span class="num">01</span>완성 후 동작</h2>
+<div>A · 과제 개요</div><p>기존 SoC의 UART 문자열 명령을 유지하면서 <strong>LED1만 전용 PWM(피더블유엠, 펄스 폭 변조)</strong> 출력으로 추가합니다. MicroBlaze V는 Duty 값을 레지스터에 기록하고, 실제 주기 카운터는 FPGA RTL에서 독립적으로 실행합니다.</p><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>명령</th><th>LED1 / FND / LED0</th><th>UART 응답</th></tr></thead><tbody><tr><td><code>PWM 0</code></td><td>LED1 소등·기본 극성</td><td><code>OK PWM 0 QUEUED</code></td></tr><tr><td><code>PWM 50</code></td><td>LED1 약 50% Duty·약 중간 밝기</td><td><code>OK PWM 50 QUEUED</code></td></tr><tr><td><code>PWM 100</code></td><td>LED1 지속 HIGH</td><td><code>OK PWM 100 QUEUED</code></td></tr><tr><td><code>STATUS</code></td><td>이전 LED·FND·버튼 상태와 PWM 추가</td><td><code>PWM_SET</code>, <code>PWM_ACTIVE</code>, <code>PWM_PENDING</code> 포함</td></tr><tr><td><code>LED ON / LED OFF</code></td><td>LED0, P2-01 사용자 IP</td><td>이전 동작 유지</td></tr><tr><td><code>DISP 1234 / DISP 0050 / DISP OFF</code></td><td>기존 4자리 FND</td><td>이전 동작 유지</td></tr></tbody></table></div><div><strong>적용과 출력은 구분:</strong> <code>QUEUED</code>는 설정 요청을 적재했다는 뜻입니다. 실제 PWM 활성값은 다음 주기 경계에서 갱신됩니다. <code>PWM_PENDING=0</code> 및 활성 Duty를 확인합니다.</div>
+</section>
+<section class="section" id="architecture">
+<h2><span class="num">02</span>CPU·AXI·PWM Core 역할</h2>
+<div>A · 시스템 구조</div><figure class="fig"><img alt="P2-04 PWM AXI IP, pwm_core, LED1 및 기존 장치 분리 구조" class="zoom" loading="lazy" src="diagrams/p2_04_architecture.svg"/><figcaption>04장에서는 PWM IP를 추가하고 01~03장 장치를 재사용합니다.</figcaption></figure><p>명령 수신은 C 애플리케이션의 <code>poll_uart()</code> 및 <code>handle_line()</code>에서 이루어집니다. <code>pwm_queue_percent()</code>가 AXI 레지스터에 설정값을 기록하면 <code>pwm_core</code>가 새로운 주기 경계에서 활성값을 교체합니다.</p><div>PC 명령 → MicroBlaze V → AXI4-Lite REG0~REG3 → pwm_core → LED1(E19)</div>
+</section>
+<section class="section" id="concept">
+<h2><span class="num">03</span>PWM 주파수와 Duty 관계</h2>
+<div>A · 핵심 원리</div><p>PWM(피더블유엠, Pulse Width Modulation, 펄스 폭 변조)은 주기마다 HIGH 구간 비율을 변경하여 평균 전력과 LED의 체감 밝기를 조절합니다. 이 과제에서는 Counter 기반 PWM을 사용하고 CPU가 파형을 직접 만들어 내지 않습니다.</p><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>항목</th><th>설정·수식</th><th>실제 의미 (AXI CLK = 100 MHz)</th></tr></thead><tbody><tr><td><code>PERIOD_CFG</code></td><td><code>100000</code></td><td>100,000 clock count / 100 MHz → 1 ms = 1 kHz</td></tr><tr><td><code>PWM 0</code></td><td>Duty 0</td><td>HIGH count 0 / 100,000</td></tr><tr><td><code>PWM 25</code></td><td>Duty 25,000</td><td>HIGH count 25,000 / 100,000</td></tr><tr><td><code>PWM 50</code></td><td>Duty 50,000</td><td>HIGH count 50,000 / 100,000</td></tr><tr><td><code>PWM 100</code></td><td>Duty 100,000</td><td>HIGH count 100,000 / 100,000</td></tr></tbody></table></div><div><b>0%와 100% 처리:</b> 0%는 항상 LOW, 100%는 항상 HIGH가 됩니다. 이는 기본 극성(0)·Enable ON일 때의 정확한 디지털 출력입니다. 실제 눈으로 본 밝기는 환경에 따라 달라집니다.</div><div><b>클록 확인:</b> 100 MHz는 보드 외부 클록의 기본값입니다. <code>S00_AXI_ACLK</code>가 100 MHz임을 확인하기 전에는 1 kHz를 실측 사실로 쓰지 않습니다.</div>
+</section>
+<section class="section" id="registers">
+<h2><span class="num">04</span>8개 레지스터 · 32-bit AXI4-Lite</h2>
+<div>A · Register Map</div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>Offset</th><th>이름</th><th>접근</th><th>의미 / bit 필드</th></tr></thead><tbody><tr><td><code>0x00</code></td><td><code>PERIOD_CFG</code></td><td>RW</td><td>요청 주기 count, 최소 2</td></tr><tr><td><code>0x04</code></td><td><code>DUTY_CFG</code></td><td>RW</td><td>요청 HIGH count, 0 이상 PERIOD 이하</td></tr><tr><td><code>0x08</code></td><td><code>CONTROL_CFG</code></td><td>RW</td><td>bit0 Enable, bit1 Polarity</td></tr><tr><td><code>0x0C</code></td><td><code>APPLY</code></td><td>WO action</td><td>bit0=1 쓰기 → Shadow 예약, 잘못된 설정은 SLVERR</td></tr><tr><td><code>0x10</code></td><td><code>STATUS</code></td><td>RO</td><td>bit0 Pending, bit8 Active Enable, bit9 Active Polarity</td></tr><tr><td><code>0x14</code></td><td><code>ACTIVE_PERIOD</code></td><td>RO</td><td>주기 경계에서 적용된 주기 count</td></tr><tr><td><code>0x18</code></td><td><code>ACTIVE_DUTY</code></td><td>RO</td><td>주기 경계에서 적용된 HIGH count</td></tr><tr><td><code>0x1C</code></td><td><code>ID</code></td><td>RO</td><td><code>0x00040001</code> · 교육용 식별자</td></tr></tbody></table></div><p><code>RW</code>(읽기/쓰기), <code>RO</code>(읽기 전용), <code>WO</code>(쓰기 동작). 모든 offset은 32-bit 레지스터의 <b>바이트 주소</b>입니다. 실제 Base Address는 Vivado Address Editor에서 결정합니다.</p><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>// PWM 50: period=100000, duty=50000, enable=1
+Xil_Out32(P2_04_PWM_BASEADDR + PWM_PERIOD_CFG, 100000U);
+Xil_Out32(P2_04_PWM_BASEADDR + PWM_DUTY_CFG,   50000U);
+Xil_Out32(P2_04_PWM_BASEADDR + PWM_CTRL_CFG,   1U);
+Xil_Out32(P2_04_PWM_BASEADDR + PWM_APPLY,      1U);
+// 다음 주기 경계에서 ACTIVE_PERIOD/ACTIVE_DUTY 변경</code></pre></div><p>잘못된 <code>DUTY_CFG &gt; PERIOD_CFG</code> 상태에서 APPLY를 실행하면 AXI <code>BRESP=SLVERR</code>가 나옵니다. <code>Xil_Out32</code>는 성공/실패 코드를 반환하지 않으므로 정상 C 명령에서는 잘못된 수치가 발생하지 않도록 사전에 계산합니다.</p>
+</section>
+<section class="section" id="preserve">
+<h2><span class="num">05</span>LED 출력 소유권과 01~03장 기능</h2>
+<div>A · 보존 원칙</div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>보드 출력</th><th>04장 최종 소유 모듈</th><th>유지 조건</th></tr></thead><tbody><tr><td><code>led[0]</code> U16</td><td>P2-01 AXI LED IP (<code>p2_led0</code>)</td><td><code>LED ON / OFF</code> 유지</td></tr><tr><td><code>led[1]</code> E19</td><td>P2-04 PWM IP (<code>pwm_led1</code>)</td><td>기존 GPIO bit1 물리 출력에서 분리</td></tr><tr><td><code>led[15:2]</code></td><td>기존 GPIO (<code>gpio_led[15:2]</code>)</td><td>LED14/15 GPIO 배선 유지 · C 표시 기능은 09장 통합 대상</td></tr><tr><td><code>seg/an/dp</code></td><td>P2-02 FND</td><td>자리별 천·백·십·일 유지</td></tr><tr><td><code>btnU/D/L/R</code></td><td>P2-03 이벤트 Core</td><td>Short/Long + IRQ 유지</td></tr><tr><td><code>btnC</code></td><td>기존 시스템 Reset</td><td>이벤트 입력에 재사용 금지</td></tr></tbody></table></div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>assign led = {gpio_led[15:2], pwm_led1, p2_led0};</code></pre></div><div>Top은 wire 선언, 인스턴스 및 단순 비트 연결만 수행합니다. Duty 계산, Enable 판단, PWM 카운터는 Top에 넣지 않습니다.</div>
+</section>
+<section class="section" id="flow">
+<h2><span class="num">06</span>문자열 명령 플로우차트</h2>
+<div>A · 명령 처리</div><figure class="fig"><img alt="poll_uart, handle_line, pwm_parse_command, pwm_queue_percent의 흐름" class="zoom" loading="lazy" src="diagrams/p2_04_command_flow.svg"/><figcaption>실제 C 함수명과 PWM 처리 분기 기준. 기존 명령은 p2_parse_command()로 전달합니다.</figcaption></figure><p><code>pwm_parse_command()</code>는 <code>PWM 0</code>부터 <code>PWM 100</code>까지만 허용합니다. <code>PWM 050</code>, <code>PWM 101</code>, <code>PWM -1</code> 등은 오류입니다. 대문자·공백·Enter 입력을 기존 03장 UART 루프와 동일하게 처리합니다.</p>
+</section>
+<section class="section" id="step01">
+<h2><span class="num">07</span>03장 복제 프로젝트로 04장 독립 생성</h2>
+<div>B · STEP 01</div><p>01~03장에 작성된 설계를 단계적으로 확인한 뒤 PWM IP를 추가한다.</p><div><div><strong>작업 · GUI/설정</strong><p><code>Vivado → File → Project → Save As</code>를 선택한다. <code>~/soc/hw/soc_ip_design_04/</code>에 <code>soc_ip_design_04.xpr</code>로 저장한다. <b>전제:</b> 03장 프로젝트를 완료한 뒤 복제한다.</p></div><div><strong>확인 · 예상 결과</strong><p><code>File → Project Summary</code>에 새 프로젝트 경로가 표시되는지 확인한다. 기본 SoC 프로젝트과 01~03장의 XPR은 변경하지 않는다.</p></div></div><p><b>이 단계가 필요한 이유:</b> 프로젝트 복제는 기존 프로젝트을 보존하면서 장별 변경을 분리한다.</p>
+</section>
+<section class="section" id="step02">
+<h2><span class="num">08</span>기존 인터페이스·LED 출력 소유권 확인</h2>
+<div>B · STEP 02</div><p>LED1이 현재 <code>led_tri_o[1]</code>에서 출력된다는 사실을 인식한다.</p><div><div><strong>작업 · GUI/설정</strong><p><code>Sources → Design Sources</code>에서 사용자 Top <code>basys3_soc11_top.v</code>과 <code>soc11_integration.bd</code>를 확인한다. <code>led_tri_o[15:0]</code>·<code>p2_led_o</code>·<code>fnd_*</code>·<code>btnU/D/L/R</code> 항목이 실제 Wrapper에 존재하는지 확인한다.</p></div><div><strong>확인 · 예상 결과</strong><p>기존 03장 Top의 <code>assign led = {gpio_led[15:1], ip_led0};</code>를 기록한다. 04장의 <code>led[1]</code>에는 중복 드라이버가 있어서는 안 된다.</p></div></div><p><b>이 단계가 필요한 이유:</b> 분리하지 않으면 기존 GPIO와 PWM이 LED1을 동시에 구동한다.</p>
+</section>
+<section class="section" id="step03">
+<h2><span class="num">09</span>PWM 이론과 주파수 계산 확인</h2>
+<div>B · STEP 03</div><p>PWM(펄스 폭 변조)의 주기와 ON 비율을 코드 값으로 연결한다.</p><div><div><strong>작업 · GUI/설정</strong><p>아래 계산표를 읽고 <code>100 MHz ÷ 100,000 counts = 1,000 Hz</code>를 확인한다. <b>실제 <code>s00_axi_aclk</code>가 100 MHz인지</b> BD Clock에 표시된 값을 확인한다.</p></div><div><strong>확인 · 예상 결과</strong><p>100 MHz인 경우 0%는 0 count, 50%는 50,000 count, 100%는 100,000 count다. 실제 클록이 다르면 <code>PWM_PERIOD_TICKS</code>와 RTL 기본 주기 설정을 조정한다.</p></div></div><p><b>이 단계가 필요한 이유:</b> 주기 계산이 틀리면 밝기뿐 아니라 PWM 주파수 자체가 바뀐다.</p>
+</section>
+<section class="section" id="step04">
+<h2><span class="num">10</span>재사용 가능한 pwm_core.v 구조 확인</h2>
+<div>B · STEP 04</div><p>RTL에서 클록 기반 카운터를 독립 모듈로 구현한다.</p><div><div><strong>작업 · GUI/설정</strong><p><a href="#f-part02_1_ch04_rtl_pwm_core_v"><code>rtl/pwm_core.v</code></a>를 읽는다. <code>counter</code>, <code>active_duty</code>, <code>active_period</code>, <code>pending</code>, <code>cfg_apply</code>의 관계를 확인한다.</p></div><div><strong>확인 · 예상 결과</strong><p>요청 값은 <code>shadow_*</code>에 보관되며, 실제 PWM 출력 설정은 다음 주기 경계에서만 적용된다. Reset과 disable에서는 출력이 LOW다.</p></div></div><p><b>이 단계가 필요한 이유:</b> C에서 펄스 시간을 반복 계산하지 않고, FPGA 회로가 독립적으로 지속 출력한다.</p>
+</section>
+<section class="section" id="step05">
+<h2><span class="num">11</span>Vivado에서 새 AXI4-Lite IP 생성</h2>
+<div>B · STEP 05</div><p>CPU의 레지스터 쓰기와 RTL 설정을 연결하는 사용자 IP를 만든다.</p><div><div><strong>작업 · GUI/설정</strong><p><code>Tools → Create and Package New IP → Create a new AXI4 peripheral</code> 선택. 이름 <code>p2_04_axi_pwm</code>, 저장 위치 <code>soc_ip_design_04/ip_repo/</code>, 인터페이스 <code>S00_AXI</code>, AXI4-Lite, Data Width <code>32</code>, 초기 Registers <code>16</code>로 생성한다. 생성된 주소 폭이 6비트·슬레이브 영역 64바이트인지 확인하고 최종 8개 레지스터만 제공 RTL로 구현한다.</p></div><div><strong>확인 · 예상 결과</strong><p>새 IP 폴더와 <code>p2_04_axi_pwm_v1_0.v</code>, <code>p2_04_axi_pwm_v1_0_S00_AXI.v</code>가 나타난다. 생성된 실제 템플릿 포트·파라미터를 먼저 대조한다.</p></div></div><p><b>이 단계가 필요한 이유:</b> Vivado가 만든 AXI 메타데이터와 사용자 로직을 구분해야 한다. 자동 생성 포트를 임의로 가정하지 않는다.</p>
+</section>
+<section class="section" id="step06">
+<h2><span class="num">12</span>IP Packager의 RTL을 완성 코드로 연결</h2>
+<div>B · STEP 06</div><p>AXI write/read와 PWM core의 실제 레지스터 동작을 구현한다.</p><div><div><strong>작업 · GUI/설정</strong><p>IP Packager에서 생성한 두 Verilog 파일의 대응 부분을 <a href="#f-part02_1_ch04_rtl_p2_04_axi_pwm_v1_0_v">IP Top</a>, <a href="#f-part02_1_ch04_rtl_p2_04_axi_pwm_v1_0_S00_AXI_v">AXI Slave</a>의 전체 코드와 대조한다. <code>pwm_core.v</code>를 소스 목록에 Add Files 한다. 32-bit Data, 최소 6-bit Address, Slave 포트 <code>S00_AXI</code>를 유지한다.</p></div><div><strong>확인 · 예상 결과</strong><p><code>pwm_led_o</code> 출력이 IP Top에 나타난다. <code>PERIOD_CFG</code>, <code>DUTY_CFG</code>, <code>CONTROL_CFG</code>, <code>APPLY</code>를 기록한 뒤 <code>STATUS</code>, <code>ACTIVE_*</code>를 읽을 수 있는 구조다.</p></div></div><p><b>이 단계가 필요한 이유:</b> 자동 생성 AXI 샘플의 slv_reg0~3을 무작정 유지하면 제공 코드의 레지스터 맵과 충돌한다.</p>
+</section>
+<section class="section" id="step07">
+<h2><span class="num">13</span>독립 PWM Core 테스트벤치 검토</h2>
+<div>B · STEP 07</div><p>시뮬레이터에서 출력 Duty와 주기 경계 갱신을 확인한다.</p><div><div><strong>작업 · GUI/설정</strong><p>테스트벤치 의 RESET, 0%, 50%, 100%, polarity, disable, mid-cycle 항목을 확인한다. 추후 Vivado <code>Simulation Sources → Add Sources</code>에 추가하고 Run Behavioral Simulation을 실행한다.</p></div><div><strong>확인 · 예상 결과</strong><p>Reset, Duty, 극성, 주기 경계 출력이 기대값과 일치하는지 확인한다.</p></div></div><p><b>이 단계가 필요한 이유:</b> 단언과 파형을 함께 확인한다.</p>
+</section>
+<section class="section" id="step08">
+<h2><span class="num">14</span>AXI4-Lite 프로토콜 독립 시험</h2>
+<div>B · STEP 08</div><p>읽기·쓰기 신호의 독립성 및 오류 응답을 확인한다.</p><div><div><strong>작업 · GUI/설정</strong><p>를 Simulation Sources에 추가한다. AW/W 도착 순서 뒤바뀜, WSTRB byte mask, BVALID/RVALID backpressure, 범위 밖 APPLY, 잘못된 주소, 0%/100% 출력을 시험한다.</p></div><div><strong>확인 · 예상 결과</strong><p><code>BRESP=2 (SLVERR)</code>는 잘못된 Duty에 대한 예상 오류 응답이다.</p></div></div><p><b>이 단계가 필요한 이유:</b> AXI 쓰기 주소·데이터는 같은 사이클에 도착한다는 보장이 없다.</p>
+</section>
+<section class="section" id="step09">
+<h2><span class="num">15</span>IP 패키지 구성 및 Repository 갱신</h2>
+<div>B · STEP 09</div><p>사용자 IP가 BD에서 정상 인식되도록 File Groups와 포트를 확인한다.</p><div><div><strong>작업 · GUI/설정</strong><p>IP Packager <code>File Groups</code>에서 <code>pwm_core.v</code>가 Synth/Sim 대상인지 확인하고, <code>Ports and Interfaces</code>에서 <code>pwm_led_o</code>를 검토한다. <code>Review and Package → Re-Package IP</code> 실행. BD <code>Tools → Settings → IP → Repository</code> 경로 확인 후 Refresh IP Catalog.</p></div><div><strong>확인 · 예상 결과</strong><p>IP Catalog에 <code>p2_04_axi_pwm</code>가 나타나며 최종 사용 RTL이 최신인 것을 확인한다. <code>Report IP Status</code>에서 변경 버전과 Lock 상태를 확인한다.</p></div></div><p><b>이 단계가 필요한 이유:</b> RTL 파일만 수정하고 Re-Package하지 않으면 BD에서 오래된 HDL을 참조할 수 있다.</p>
+</section>
+<section class="section" id="step10">
+<h2><span class="num">16</span>Block Design에 사용자 PWM IP 추가</h2>
+<div>B · STEP 10</div><p>기존 AXI GPIO/Timer/UART/INTC/LED/FND/버튼 IP를 유지한다.</p><div><div><strong>작업 · GUI/설정</strong><p><code>Sources → soc11_integration.bd → Open Block Design</code>. <code>Add IP</code>에서 <code>p2_04_axi_pwm</code> 삽입. <code>Run Connection Automation</code>으로 <code>S00_AXI</code>를 CPU AXI Master 경로에 연결한다. <code>s00_axi_aclk</code>와 <code>s00_axi_aresetn</code>을 기존 AXI 클록·리셋 도메인에 연결한다.</p></div><div><strong>확인 · 예상 결과</strong><p>새 IP의 <code>S00_AXI</code>가 Interconnect에 연결되고 Clock/Reset 관련 Validation 경고가 없는지 확인한다. 기존 INTC에 **새 PWM IRQ는 추가하지 않는다**.</p></div></div><p><b>이 단계가 필요한 이유:</b> 이번 PWM은 설정 레지스터만 사용하며 별도 인터럽트가 필요 없다.</p>
+</section>
+<section class="section" id="step11">
+<h2><span class="num">17</span>PWM 출력 포트 외부화와 Wrapper 재생성</h2>
+<div>B · STEP 11</div><p>신규 PWM 출력만 사용자 Top까지 전달한다.</p><div><div><strong>작업 · GUI/설정</strong><p>BD의 <code>pwm_led_o</code>를 <code>Make External</code>로 내보내고 외부 포트를 <code>pwm_led1</code>로 변경한다. <code>Validate Design</code> 후 <code>Generate Output Products</code>를 실행한다. <code>Create HDL Wrapper</code>는 Vivado 자동 관리로 재생성한다.</p></div><div><strong>확인 · 예상 결과</strong><p>자동 생성된 <code>soc11_integration_wrapper.v</code>의 출력에 <code>pwm_led1</code>이 있는지 실제 선언부를 확인한다. 없으면 사용자 Top을 먼저 수정하지 않는다.</p></div></div><p><b>이 단계가 필요한 이유:</b> BD 밖에서 연결하려면 해당 포트가 자동 Wrapper 선언에 실제 존재해야 한다.</p>
+</section>
+<section class="section" id="step12">
+<h2><span class="num">18</span>사용자 Top에서 LED1 소유권 분리</h2>
+<div>B · STEP 12</div><p>LED0·LED1·LED2~15 각각 하나의 모듈만 출력한다.</p><div><div><strong>작업 · GUI/설정</strong><p><a href="#f-part02_1_ch04_rtl_basys3_soc11_top_p2_04_v">04장 Top 전체 소스</a>를 Vivado 복제 프로젝트의 사용자 Top에 반영한다. <code>assign led = {gpio_led[15:2], pwm_led1, p2_led0};</code>는 단순 신호 연결이며 기능 로직을 넣지 않는다.</p></div><div><strong>확인 · 예상 결과</strong><p><code>led[0]</code>는 01장 IP, <code>led[1]</code>는 PWM, <code>led[15:2]</code>는 기존 GPIO에 연결된다. LED14/15의 기존 GPIO 배선은 유지하지만, 이 장 C 프로그램에는 UART 표시·Timer heartbeat 처리가 없다.</p></div></div><p><b>이 단계가 필요한 이유:</b> 기존 LED0 전용 사용자 AXI IP와 신규 PWM IP는 서로 다른 보드 출력이어야 한다.</p>
+</section>
+<section class="section" id="step13">
+<h2><span class="num">19</span>XDC 핀·Clock·Address Editor 대조</h2>
+<div>B · STEP 13</div><p>기존 모든 핀을 유지하면서 신규 LED1에 중복 제약이 없도록 한다.</p><div><div><strong>작업 · GUI/설정</strong><p><code>Constraints</code>에서 기존 Master XDC <code>led[1]</code>이 <code>E19 / LVCMOS33</code>에 한 번만 지정되는지 검사한다. <a href="#f-part02_1_ch04_rtl_pwm_led1_only_xdc">참고용 XDC</a>는 복사 제약이 아니라 중복 방지 안내다. <code>Address Editor</code>에서 04장 PWM IP의 실제 Base Address를 기록한다. Clock Wizard/BD Clock frequency 대조.</p></div><div><strong>확인 · 예상 결과</strong><p>전체 주소 충돌이 없고 출력 핀 명칭이 <code>led[1]</code>인지 확인한다. 신규 base address는 예제 수치로 확정하지 않는다.</p></div></div><p><b>이 단계가 필요한 이유:</b> XDC 중복, 클록 주기 불일치, AXI 주소 중복은 실물에서 흔한 오류 원인이다.</p>
+</section>
+<section class="section" id="step14">
+<h2><span class="num">20</span>Validate → Synthesis → Implementation → XSA</h2>
+<div>B · STEP 14</div><p>실제 동작할 구성 파일을 생성하고 타이밍을 확인한다.</p><div><div><strong>작업 · GUI/설정</strong><p><code>Validate Design → Run Synthesis → Run Implementation → Generate Bitstream → File → Export → Export Hardware</code>에서 Include Bitstream을 검토한다. 이 전에 IP Output Products 최신 여부 확인. WNS/TNS, DRC, Clock 중복 Critical Warning 확인.</p></div><div><strong>확인 · 예상 결과</strong><p>새 Top 및 PWM 포트가 Synthesis/Implementation에 반영되고 실제 Address Map이 XSA에 포함되어야 한다. 경고가 남아 있으면 완료라고 기록하지 않는다.</p></div></div><p><b>이 단계가 필요한 이유:</b> C BSP는 새 XSA의 주소 정보를 반영해야 레지스터에 정확히 접근한다.</p>
+</section>
+<section class="section" id="step15">
+<h2><span class="num">21</span>Vitis 플랫폼 갱신·C 소스 적용</h2>
+<div>B · STEP 15</div><p>기존 명령 처리를 유지한 채 <code>PWM 0..100</code>만 추가한다.</p><div><div><strong>작업 · GUI/설정</strong><p>새 XSA를 반영한 Platform을 만들거나 갱신한다. <code>xparameters.h</code>에서 P2-01~04 주소와 03장 버튼 IRQ ID/Parent를 실제 값으로 확인한다. <a href="#f-part02_1_ch04_sw_main_p2_04_c">main_p2_04.c</a>, <a href="#f-part02_1_ch04_sw_p2_04_pwm_logic_c">p2_04_pwm_logic.c</a>/.h, 기존 <code>p2_03_logic.c</code>/.h를 Application Sources에 추가한다. 필요한 매크로는 프로젝트의 Build Settings에서 정의하거나 확인된 헤더로 별도 관리한다.</p></div><div><strong>확인 · 예상 결과</strong><p>주소가 비어 있거나 중복이면 <code>#error</code>로 빌드가 차단된다. 새 IP ID는 <code>0x00040001</code>이며 UART의 기존 LED·DISP·STATUS·버튼 처리는 유지된다.</p></div></div><p><b>이 단계가 필요한 이유:</b> P2-03의 인터럽트 API는 실제 BSP SDT 설정과 대조해야 한다.</p>
+</section>
+<section class="section" id="step16">
+<h2><span class="num">22</span>UART 명령으로 밝기 변경</h2>
+<div>B · STEP 16</div><p>PC 터미널에서 문자열 입력 후 Enter로 LED1 Duty를 조절한다.</p><div><div><strong>작업 · GUI/설정</strong><p>기존 실습에서 사용하던 UART 터미널을 <code>115200, 8N1</code>로 설정한다. <code>PWM 0</code> → <code>PWM 50</code> → <code>PWM 100</code> → <code>STATUS</code> 순서로 입력한다. <code>BUSY</code>가 나오면 갱신 주기 경계가 지나간 후 재시도한다.</p></div><div><strong>확인 · 예상 결과</strong><p>LED1: 0% 소등, 50% 중간 밝기, 100% 지속 점등이 목표다. <code>OK PWM 50 QUEUED</code>는 반영 대기이며, <code>STATUS PWM_PENDING=0</code>과 ACTIVE 값을 확인해야 한다.</p></div></div><p><b>이 단계가 필요한 이유:</b> 명령이 수신되었다는 메시지와 실제 하드웨어 출력 적용은 다른 사건이다.</p>
+</section>
+<section class="section" id="step17">
+<h2><span class="num">23</span>01~03장 기존 기능 확인</h2>
+<div>B · STEP 17</div><p>신규 PWM 추가가 기존 SoC 기능을 파괴하지 않았는지 확인한다.</p><div><div><strong>작업 · GUI/설정</strong><p><code>LED ON/OFF</code>(LED0), <code>DISP 0050</code>(천·백·십·일 자리), 네 방향 버튼 Short/Long, <code>STATUS</code>, UART/Timer/INTC를 순서대로 시험한다.</p></div><div><strong>확인 · 예상 결과</strong><p>FND와 버튼 IRQ 기능 및 LED14/15 GPIO 배선을 확인한다. LED14·LED15 소프트웨어 표시 동작은 이 장에서 지원하지 않으며 09장 통합 대상이다.</p></div></div><p><b>이 단계가 필요한 이유:</b> 새 기능이 작동하더라도 기존 기능에 퇴행이 있으면 장 완료가 아니다.</p>
+</section>
+<section class="section" id="errors">
+<h2><span class="num">24</span>오류 발생 시 첫 확인 위치</h2>
+<div>C · 점검</div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>증상</th><th>우선 검사 지점</th><th>정상 기준</th></tr></thead><tbody><tr><td><code>pwm_led1</code> 포트 없음</td><td>BD Make External → Validate → Generate Output Products → Wrapper 재생성</td><td>Wrapper 실제 포트 선언</td></tr><tr><td>IP 인식 실패</td><td>IP Packager File Groups, Re-Package, IP Repository</td><td>최신 IP Catalog와 IP Status</td></tr><tr><td>LED1이 변하지 않음</td><td>AXI Base/ID → STATUS Pending → ACTIVE_DUTY → GPIO 출력 분리</td><td>P2-04 PWM 단독 출력</td></tr><tr><td>동작 주기가 1 kHz가 아님</td><td>AXI Clock 속도, PERIOD_CFG, Reset</td><td>100 MHz라면 PERIOD=100000</td></tr><tr><td><code>PWM 50</code> 명령은 왔지만 출력 안 바뀜</td><td><code>STATUS</code>의 PWM_PENDING/ENABLE과 active duty</td><td>PENDING=0, DUTY=50000</td></tr><tr><td><code>ERROR: PWM IP identity mismatch</code></td><td>XSA/BSP Base Address, IP ID RTL, 인터커넥트 연결</td><td>ID=0x00040001</td></tr><tr><td>버튼 이벤트 사라짐</td><td>03장 IP/INTC 신호, SDT IRQ ID/Parent, 03장 회귀</td><td>기존 이벤트 동작</td></tr><tr><td>LED0 / FND 오류</td><td>Top 변경 비교, 원래 IP 주소 유지</td><td>01/02장 명령이 정상</td></tr></tbody></table></div>
+</section>
+<section class="section" id="resources">
+<h2><span class="num">25</span>코드·테스트·교육자료</h2>
+<div>C · 소스</div><div><a href="p2_04_1_c_v02.html">C 전체 소스·코드 풀이</a><a href="p2_04_2_rtl_v02.html">PWM/AXI/Top RTL 전체 코드·풀이</a><a href="#f-part02_1_ch04_sw_main_p2_04_c">Vitis main.c</a><a href="#f-part02_1_ch04_rtl_pwm_core_v">pwm_core.v</a></div>
+</section>
+    <section class="section" id="files">
+      <h2><span class="num">26</span>실습 파일</h2>
+      <div class="codeblock" id="f-part02_1_ch04_rtl_pwm_core_v"><div class="codebar"><span>pwm_core.v · Verilog</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-04: 보드와 무관한 단일 채널 범용 PWM 코어.
+// (추가) period와 duty는 클록 횟수 단위. 0%/100%는 지속 LOW/HIGH.
+// (추가) 설정은 주기 마지막 경계에서만 활성값으로 반영.
+module pwm_core #(
+    parameter [31:0] RESET_PERIOD = 32&#x27;d100000
+)(
+    input  wire        clk,
+    input  wire        resetn,
+    input  wire        cfg_apply,
+    input  wire [31:0] cfg_period,
+    input  wire [31:0] cfg_duty,
+    input  wire        cfg_enable,
+    input  wire        cfg_polarity,
+    output wire        pwm_out,
+    output reg         pending,
+    output reg [31:0] active_period,
+    output reg [31:0] active_duty,
+    output reg         active_enable,
+    output reg         active_polarity
+);
+    reg [31:0] counter;
+    reg [31:0] shadow_period;
+    reg [31:0] shadow_duty;
+    reg        shadow_enable;
+    reg        shadow_polarity;
+
+    wire boundary = (counter &gt;= active_period - 32&#x27;d1);
+    wire duty_high = (counter &lt; active_duty);
+
+    // (주의) enable=0이면 polarity와 관계없이 LOW로 차단.
+    // (설명) 기본 polarity에서 active_duty=0이면 항상 LOW,
+    //         active_duty=active_period이면 항상 HIGH.
+    assign pwm_out = resetn &amp;&amp; active_enable &amp;&amp;
+                     (active_polarity ? !duty_high : duty_high);
+
+    always @(posedge clk) begin
+        if (!resetn) begin
+            counter         &lt;= 32&#x27;d0;
+            active_period   &lt;= RESET_PERIOD;
+            active_duty     &lt;= 32&#x27;d0;
+            active_enable   &lt;= 1&#x27;b0;
+            active_polarity &lt;= 1&#x27;b0;
+            shadow_period   &lt;= RESET_PERIOD;
+            shadow_duty     &lt;= 32&#x27;d0;
+            shadow_enable   &lt;= 1&#x27;b0;
+            shadow_polarity &lt;= 1&#x27;b0;
+            pending         &lt;= 1&#x27;b0;
+        end else begin
+            if (boundary) begin
+                counter &lt;= 32&#x27;d0;
+                if (pending) begin
+                    active_period   &lt;= shadow_period;
+                    active_duty     &lt;= shadow_duty;
+                    active_enable   &lt;= shadow_enable;
+                    active_polarity &lt;= shadow_polarity;
+                    pending         &lt;= 1&#x27;b0;
+                end
+            end else begin
+                counter &lt;= counter + 32&#x27;d1;
+            end
+            // (추가) 경계와 APPLY가 겹치면 새 값은 다음 경계에 적용.
+            // 여러 APPLY가 겹치면 최종 요청값을 우선하는 단일 Shadow 구조.
+            if (cfg_apply) begin
+                shadow_period   &lt;= cfg_period;
+                shadow_duty     &lt;= cfg_duty;
+                shadow_enable   &lt;= cfg_enable;
+                shadow_polarity &lt;= cfg_polarity;
+                pending         &lt;= 1&#x27;b1;
+            end
+        end
+    end
+endmodule
+</code></pre></div>
+      <div class="codeblock" id="f-part02_1_ch04_rtl_p2_04_axi_pwm_v1_0_v"><div class="codebar"><span>p2_04_axi_pwm_v1_0.v · Verilog</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// User-IP boundary: one PWM channel + standard AXI4-Lite slave.
+module p2_04_axi_pwm_v1_0 #(
+    parameter integer C_S00_AXI_DATA_WIDTH = 32,
+    parameter integer C_S00_AXI_ADDR_WIDTH = 6
+)(
+    output wire pwm_led_o,
+    input wire s00_axi_aclk, input wire s00_axi_aresetn,
+    input wire [C_S00_AXI_ADDR_WIDTH-1:0] s00_axi_awaddr,
+    input wire [2:0] s00_axi_awprot, input wire s00_axi_awvalid,
+    output wire s00_axi_awready,
+    input wire [C_S00_AXI_DATA_WIDTH-1:0] s00_axi_wdata,
+    input wire [(C_S00_AXI_DATA_WIDTH/8)-1:0] s00_axi_wstrb,
+    input wire s00_axi_wvalid, output wire s00_axi_wready,
+    output wire [1:0] s00_axi_bresp, output wire s00_axi_bvalid,
+    input wire s00_axi_bready,
+    input wire [C_S00_AXI_ADDR_WIDTH-1:0] s00_axi_araddr,
+    input wire [2:0] s00_axi_arprot, input wire s00_axi_arvalid,
+    output wire s00_axi_arready,
+    output wire [C_S00_AXI_DATA_WIDTH-1:0] s00_axi_rdata,
+    output wire [1:0] s00_axi_rresp, output wire s00_axi_rvalid,
+    input wire s00_axi_rready
+);
+    p2_04_axi_pwm_v1_0_S00_AXI #(
+        .C_S_AXI_DATA_WIDTH(C_S00_AXI_DATA_WIDTH),
+        .C_S_AXI_ADDR_WIDTH(C_S00_AXI_ADDR_WIDTH)
+    ) u_axi (
+        .S_AXI_ACLK(s00_axi_aclk), .S_AXI_ARESETN(s00_axi_aresetn),
+        .S_AXI_AWADDR(s00_axi_awaddr), .S_AXI_AWPROT(s00_axi_awprot),
+        .S_AXI_AWVALID(s00_axi_awvalid), .S_AXI_AWREADY(s00_axi_awready),
+        .S_AXI_WDATA(s00_axi_wdata), .S_AXI_WSTRB(s00_axi_wstrb),
+        .S_AXI_WVALID(s00_axi_wvalid), .S_AXI_WREADY(s00_axi_wready),
+        .S_AXI_BRESP(s00_axi_bresp), .S_AXI_BVALID(s00_axi_bvalid),
+        .S_AXI_BREADY(s00_axi_bready),
+        .S_AXI_ARADDR(s00_axi_araddr), .S_AXI_ARPROT(s00_axi_arprot),
+        .S_AXI_ARVALID(s00_axi_arvalid), .S_AXI_ARREADY(s00_axi_arready),
+        .S_AXI_RDATA(s00_axi_rdata), .S_AXI_RRESP(s00_axi_rresp),
+        .S_AXI_RVALID(s00_axi_rvalid), .S_AXI_RREADY(s00_axi_rready),
+        .pwm_out(pwm_led_o)
+    );
+endmodule
+</code></pre></div>
+      <div class="codeblock" id="f-part02_1_ch04_rtl_p2_04_axi_pwm_v1_0_S00_AXI_v"><div class="codebar"><span>p2_04_axi_pwm_v1_0_S00_AXI.v · Verilog</span></div><pre tabindex="0"><code>`timescale 1ns/1ps
+// P2-04 AXI4-Lite 슬레이브: AW/W 주소·데이터 핸드셰이크를 독립 처리.
+// AW와 W 각각 1개 버퍼, B/R 각각 1개 미완료 응답만 처리.
+// WRITE 0x00 PERIOD_CFG, 0x04 DUTY_CFG, 0x08 CONTROL_CFG, 0x0C APPLY
+// READ  0x10 STATUS, 0x14 ACTIVE_PERIOD, 0x18 ACTIVE_DUTY, 0x1C ID
+// STATUS bit0 pending, bit8 active_enable, bit9 active_polarity.
+module p2_04_axi_pwm_v1_0_S00_AXI #(
+    parameter integer C_S_AXI_DATA_WIDTH = 32,
+    parameter integer C_S_AXI_ADDR_WIDTH = 6
+)(
+    input wire S_AXI_ACLK, input wire S_AXI_ARESETN,
+    input wire [C_S_AXI_ADDR_WIDTH-1:0] S_AXI_AWADDR,
+    input wire [2:0] S_AXI_AWPROT, input wire S_AXI_AWVALID,
+    output wire S_AXI_AWREADY,
+    input wire [C_S_AXI_DATA_WIDTH-1:0] S_AXI_WDATA,
+    input wire [(C_S_AXI_DATA_WIDTH/8)-1:0] S_AXI_WSTRB,
+    input wire S_AXI_WVALID, output wire S_AXI_WREADY,
+    output reg [1:0] S_AXI_BRESP, output reg S_AXI_BVALID,
+    input wire S_AXI_BREADY,
+    input wire [C_S_AXI_ADDR_WIDTH-1:0] S_AXI_ARADDR,
+    input wire [2:0] S_AXI_ARPROT, input wire S_AXI_ARVALID,
+    output wire S_AXI_ARREADY,
+    output reg [C_S_AXI_DATA_WIDTH-1:0] S_AXI_RDATA,
+    output reg [1:0] S_AXI_RRESP, output reg S_AXI_RVALID,
+    input wire S_AXI_RREADY,
+    output wire pwm_out
+);
+    // (주의) 교육용 레지스터는 32비트, 4바이트 정렬.
+    // IP Packager에서 Data Width=32, Address Width&gt;=6 적용.
+    localparam [1:0] OKAY = 2&#x27;b00, SLVERR = 2&#x27;b10;
+    localparam [31:0] RESET_PERIOD = 32&#x27;d100000;
+    localparam [31:0] IP_ID = 32&#x27;h00040001;
+    reg [31:0] period_cfg, duty_cfg, control_cfg;
+    reg apply_strobe;
+    wire pending;
+    wire [31:0] active_period, active_duty;
+    wire active_enable, active_polarity;
+    reg aw_hold, w_hold;
+    reg [C_S_AXI_ADDR_WIDTH-1:0] awaddr_hold;
+    reg [31:0] wdata_hold;
+    reg [3:0] wstrb_hold;
+    integer byte_i;
+    reg [31:0] data_merged;
+
+    pwm_core #(.RESET_PERIOD(RESET_PERIOD)) u_pwm_core (
+        .clk(S_AXI_ACLK), .resetn(S_AXI_ARESETN),
+        .cfg_apply(apply_strobe),
+        .cfg_period(period_cfg), .cfg_duty(duty_cfg),
+        .cfg_enable(control_cfg[0]), .cfg_polarity(control_cfg[1]),
+        .pwm_out(pwm_out), .pending(pending),
+        .active_period(active_period), .active_duty(active_duty),
+        .active_enable(active_enable), .active_polarity(active_polarity)
+    );
+
+    assign S_AXI_AWREADY = S_AXI_ARESETN &amp;&amp; !aw_hold &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_WREADY  = S_AXI_ARESETN &amp;&amp; !w_hold &amp;&amp; !S_AXI_BVALID;
+    assign S_AXI_ARREADY = S_AXI_ARESETN &amp;&amp; !S_AXI_RVALID;
+
+    // (추가) AXI 쓰기: AW/W 모두 수신 후 WSTRB 적용, BRESP 유지.
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            period_cfg   &lt;= RESET_PERIOD;
+            duty_cfg     &lt;= 32&#x27;d0;
+            control_cfg  &lt;= 32&#x27;d0;
+            apply_strobe &lt;= 1&#x27;b0;
+            aw_hold      &lt;= 1&#x27;b0;
+            w_hold       &lt;= 1&#x27;b0;
+            awaddr_hold  &lt;= {C_S_AXI_ADDR_WIDTH{1&#x27;b0}};
+            wdata_hold   &lt;= 32&#x27;d0;
+            wstrb_hold   &lt;= 4&#x27;b0;
+            S_AXI_BVALID &lt;= 1&#x27;b0;
+            S_AXI_BRESP  &lt;= OKAY;
+        end else begin
+            apply_strobe &lt;= 1&#x27;b0;
+            if (S_AXI_AWVALID &amp;&amp; S_AXI_AWREADY) begin
+                awaddr_hold &lt;= S_AXI_AWADDR;
+                aw_hold &lt;= 1&#x27;b1;
+            end
+            if (S_AXI_WVALID &amp;&amp; S_AXI_WREADY) begin
+                wdata_hold &lt;= S_AXI_WDATA;
+                wstrb_hold &lt;= S_AXI_WSTRB;
+                w_hold &lt;= 1&#x27;b1;
+            end
+            if (S_AXI_BVALID &amp;&amp; S_AXI_BREADY)
+                S_AXI_BVALID &lt;= 1&#x27;b0;
+            if (aw_hold &amp;&amp; w_hold &amp;&amp; !S_AXI_BVALID) begin
+                aw_hold      &lt;= 1&#x27;b0;
+                w_hold       &lt;= 1&#x27;b0;
+                S_AXI_BVALID &lt;= 1&#x27;b1;
+                S_AXI_BRESP  &lt;= OKAY;
+                // (주의) 미정의/비정렬 주소는 저장하지 않고 SLVERR 응답.
+                case (awaddr_hold)
+                6&#x27;h00: begin
+                    data_merged = period_cfg;
+                    for (byte_i=0;byte_i&lt;4;byte_i=byte_i+1)
+                        if (wstrb_hold[byte_i])
+                            data_merged[8*byte_i +: 8] = wdata_hold[8*byte_i +: 8];
+                    period_cfg &lt;= data_merged;
+                end
+                6&#x27;h04: begin
+                    data_merged = duty_cfg;
+                    for (byte_i=0;byte_i&lt;4;byte_i=byte_i+1)
+                        if (wstrb_hold[byte_i])
+                            data_merged[8*byte_i +: 8] = wdata_hold[8*byte_i +: 8];
+                    duty_cfg &lt;= data_merged;
+                end
+                6&#x27;h08: begin
+                    data_merged = control_cfg;
+                    for (byte_i=0;byte_i&lt;4;byte_i=byte_i+1)
+                        if (wstrb_hold[byte_i])
+                            data_merged[8*byte_i +: 8] = wdata_hold[8*byte_i +: 8];
+                    control_cfg &lt;= data_merged &amp; 32&#x27;h00000003;
+                end
+                6&#x27;h0C: begin
+                    if (wstrb_hold[0] &amp;&amp; wdata_hold[0]) begin
+                        if (period_cfg &lt; 32&#x27;d2 || duty_cfg &gt; period_cfg)
+                            S_AXI_BRESP &lt;= SLVERR;
+                        else
+                            apply_strobe &lt;= 1&#x27;b1;
+                    end
+                end
+                default: S_AXI_BRESP &lt;= SLVERR;
+                endcase
+            end
+        end
+    end
+
+    // (추가) AXI 읽기: AR 별도 수신, RREADY 전까지 RDATA 유지.
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            S_AXI_RVALID &lt;= 1&#x27;b0;
+            S_AXI_RRESP  &lt;= OKAY;
+            S_AXI_RDATA  &lt;= 32&#x27;d0;
+        end else begin
+            if (S_AXI_RVALID &amp;&amp; S_AXI_RREADY)
+                S_AXI_RVALID &lt;= 1&#x27;b0;
+            if (S_AXI_ARVALID &amp;&amp; S_AXI_ARREADY) begin
+                S_AXI_RVALID &lt;= 1&#x27;b1;
+                S_AXI_RRESP  &lt;= OKAY;
+                case (S_AXI_ARADDR)
+                6&#x27;h00: S_AXI_RDATA &lt;= period_cfg;
+                6&#x27;h04: S_AXI_RDATA &lt;= duty_cfg;
+                6&#x27;h08: S_AXI_RDATA &lt;= control_cfg;
+                6&#x27;h0C: S_AXI_RDATA &lt;= 32&#x27;d0; // APPLY는 쓰기 명령; 읽으면 0.
+                6&#x27;h10: S_AXI_RDATA &lt;= {22&#x27;d0,active_polarity,active_enable,7&#x27;d0,pending};
+                6&#x27;h14: S_AXI_RDATA &lt;= active_period;
+                6&#x27;h18: S_AXI_RDATA &lt;= active_duty;
+                6&#x27;h1C: S_AXI_RDATA &lt;= IP_ID;
+                default: begin S_AXI_RDATA &lt;= 32&#x27;d0; S_AXI_RRESP &lt;= SLVERR; end
+                endcase
+            end
+        end
+    end
+endmodule
+</code></pre></div>
+      <div class="codeblock" id="f-part02_1_ch04_rtl_basys3_soc11_top_p2_04_v"><div class="codebar"><span>basys3_soc11_top_p2_04.v · Verilog</span></div><pre tabindex="0"><code>// P2-04 Top은 보드 연결만 담당. PWM 계산 및 always 기능 로직 금지.
+// (유지) LED0은 01장 IP, LED14/15는 기존 GPIO UART/Timer.
+// (추가) LED1(E19)은 PWM 전용으로 분리하며 GPIO bit1은 외부핀에서 제외.
+// (유지) FND는 02장, 방향버튼은 03장, BTNC는 Reset.
+module basys3_soc11_top (
+    input wire clk, input wire btnC,
+    input wire btnU, input wire btnD, input wire btnL, input wire btnR,
+    input wire [15:0] sw, output wire [15:0] led,
+    input wire RsRx, output wire RsTx,
+    output wire [6:0] seg, output wire [3:0] an, output wire dp
+);
+    wire [15:0] gpio_led;
+    wire p2_led0;
+    wire pwm_led1;
+
+    // 단순 연결: [15:2] GPIO, bit1 PWM, bit0 LED IP.
+    assign led = {gpio_led[15:2], pwm_led1, p2_led0};
+
+    // BD에 pwm_led1 외부 포트를 만든 후에 Wrapper를 재생성해야 한다.
+    soc11_integration_wrapper u_soc11 (
+        .clk(clk), .btnC(btnC),
+        .btnU(btnU), .btnD(btnD), .btnL(btnL), .btnR(btnR),
+        .sw_tri_i(sw), .led_tri_o(gpio_led),
+        .UART_0_rxd(RsRx), .UART_0_txd(RsTx),
+        .p2_led_o(p2_led0), .pwm_led1(pwm_led1),
+        .fnd_seg(seg), .fnd_an(an), .fnd_dp(dp)
+    );
+endmodule
+</code></pre></div>
+      <div class="codeblock" id="f-part02_1_ch04_rtl_pwm_led1_only_xdc"><div class="codebar"><span>pwm_led1_only.xdc · XDC</span></div><pre tabindex="0"><code># P2-04: LED1 already constrained in the original 16-LED XDC.
+# DO NOT add this pair again if led[1] is already assigned.
+# Reference only: Digilent Basys-3-Master.xdc
+# set_property PACKAGE_PIN E19 [get_ports {led[1]}]
+# set_property IOSTANDARD LVCMOS33 [get_ports {led[1]}]
+</code></pre></div>
+      <div class="codeblock" id="f-part02_1_ch04_sw_main_p2_04_c"><div class="codebar"><span>main_p2_04.c · C</span></div><pre tabindex="0"><code>/* P2-04: retain P2-03 commands/button IRQ, add AXI PWM on Basys3 LED1.
+ * NOTE: Base addresses, Interrupt ID/Parent MUST be read from actual BSP.
+ * This source intentionally rejects unknown constants before target build.
+ */
+#include &quot;xparameters.h&quot;
+#include &quot;xil_types.h&quot;      /* u8, u32, UINTPTR */
+#include &quot;xil_io.h&quot;         /* Xil_In32, Xil_Out32 */
+#include &quot;xuartlite_l.h&quot;    /* UART Lite byte functions + FIFO empty check */
+#include &quot;xstatus.h&quot;
+#include &quot;xil_exception.h&quot;
+#ifdef SDT
+#include &quot;xinterrupt_wrap.h&quot; /* SDT interrupt API */
+#else
+#include &quot;xintc.h&quot;          /* Classic interrupt controller API */
+#endif
+#include &quot;p2_03_logic.h&quot;
+#include &quot;p2_04_pwm_logic.h&quot; // Reusable PWM string parser and duty calculation
+
+#ifndef P2_04_PWM_BASEADDR
+#define P2_04_PWM_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_04_PWM_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set P2_04_PWM_BASEADDR from CURRENT Vivado Address Editor/xparameters.h&quot;
+#endif
+#ifndef P2_01_LED_BASEADDR
+#define P2_01_LED_BASEADDR 0xFFFFFFFFU
+#endif
+#ifndef P2_02_FND_BASEADDR
+#define P2_02_FND_BASEADDR 0xFFFFFFFFU
+#endif
+#ifndef P2_03_BTN_BASEADDR
+#define P2_03_BTN_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_01_LED_BASEADDR == 0xFFFFFFFFU || P2_02_FND_BASEADDR == 0xFFFFFFFFU || P2_03_BTN_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set all three AXI IP addresses from CURRENT Address Editor/xparameters.h&quot;
+#endif
+#if P2_01_LED_BASEADDR == P2_02_FND_BASEADDR || P2_01_LED_BASEADDR == P2_03_BTN_BASEADDR || P2_02_FND_BASEADDR == P2_03_BTN_BASEADDR
+#error &quot;Three user AXI IP base addresses must be unique&quot;
+#endif
+#ifndef P2_03_BTN_INTR_ID
+#error &quot;Fill P2_03_BTN_INTR_ID from CURRENT generated BSP interrupt map&quot;
+#endif
+#ifdef SDT
+#ifndef P2_03_BTN_INTR_PARENT
+#error &quot;Fill P2_03_BTN_INTR_PARENT (SDT encoded interrupt parent) from actual BSP&quot;
+#endif
+#else
+#ifndef P2_03_INTC_DEVICE_ID
+#error &quot;Fill P2_03_INTC_DEVICE_ID from Classic BSP&quot;
+#endif
+#endif
+
+#if defined(XPAR_XUARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_XUARTLITE_0_BASEADDR
+#elif defined(XPAR_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_UARTLITE_0_BASEADDR
+#elif defined(XPAR_AXI_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_AXI_UARTLITE_0_BASEADDR
+#else
+#error &quot;Check UART Lite base macro in the generated xparameters.h&quot;
+#endif
+
+#define FND_VAL_REG  0x00U
+#define FND_CTRL_REG 0x04U
+#define BTN_PENDING  0x00U
+#define BTN_ENABLE   0x04U
+#define BTN_PRESSED  0x08U
+#define BTN_ID       0x0CU
+#define BTN_COALESCED 0x10U
+// P2-04 register offsets: 32-bit, byte-addressed.
+#define PWM_PERIOD_CFG 0x00U
+#define PWM_DUTY_CFG   0x04U
+#define PWM_CTRL_CFG   0x08U
+#define PWM_APPLY      0x0CU
+#define PWM_STATUS     0x10U
+#define PWM_PERIOD_ACT 0x14U
+#define PWM_DUTY_ACT   0x18U
+#define PWM_ID         0x1CU
+#define PWM_IP_ID      0x00040001U
+#define PWM_PERIOD_TICKS 100000U // AXI Clock이 실제 100MHz일 때 1kHz.
+#if P2_04_PWM_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_04_PWM_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_04_PWM_BASEADDR == P2_03_BTN_BASEADDR
+#error &quot;New PWM IP base must differ from all prior IP addresses&quot;
+#endif
+#define LINE_CAP     32U
+
+static P2AppState app;
+static u8 pwm_requested_percent = 0U;
+static volatile u32 irq_counts[8]; // ISR writes monotonically; main reads.
+static u32 handled_counts[8];      // Main-only processed counts.
+#ifndef SDT
+static XIntc intc;
+#endif
+
+static void uart_puts(const char *s)
+{
+    while (*s) XUartLite_SendByte(UART_BASEADDR, (u8)*s++);
+}
+static void uart_hex32(u32 v)
+{
+    const char hex[] = &quot;0123456789ABCDEF&quot;;
+    int shift;
+    for (shift = 28; shift &gt;= 0; shift -= 4)
+        XUartLite_SendByte(UART_BASEADDR, (u8)hex[(v &gt;&gt; shift) &amp; 15U]);
+}
+static void uart_dec4(u32 value)
+{
+    int d;
+    u32 divisors[4] = {1000U, 100U, 10U, 1U};
+    for (d = 0; d &lt; 4; ++d) {
+        u32 n = (value / divisors[d]) % 10U;
+        XUartLite_SendByte(UART_BASEADDR, (u8)(&#x27;0&#x27; + n));
+    }
+}
+
+// (추가) 0~4294967295를 선행 0 없이 UART에 출력.
+static void uart_dec_u32(u32 value)
+{
+    char tmp[10]; // u32 십진수 최대 10자리.
+    unsigned used = 0U;
+    do {
+        tmp[used++] = (char)(&#x27;0&#x27; + (value % 10U));
+        value /= 10U;
+    } while (value != 0U);
+    while (used != 0U)
+        XUartLite_SendByte(UART_BASEADDR, (u8)tmp[--used]);
+}
+
+// (추가) 이전 설정이 반영 중이면 BUSY, 아니면 다음 주기 적용을 예약.
+static int pwm_queue_percent(u8 percent)
+{
+    u32 duty;
+    if ((Xil_In32(P2_04_PWM_BASEADDR + PWM_STATUS) &amp; 1U) != 0U)
+        return 0; // 기존 Pending 설정을 덮지 않는다.
+    duty = pwm_duty_for_percent(PWM_PERIOD_TICKS, percent);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_PERIOD_CFG, PWM_PERIOD_TICKS);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_DUTY_CFG, duty);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_CTRL_CFG, percent ? 1U : 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_APPLY, 1U);
+    pwm_requested_percent = percent;
+    return 1;
+}
+
+static void fnd_commit(void)
+{
+    // P2-02: REG0 BCD digits, REG1 bit0 enable. No software scan loops.
+    Xil_Out32(P2_02_FND_BASEADDR + FND_VAL_REG,
+              p2_to_bcd4(p2_visible_decimal(&amp;app)));
+    Xil_Out32(P2_02_FND_BASEADDR + FND_CTRL_REG, (u32)app.display_on);
+}
+
+// Level interrupt: read PENDING, acknowledge W1C, count each asserted type.
+static void btn_irq_handler(void *unused)
+{
+    u32 pending;
+    unsigned i;
+    (void)unused;
+    pending = Xil_In32(P2_03_BTN_BASEADDR + BTN_PENDING) &amp; 0xFFU;
+    if (!pending) return;
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_PENDING, pending); // W1C
+    for (i = 0; i &lt; 8U; ++i)
+        if (pending &amp; (1U &lt;&lt; i)) irq_counts[i]++;
+}
+
+static int setup_button_interrupt(void)
+{
+    int status;
+#ifdef SDT
+    // The physical interrupt ID and parent are project-specific.
+    status = XSetupInterruptSystem(0, (void *)btn_irq_handler,
+        P2_03_BTN_INTR_ID, (UINTPTR)P2_03_BTN_INTR_PARENT,
+        XINTERRUPT_DEFAULT_PRIORITY);
+#else
+    status = XIntc_Initialize(&amp;intc, P2_03_INTC_DEVICE_ID);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Connect(&amp;intc, P2_03_BTN_INTR_ID,
+        (XInterruptHandler)btn_irq_handler, 0);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Start(&amp;intc, XIN_REAL_MODE);
+    if (status != XST_SUCCESS) return status;
+    XIntc_Enable(&amp;intc, P2_03_BTN_INTR_ID);
+    Xil_ExceptionInit();
+    Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT,
+        (Xil_ExceptionHandler)XIntc_InterruptHandler, &amp;intc);
+    Xil_ExceptionEnable();
+#endif
+    return status;
+}
+
+static void print_status(void)
+{
+    u32 led = Xil_In32(P2_01_LED_BASEADDR);
+    u32 fnd_bcd = Xil_In32(P2_02_FND_BASEADDR + FND_VAL_REG);
+    u32 fnd_ctrl = Xil_In32(P2_02_FND_BASEADDR + FND_CTRL_REG);
+    u32 pressed = Xil_In32(P2_03_BTN_BASEADDR + BTN_PRESSED);
+    u32 pending = Xil_In32(P2_03_BTN_BASEADDR + BTN_PENDING);
+    u32 lost = Xil_In32(P2_03_BTN_BASEADDR + BTN_COALESCED);
+    uart_puts(&quot;STATUS LED=&quot;); uart_puts((led &amp; 1U) ? &quot;ON&quot; : &quot;OFF&quot;);
+    uart_puts(&quot; REG0=0x&quot;); uart_hex32(led);
+    uart_puts(&quot; DISP=&quot;); uart_dec4(p2_visible_decimal(&amp;app));
+    uart_puts((fnd_ctrl &amp; 1U) ? &quot; ON&quot; : &quot; OFF&quot;);
+    uart_puts(&quot; MODE=&quot;); uart_puts(app.mode ? &quot;EVENTS&quot; : &quot;VALUE&quot;);
+    uart_puts(&quot; VALUE=&quot;); uart_dec4(app.value);
+    uart_puts(&quot; EVENTS=&quot;); uart_dec4(app.event_count);
+    uart_puts(&quot; FND_REG0=0x&quot;); uart_hex32(fnd_bcd);
+    uart_puts(&quot; BTN_PRESSED=0x&quot;); uart_hex32(pressed);
+    uart_puts(&quot; BTN_PENDING=0x&quot;); uart_hex32(pending);
+    uart_puts(&quot; COALESCED=0x&quot;); uart_hex32(lost);
+    // (추가) 03장 STATUS 전체를 유지하고 PWM 상태를 뒤에 추가.
+    {
+        u32 flags = Xil_In32(P2_04_PWM_BASEADDR + PWM_STATUS);
+        u32 p = Xil_In32(P2_04_PWM_BASEADDR + PWM_PERIOD_ACT);
+        u32 d = Xil_In32(P2_04_PWM_BASEADDR + PWM_DUTY_ACT);
+        u32 pct = p ? (u32)(((uint64_t)d * 100U) / p) : 0U;
+        uart_puts(&quot; PWM_SET=&quot;); uart_dec_u32(pwm_requested_percent);
+        uart_puts(&quot;% PWM_ACTIVE=&quot;); uart_dec_u32(pct);
+        uart_puts(&quot;% PWM_PENDING=&quot;); uart_puts((flags &amp; 1U) ? &quot;1&quot; : &quot;0&quot;);
+        uart_puts(&quot; PWM_ENABLE=&quot;); uart_puts((flags &amp; (1U &lt;&lt; 8)) ? &quot;1&quot; : &quot;0&quot;);
+        uart_puts(&quot; PWM_LED=1&quot;);
+    }
+    uart_puts(&quot;\r\n&quot;);
+}
+
+static void handle_line(const char *line)
+{
+    uint16_t value = 0;
+    u8 pwm_percent = 0U;
+    PwmParseResult pwm_cmd = pwm_parse_command(line, &amp;pwm_percent);
+    P2Command cmd;
+    if (pwm_cmd != PWM_NOT_COMMAND) {
+        if (pwm_cmd == PWM_INVALID) {
+            uart_puts(&quot;ERROR: PWM 0..100 (decimal, no leading zeroes)\r\n&quot;);
+        } else if (!pwm_queue_percent(pwm_percent)) {
+            uart_puts(&quot;BUSY: previous PWM update pending; retry\r\n&quot;);
+        } else {
+            uart_puts(&quot;OK PWM &quot;); uart_dec_u32(pwm_percent);
+            uart_puts(&quot; QUEUED\r\n&quot;); // 실제 출력은 다음 주기 경계에서 반영됨.
+        }
+        return;
+    }
+    cmd = p2_parse_command(line, &amp;value);
+    switch (cmd) {
+    case P2_CMD_LED_ON:
+        Xil_Out32(P2_01_LED_BASEADDR, 1U);
+        uart_puts(&quot;OK LED ON\r\n&quot;); break;
+    case P2_CMD_LED_OFF:
+        Xil_Out32(P2_01_LED_BASEADDR, 0U);
+        uart_puts(&quot;OK LED OFF\r\n&quot;); break;
+    case P2_CMD_DISP_VALUE:
+        p2_set_disp(&amp;app, value); fnd_commit();
+        uart_puts(&quot;OK DISP &quot;); uart_dec4(value); uart_puts(&quot;\r\n&quot;); break;
+    case P2_CMD_DISP_OFF:
+        app.display_on = 0; fnd_commit(); uart_puts(&quot;OK DISP OFF\r\n&quot;); break;
+    case P2_CMD_STATUS:
+        print_status(); break;
+    default:
+        uart_puts(&quot;ERROR: LED ON | LED OFF | DISP dddd | DISP OFF | PWM 0..100 | STATUS\r\n&quot;);
+    }
+}
+
+static void poll_uart(void)
+{
+    static char line[LINE_CAP];
+    static u32 used = 0;
+    static int invalid = 0;
+    static int overflow = 0;
+    u8 ch;
+    if (XUartLite_IsReceiveEmpty(UART_BASEADDR)) return;
+    ch = XUartLite_RecvByte(UART_BASEADDR);
+    if (ch == &#x27;\r&#x27; || ch == &#x27;\n&#x27;) {
+        line[used] = &#x27;\0&#x27;;
+        if (overflow) uart_puts(&quot;ERROR: line too long\r\n&quot;);
+        else if (invalid) uart_puts(&quot;ERROR: invalid ASCII\r\n&quot;);
+        else if (used) handle_line(line);
+        used = 0; overflow = 0; invalid = 0;
+        return; // CRLF second terminator is ignored.
+    }
+    if (ch &lt; 0x20U || ch &gt; 0x7EU) { invalid = 1; return; }
+    if (used &lt; LINE_CAP-1U) line[used++] = (char)ch;
+    else overflow = 1;
+}
+
+static void service_button_events(void)
+{
+    unsigned i;
+    for (i = 0; i &lt; 8U; ++i) {
+        // Each 32-bit read is atomic on the target 32-bit CPU. ISR only increments.
+        u32 seen = irq_counts[i];
+        while (handled_counts[i] != seen) {
+            handled_counts[i]++;
+            p2_apply_button(&amp;app, i);
+            fnd_commit();
+        }
+    }
+}
+
+int main(void)
+{
+    int status;
+    unsigned i;
+    p2_init(&amp;app);
+    for (i=0; i&lt;8U; ++i) { irq_counts[i]=0U; handled_counts[i]=0U; }
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_ENABLE, 0U); // Mask IRQ while setting up.
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_PENDING, 0xFFU); // Clear stale events.
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_COALESCED, 0xFFU); // Clear stale loss flags.
+    if (Xil_In32(P2_03_BTN_BASEADDR + BTN_ID) != 0x00030001U) {
+        uart_puts(&quot;ERROR: button IP identity mismatch\r\n&quot;); return XST_FAILURE;
+    }
+    // (추가) IP ID를 확인하고 시작할 때 PWM OFF를 예약.
+    if (Xil_In32(P2_04_PWM_BASEADDR + PWM_ID) != PWM_IP_ID) {
+        uart_puts(&quot;ERROR: PWM IP identity mismatch\r\n&quot;);
+        return XST_FAILURE;
+    }
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_PERIOD_CFG, PWM_PERIOD_TICKS);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_DUTY_CFG, 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_CTRL_CFG, 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_APPLY, 1U);
+    fnd_commit();
+    status = setup_button_interrupt();
+    if (status != XST_SUCCESS) {
+        uart_puts(&quot;ERROR: interrupt initialization failed\r\n&quot;);
+        return XST_FAILURE;
+    }
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_ENABLE, 0xFFU);
+    uart_puts(&quot;P2-04: PWM LED1 + BUTTON IRQ + FND + LED0\r\n&quot;);
+    uart_puts(&quot;UART: LED ON | LED OFF | DISP 1234 | DISP OFF | PWM 0..100 | STATUS\r\n&quot;);
+    while (1) {
+        poll_uart(); // Non-blocking: do not starve event processing.
+        service_button_events();
+    }
+}
+</code></pre></div>
+      <div class="codeblock" id="f-part02_1_ch04_sw_p2_04_pwm_logic_c"><div class="codebar"><span>p2_04_pwm_logic.c · C</span></div><pre tabindex="0"><code>#include &quot;p2_04_pwm_logic.h&quot;
+#include &lt;string.h&gt;
+
+PwmParseResult pwm_parse_command(const char *line, uint8_t *percent)
+{
+    unsigned value = 0U;
+    const char *p;
+    // (유지) 기존 LED/DISP 명령은 p2_parse_command()에서 처리.
+    if (strncmp(line, &quot;PWM&quot;, 3) != 0) return PWM_NOT_COMMAND;
+    if (line[3] != &#x27; &#x27;) return PWM_INVALID;
+    p = line + 4;
+    if (*p &lt; &#x27;0&#x27; || *p &gt; &#x27;9&#x27;) return PWM_INVALID;
+    if (*p == &#x27;0&#x27; &amp;&amp; p[1] != &#x27;\0&#x27;) return PWM_INVALID;
+    while (*p &gt;= &#x27;0&#x27; &amp;&amp; *p &lt;= &#x27;9&#x27;) {
+        value = 10U * value + (unsigned)(*p - &#x27;0&#x27;);
+        if (value &gt; 100U) return PWM_INVALID; // 100 초과는 곧바로 차단해 오버플로 방지.
+        ++p;
+    }
+    if (*p != &#x27;\0&#x27;) return PWM_INVALID;
+    *percent = (uint8_t)value;
+    return PWM_VALID;
+}
+
+uint32_t pwm_duty_for_percent(uint32_t period, uint8_t percent)
+{
+    // (추가) 주기값 × 퍼센트의 곱셈을 64비트로 수행.
+    if (percent &gt; 100U) return period; // 방어적 상한 처리. UART parser에서는 오류로 차단.
+    return (uint32_t)(((uint64_t)period * percent) / 100U);
+}
+</code></pre></div>
+    </section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

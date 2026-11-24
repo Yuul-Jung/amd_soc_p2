@@ -1,0 +1,458 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 05장 · CdS 자동 조명 C 프로그램 흐름도",
+ "title": "제2부 05장 · CdS 자동 조명 C 프로그램 흐름도",
+ "subtitle": "",
+ "width": 2482,
+ "height": 722,
+ "headings": {
+  "title": {
+   "x": 1241.0,
+   "y": 44,
+   "w": 2402,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 1241.0,
+   "y": 90,
+   "w": 2402,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "IN",
+   "type": "rect",
+   "x": 154,
+   "y": 338,
+   "w": 187,
+   "h": 76,
+   "title": "poll_uart()",
+   "sub": "Enter -> handle_line()",
+   "fill": "#fff4df",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "CDS",
+   "type": "diamond",
+   "x": 588,
+   "y": 338,
+   "w": 382,
+   "h": 92,
+   "title": "cds_parse_command()",
+   "sub": "",
+   "fill": "#e5e2f9",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "AUTO",
+   "type": "rect",
+   "x": 1588,
+   "y": 188,
+   "w": 191,
+   "h": 76,
+   "title": "AUTO ON/OFF",
+   "sub": "cds_commit_control()",
+   "fill": "#f4f4fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "POL",
+   "type": "rect",
+   "x": 1588,
+   "y": 304,
+   "w": 209,
+   "h": 76,
+   "title": "CDS POL LOW/HIGH",
+   "sub": "cds_commit_control()",
+   "fill": "#f4f4fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "READ",
+   "type": "rect",
+   "x": 1132,
+   "y": 388,
+   "w": 174,
+   "h": 76,
+   "title": "CDS READ",
+   "sub": "cds_print_reading()",
+   "fill": "#f4f4fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "PWM",
+   "type": "diamond",
+   "x": 1132,
+   "y": 512,
+   "w": 405,
+   "h": 92,
+   "title": "pwm_parse_command()",
+   "sub": "",
+   "fill": "#e5e2f9",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "OUT",
+   "type": "rect",
+   "x": 2308,
+   "y": 388,
+   "w": 169,
+   "h": 56,
+   "title": "UART response",
+   "sub": "",
+   "fill": "#e4f4ed",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "Q",
+   "type": "rect",
+   "x": 1958,
+   "y": 488,
+   "w": 196,
+   "h": 76,
+   "title": "PWM 0..100",
+   "sub": "pwm_queue_percent()",
+   "fill": "#f4f4fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "OLD",
+   "type": "rect",
+   "x": 1958,
+   "y": 604,
+   "w": 230,
+   "h": 76,
+   "title": "p2_parse_command()",
+   "sub": "LED/DISP/STATUS",
+   "fill": "#eaf4ff",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "IN",
+   "to": "CDS",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "CDS",
+   "to": "AUTO",
+   "label": "AUTO",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1368,
+     338
+    ],
+    [
+     1368,
+     188
+    ]
+   ]
+  },
+  {
+   "id": "e3",
+   "from": "CDS",
+   "to": "POL",
+   "label": "POL",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1368,
+     338
+    ],
+    [
+     1368,
+     304
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "CDS",
+   "to": "READ",
+   "label": "READ",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     813,
+     338
+    ],
+    [
+     813,
+     388
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "CDS",
+   "to": "PWM",
+   "label": "other",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     813,
+     338
+    ],
+    [
+     813,
+     512
+    ]
+   ]
+  },
+  {
+   "id": "e6",
+   "from": "AUTO",
+   "to": "OUT",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     2107,
+     188
+    ],
+    [
+     2107,
+     388
+    ]
+   ]
+  },
+  {
+   "id": "e7",
+   "from": "POL",
+   "to": "OUT",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     2107,
+     304
+    ],
+    [
+     2107,
+     388
+    ]
+   ]
+  },
+  {
+   "id": "e8",
+   "from": "READ",
+   "to": "OUT",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e9",
+   "from": "PWM",
+   "to": "Q",
+   "label": "PWM",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1727,
+     512
+    ],
+    [
+     1727,
+     488
+    ]
+   ]
+  },
+  {
+   "id": "e10",
+   "from": "PWM",
+   "to": "OLD",
+   "label": "other",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "left"
+  },
+  {
+   "id": "e11",
+   "from": "Q",
+   "to": "OUT",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     2107,
+     488
+    ],
+    [
+     2107,
+     388
+    ]
+   ]
+  },
+  {
+   "id": "e12",
+   "from": "OLD",
+   "to": "OUT",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     2107,
+     604
+    ],
+    [
+     2107,
+     388
+    ]
+   ]
+  }
+ ]
+}

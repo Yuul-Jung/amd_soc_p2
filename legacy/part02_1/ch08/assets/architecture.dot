@@ -1,0 +1,21 @@
+digraph P208 {
+  graph [rankdir=LR, bgcolor="white", pad="0.3", nodesep="0.45", ranksep="0.85", splines=polyline];
+  node [fontname="DejaVu Sans",fontsize=11,shape=box,style="rounded,filled",color="#9aa6b6",fillcolor="#f7f8fd",margin="0.18,0.14"];
+  edge [color="#596679",fontname="DejaVu Sans",fontsize=10,arrowsize=0.7];
+  pc[label="PC UART\nADC READ / ADC PWM"];
+  cpu[label="MicroBlaze V\nmain_p2_08.c",fillcolor="#ece9fc"];
+  xadc[label="xadc_wiz_0\nAXI4-Lite",fillcolor="#e5f3ff"];
+  analog[label="VAUX6 (JXADC1/7)\n0~1V differential",fillcolor="#fff5e5"];
+  pwm[label="p2_04_axi_pwm\nperiod-boundary apply"];
+  gate[label="auto_light_controller\nCdS gate"];
+  led[label="LED1",fillcolor="#e7f6ec"];
+  sonar[label="HC-SR04",fillcolor="#fff5e5"];
+  motor[label="motor_controller\nunchanged protection",fillcolor="#fff5e5"];
+  pc -> cpu [label="UART lines"];
+  cpu -> pc [label="ADC report",constraint=false];
+  analog -> xadc;
+  xadc -> cpu [label="AXI sample"];
+  cpu -> pwm [label="one-shot Duty"];
+  pwm -> gate; gate -> led;
+  sonar -> motor [label="separate safety"];
+}

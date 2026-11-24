@@ -1,0 +1,272 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 07장 · DC 모터 구조도",
+ "title": "제2부 07장 · DC 모터 구조도",
+ "subtitle": "",
+ "width": 1374,
+ "height": 1276,
+ "headings": {
+  "title": {
+   "x": 687.0,
+   "y": 44,
+   "w": 1294,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 687.0,
+   "y": 90,
+   "w": 1294,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "uart",
+   "type": "rect",
+   "x": 200,
+   "y": 188,
+   "w": 213,
+   "h": 76,
+   "title": "PC UART",
+   "sub": "MOTOR FWD / REV / STOP",
+   "fill": "#f1f4fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "cpu",
+   "type": "rect",
+   "x": 200,
+   "y": 382,
+   "w": 220,
+   "h": 76,
+   "title": "MicroBlaze V",
+   "sub": "handle_line() / Xil_Out32()",
+   "fill": "#f1f4fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "motoraxi",
+   "type": "rect",
+   "x": 200,
+   "y": 576,
+   "w": 187,
+   "h": 76,
+   "title": "07장 motor AXI IP",
+   "sub": "CMD / STATUS / ID",
+   "fill": "#eae7fc",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "sonic",
+   "type": "rect",
+   "x": 1078,
+   "y": 576,
+   "w": 252,
+   "h": 76,
+   "title": "06장 HC-SR04 AXI IP",
+   "sub": "AUTO / DONE / VALID / UNSAFE",
+   "fill": "#fcf3e1",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "core",
+   "type": "rect",
+   "x": 1148,
+   "y": 770,
+   "w": 212,
+   "h": 76,
+   "title": "motor_controller",
+   "sub": "TRIP · 유효시간 · 방향 대기",
+   "fill": "#eae7fc",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "pins",
+   "type": "rect",
+   "x": 1148,
+   "y": 964,
+   "w": 274,
+   "h": 76,
+   "title": "JB1 IN1 / JB2 IN2 / JB3 ENA",
+   "sub": "3.3V logic, 외부 풀다운",
+   "fill": "#ebf6f0",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "driver",
+   "type": "rect",
+   "x": 1148,
+   "y": 1158,
+   "w": 162,
+   "h": 76,
+   "title": "L298N 드라이버",
+   "sub": "외부 모터 전원",
+   "fill": "#ebf6f0",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "uart",
+   "to": "cpu",
+   "label": "문자열 + Enter",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top"
+  },
+  {
+   "id": "e2",
+   "from": "cpu",
+   "to": "motoraxi",
+   "label": "AXI4-Lite",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top"
+  },
+  {
+   "id": "e3",
+   "from": "sonic",
+   "to": "core",
+   "label": "하드웨어 안전 신호",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top",
+   "bendPoints": [
+    [
+     1078,
+     648
+    ],
+    [
+     1148,
+     648
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "motoraxi",
+   "to": "core",
+   "label": "request_dir",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top",
+   "bendPoints": [
+    [
+     200,
+     648
+    ],
+    [
+     1148,
+     648
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "core",
+   "to": "pins",
+   "label": "IN1, IN2, ENA",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top"
+  },
+  {
+   "id": "e6",
+   "from": "pins",
+   "to": "driver",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "bottom",
+   "tp": "top"
+  }
+ ]
+}

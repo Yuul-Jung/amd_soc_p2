@@ -1,0 +1,431 @@
+{
+ "version": 3,
+ "pageTitle": "제2부 07장 · DC 모터 C 프로그램 흐름도",
+ "title": "제2부 07장 · DC 모터 C 프로그램 흐름도",
+ "subtitle": "",
+ "width": 2434,
+ "height": 597,
+ "headings": {
+  "title": {
+   "x": 1217.0,
+   "y": 44,
+   "w": 2354,
+   "h": 50,
+   "size": 26,
+   "align": "left",
+   "autoFit": true
+  },
+  "subtitle": {
+   "x": 1217.0,
+   "y": 90,
+   "w": 2354,
+   "h": 30,
+   "size": 15,
+   "align": "left",
+   "autoFit": true
+  }
+ },
+ "settings": {
+  "fontMain": 18,
+  "fontSub": 15,
+  "stroke": 2.4,
+  "gap": 40,
+  "pad": 8,
+  "padY": 5,
+  "defaultPreset": "navy"
+ },
+ "nodes": [
+  {
+   "id": "input",
+   "type": "rect",
+   "x": 142,
+   "y": 281,
+   "w": 163,
+   "h": 76,
+   "title": "poll_uart()",
+   "sub": "Enter로 문자열 완성",
+   "fill": "#f6f7fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "parse",
+   "type": "rect",
+   "x": 520,
+   "y": 281,
+   "w": 295,
+   "h": 56,
+   "title": "motor_parse_command(line)",
+   "sub": "",
+   "fill": "#e8e3f8",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "stop",
+   "type": "rect",
+   "x": 1244,
+   "y": 188,
+   "w": 163,
+   "h": 76,
+   "title": "MOTOR STOP",
+   "sub": "CMD=0 · TRIP 해제",
+   "fill": "#f6f7fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "cmd",
+   "type": "rect",
+   "x": 916,
+   "y": 247,
+   "w": 195,
+   "h": 76,
+   "title": "MOTOR FWD / REV",
+   "sub": "안전 상태 조회",
+   "fill": "#f6f7fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "status",
+   "type": "rect",
+   "x": 916,
+   "y": 363,
+   "w": 173,
+   "h": 76,
+   "title": "MOTOR STATUS",
+   "sub": "요청/실제/보호 출력",
+   "fill": "#f6f7fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "other",
+   "type": "rect",
+   "x": 916,
+   "y": 479,
+   "w": 150,
+   "h": 76,
+   "title": "기존 01~06장",
+   "sub": "문자열 명령 처리",
+   "fill": "#f6f7fb",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "hw",
+   "type": "rect",
+   "x": 1916,
+   "y": 251,
+   "w": 189,
+   "h": 76,
+   "title": "motor_controller",
+   "sub": "센서+신선도+방향 대기",
+   "fill": "#e8e3f8",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "blocked",
+   "type": "rect",
+   "x": 1574,
+   "y": 247,
+   "w": 196,
+   "h": 76,
+   "title": "안전하지 않음 / TRIP",
+   "sub": "BLOCKED 표시",
+   "fill": "#fff1e5",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "request",
+   "type": "rect",
+   "x": 1574,
+   "y": 363,
+   "w": 174,
+   "h": 76,
+   "title": "CMD=1 / CMD=2",
+   "sub": "요청만 등록",
+   "fill": "#e8f3ec",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  },
+  {
+   "id": "out",
+   "type": "rect",
+   "x": 2252,
+   "y": 251,
+   "w": 183,
+   "h": 76,
+   "title": "실제 IN1/IN2/ENA",
+   "sub": "구동 또는 안전 정지",
+   "fill": "#e8f3ec",
+   "autoFit": false,
+   "textAlign": "center",
+   "strokeColor": "#1F3A5F",
+   "strokeWidth": 2.2,
+   "textColor": "#172439",
+   "subTextColor": "#273e5e",
+   "fontMain": 18,
+   "fontSub": 15
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "from": "input",
+   "to": "parse",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e2",
+   "from": "parse",
+   "to": "stop",
+   "label": "STOP",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     702,
+     281
+    ],
+    [
+     702,
+     188
+    ]
+   ]
+  },
+  {
+   "id": "e3",
+   "from": "parse",
+   "to": "cmd",
+   "label": "FWD/REV",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     702,
+     281
+    ],
+    [
+     702,
+     247
+    ]
+   ]
+  },
+  {
+   "id": "e4",
+   "from": "parse",
+   "to": "status",
+   "label": "STATUS",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     702,
+     281
+    ],
+    [
+     702,
+     363
+    ]
+   ]
+  },
+  {
+   "id": "e5",
+   "from": "parse",
+   "to": "other",
+   "label": "기타",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     702,
+     281
+    ],
+    [
+     702,
+     479
+    ]
+   ]
+  },
+  {
+   "id": "e6",
+   "from": "stop",
+   "to": "hw",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1706,
+     188
+    ],
+    [
+     1706,
+     251
+    ]
+   ]
+  },
+  {
+   "id": "e7",
+   "from": "cmd",
+   "to": "blocked",
+   "label": "위험",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  },
+  {
+   "id": "e8",
+   "from": "cmd",
+   "to": "request",
+   "label": "안전",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1360,
+     247
+    ],
+    [
+     1360,
+     363
+    ]
+   ]
+  },
+  {
+   "id": "e9",
+   "from": "request",
+   "to": "hw",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left",
+   "bendPoints": [
+    [
+     1706,
+     363
+    ],
+    [
+     1706,
+     251
+    ]
+   ]
+  },
+  {
+   "id": "e10",
+   "from": "hw",
+   "to": "out",
+   "label": "",
+   "route": "auto",
+   "strokeColor": "#4635B1",
+   "strokeWidth": 2.4,
+   "arrowSize": 13,
+   "labelFont": 14,
+   "fp": "right",
+   "tp": "left"
+  }
+ ]
+}

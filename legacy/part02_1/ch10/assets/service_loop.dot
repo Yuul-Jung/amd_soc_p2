@@ -1,0 +1,13 @@
+digraph Loop {
+ graph [rankdir=LR,bgcolor="white",pad="0.26",nodesep="0.85",ranksep="1.17",splines=polyline,outputorder=edgesfirst];
+ node [shape=box,style="rounded,filled",fontname="DejaVu Sans",fontsize=13,fillcolor="#F4F8FC",color="#7590B0",margin="0.30,0.22"];
+ edge [color="#58647A",penwidth=1.7,arrowsize=.72];
+ START[label="main() 반복 루프"];
+ UART[label="poll_uart()"];
+ BTN[label="service_button_events()\nBTNR LONG -> 정지 요청"];
+ GUARD[label="service_capstone()\np2_10_tick()"];
+ ACTION[label="위험 발견 시\nMOTOR STOP + FAULT latch",fillcolor="#FFF0ED",color="#CC887D"];
+ REST[label="service_sonic_display()\nservice_legacy_gpio_leds()"];
+ START->UART->BTN->GUARD;
+ GUARD->ACTION;GUARD->REST;
+}

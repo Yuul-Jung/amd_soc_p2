@@ -1,0 +1,966 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 05.1장 · C 코드 풀이">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 05.1장 · C 코드 풀이 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-05-1">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 05.1장 <span class="vbadge">v02</span></p>
+    <h1>제2부 05.1장 · C 코드 풀이</h1>
+    <p>소스 기존을 누락 없이 제시하고, 주요 구문과 실제 하드웨어 동작을 연결합니다.</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+ <section class="section" id="overview">
+<h2><span class="num">00</span>이 장의 목표</h2>
+<p>소스 기존을 누락 없이 제시하고, 주요 구문과 실제 하드웨어 동작을 연결합니다.</p>
+</section>
+<section class="section" id="glossary">
+<h2><span class="num">01</span>소스 이해에 필요한 용어</h2>
+<div>A · 용어</div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>용어</th><th>의미</th></tr></thead><tbody><tr><td><code>u8 / u32</code></td><td>AMD BSP의 부호 없는 8비트 / 32비트 정수형. 상태 비트와 32비트 AXI 레지스터값을 저장한다.</td></tr><tr><td><code>UINTPTR</code></td><td>포인터 크기의 주소 정수형. 실제 SDT 인터럽트 경로에 따라 사용한다.</td></tr><tr><td><code>Xil_In32</code></td><td>지정 메모리 매핑 주소에서 32비트 레지스터를 읽는다. 예: BASE+0x04 STATUS.</td></tr><tr><td><code>Xil_Out32</code></td><td>지정 메모리 매핑 주소로 32비트 값을 기록한다. 예: BASE+0x00 CONTROL.</td></tr><tr><td><code>XUartLite_RecvByte</code></td><td>AXI UART Lite(유아트 라이트, 간이 비동기 통신 IP)의 RX 수신 바이트를 가져온다.</td></tr><tr><td><code>XUartLite_IsReceiveEmpty</code></td><td>UART RX FIFO에 처리할 문자가 있는지 비차단 방식으로 검사한다.</td></tr><tr><td><code>strcmp / strncmp</code></td><td>C 표준 문자열 전체 비교 / 지정 길이 접두 비교. 대문자·공백까지 일치해야 한다.</td></tr><tr><td><code>#error</code></td><td>BSP 주소·IRQ 설정이 빠졌거나 잘못되면 빌드를 즉시 막는 전처리 지시문.</td></tr><tr><td><code>volatile</code></td><td>ISR과 메인 루프가 공유하는 카운터가 컴파일러 최적화로 사라지지 않도록 지정. 자동 동기화/원자성은 보장하지 않는다.</td></tr><tr><td><code>SDT</code></td><td>System Device Tree(시스템 디바이스 트리) 기반 BSP. Classic 장치 ID 방식과 인터럽트 설정이 다를 수 있다.</td></tr><tr><td><code>UINT32 / uint64_t</code></td><td>표준 C 정수 자료형. PWM 기간 × 퍼센트 계산 중 overflow 방지에 64비트 정수를 사용한다.</td></tr></tbody></table></div>
+</section>
+<section class="section" id="cmain">
+<h2><span class="num">02</span>main_p2_05.c 전체</h2>
+<div>B · 소스 + 코드 풀이</div><p><b>코드 풀이 — 이 코드가 무엇을 하는가:</b> <code>poll_uart()</code>가 바이트를 조합해 Enter로 완성된 문자열을 만들고 <code>handle_line()</code>으로 전달한다. 여기서 먼저 <code>cds_parse_command()</code>, 그 다음 04장 <code>pwm_parse_command()</code>, 마지막으로 기존 03장 <code>p2_parse_command()</code> 순으로 명령을 처리한다. 새 CONTROL 레지스터는 <code>Xil_Out32(P2_05_CDS_BASEADDR + 0x00, value)</code>로 기록한다. <code>STATUS</code>는 실제 하드웨어 상태와 AUTO 설정을 읽는다. 기존 버튼 ISR은 이벤트를 기록하고 Main Loop에서 FND를 갱신한다.</p><div><a href="#f-part02_1_ch05_sw_main_p2_05_c">소스 열기</a></div><div class="codeblock" id="f-part02_1_ch05_sw_main_p2_05_c"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>/* P2-05: retain P2-01~04 and gate PWM LED1 with filtered CdS DO.
+ * NOTE: Base addresses, Interrupt ID/Parent MUST be read from actual BSP.
+ * This source intentionally rejects unknown constants before target build.
+ */
+#include "xparameters.h"
+#include "xil_types.h"      /* u8, u32, UINTPTR */
+#include "xil_io.h"         /* Xil_In32, Xil_Out32 */
+#include "xuartlite_l.h"    /* UART Lite byte functions + FIFO empty check */
+#include "xstatus.h"
+#include "xil_exception.h"
+#ifdef SDT
+#include "xinterrupt_wrap.h" /* SDT interrupt API */
+#else
+#include "xintc.h"          /* Classic interrupt controller API */
+#endif
+#include "p2_03_logic.h"
+#include "p2_04_pwm_logic.h" // Reused 04 PWM parser / duty calculation
+#include "p2_05_cds_logic.h" // (추가) Reusable AUTO/CDS command parser
+
+#ifndef P2_04_PWM_BASEADDR
+#define P2_04_PWM_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_04_PWM_BASEADDR == 0xFFFFFFFFU
+#error "Set P2_04_PWM_BASEADDR from CURRENT Vivado Address Editor/xparameters.h"
+#endif
+// (추가) Never guess the fifth AXI IP base: use CURRENT generated BSP.
+#ifndef P2_05_CDS_BASEADDR
+#define P2_05_CDS_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_05_CDS_BASEADDR == 0xFFFFFFFFU
+#error "Set P2_05_CDS_BASEADDR from CURRENT Address Editor/xparameters.h"
+#endif
+#ifndef P2_01_LED_BASEADDR
+#define P2_01_LED_BASEADDR 0xFFFFFFFFU
+#endif
+#ifndef P2_02_FND_BASEADDR
+#define P2_02_FND_BASEADDR 0xFFFFFFFFU
+#endif
+#ifndef P2_03_BTN_BASEADDR
+#define P2_03_BTN_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_01_LED_BASEADDR == 0xFFFFFFFFU || P2_02_FND_BASEADDR == 0xFFFFFFFFU || P2_03_BTN_BASEADDR == 0xFFFFFFFFU
+#error "Set all three AXI IP addresses from CURRENT Address Editor/xparameters.h"
+#endif
+#if P2_01_LED_BASEADDR == P2_02_FND_BASEADDR || P2_01_LED_BASEADDR == P2_03_BTN_BASEADDR || P2_02_FND_BASEADDR == P2_03_BTN_BASEADDR
+#error "Three user AXI IP base addresses must be unique"
+#endif
+#ifndef P2_03_BTN_INTR_ID
+#error "Fill P2_03_BTN_INTR_ID from CURRENT generated BSP interrupt map"
+#endif
+#ifdef SDT
+#ifndef P2_03_BTN_INTR_PARENT
+#error "Fill P2_03_BTN_INTR_PARENT (SDT encoded interrupt parent) from actual BSP"
+#endif
+#else
+#ifndef P2_03_INTC_DEVICE_ID
+#error "Fill P2_03_INTC_DEVICE_ID from Classic BSP"
+#endif
+#endif
+
+#if defined(XPAR_XUARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_XUARTLITE_0_BASEADDR
+#elif defined(XPAR_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_UARTLITE_0_BASEADDR
+#elif defined(XPAR_AXI_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_AXI_UARTLITE_0_BASEADDR
+#else
+#error "Check UART Lite base macro in the generated xparameters.h"
+#endif
+
+#define FND_VAL_REG  0x00U
+#define FND_CTRL_REG 0x04U
+#define BTN_PENDING  0x00U
+#define BTN_ENABLE   0x04U
+#define BTN_PRESSED  0x08U
+#define BTN_ID       0x0CU
+#define BTN_COALESCED 0x10U
+// P2-04 register offsets: 32-bit, byte-addressed.
+#define PWM_PERIOD_CFG 0x00U
+#define PWM_DUTY_CFG   0x04U
+#define PWM_CTRL_CFG   0x08U
+#define PWM_APPLY      0x0CU
+#define PWM_STATUS     0x10U
+#define PWM_PERIOD_ACT 0x14U
+#define PWM_DUTY_ACT   0x18U
+#define PWM_ID         0x1CU
+#define PWM_IP_ID      0x00040001U
+#define PWM_PERIOD_TICKS 100000U // AXI Clock이 실제 100MHz일 때 1kHz.
+#if P2_04_PWM_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_04_PWM_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_04_PWM_BASEADDR == P2_03_BTN_BASEADDR
+#error "New PWM IP base must differ from all prior IP addresses"
+#endif
+// (추가) P2-05 digital CdS AXI register map (32-bit byte offsets).
+#define CDS_CTRL    0x00U
+#define CDS_STATUS  0x04U
+#define CDS_IP_ID   0x08U
+#define CDS_FILTER  0x0CU
+#define CDS_EXPECTED_ID 0x00050001U
+#if P2_05_CDS_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_05_CDS_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_05_CDS_BASEADDR == P2_03_BTN_BASEADDR || \
+    P2_05_CDS_BASEADDR == P2_04_PWM_BASEADDR
+#error "P2-05 CdS IP base address must differ from P2-01~04"
+#endif
+#define LINE_CAP     32U
+
+static P2AppState app;
+static u8 pwm_requested_percent = 0U;
+// (추가) The C application owns control policy; RTL filters raw CdS signal.
+static u8 cds_auto_enabled = 0U;
+static u8 cds_dark_when_low = 1U; // Start assumption; verify DO via CDS READ.
+
+static volatile u32 irq_counts[8]; // ISR writes monotonically; main reads.
+static u32 handled_counts[8];      // Main-only processed counts.
+#ifndef SDT
+static XIntc intc;
+#endif
+
+static void uart_puts(const char *s)
+{
+    while (*s) XUartLite_SendByte(UART_BASEADDR, (u8)*s++);
+}
+static void uart_hex32(u32 v)
+{
+    const char hex[] = "0123456789ABCDEF";
+    int shift;
+    for (shift = 28; shift &gt;= 0; shift -= 4)
+        XUartLite_SendByte(UART_BASEADDR, (u8)hex[(v &gt;&gt; shift) &amp; 15U]);
+}
+static void uart_dec4(u32 value)
+{
+    int d;
+    u32 divisors[4] = {1000U, 100U, 10U, 1U};
+    for (d = 0; d &lt; 4; ++d) {
+        u32 n = (value / divisors[d]) % 10U;
+        XUartLite_SendByte(UART_BASEADDR, (u8)('0' + n));
+    }
+}
+
+// (추가) 0~4294967295를 선행 0 없이 UART에 출력.
+static void uart_dec_u32(u32 value)
+{
+    char tmp[10]; // u32 십진수 최대 10자리.
+    unsigned used = 0U;
+    do {
+        tmp[used++] = (char)('0' + (value % 10U));
+        value /= 10U;
+    } while (value != 0U);
+    while (used != 0U)
+        XUartLite_SendByte(UART_BASEADDR, (u8)tmp[--used]);
+}
+
+// (추가) 이전 설정이 반영 중이면 BUSY, 아니면 다음 주기 적용을 예약.
+static int pwm_queue_percent(u8 percent)
+{
+    u32 duty;
+    if ((Xil_In32(P2_04_PWM_BASEADDR + PWM_STATUS) &amp; 1U) != 0U)
+        return 0; // 기존 Pending 설정을 덮지 않는다.
+    duty = pwm_duty_for_percent(PWM_PERIOD_TICKS, percent);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_PERIOD_CFG, PWM_PERIOD_TICKS);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_DUTY_CFG, duty);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_CTRL_CFG, percent ? 1U : 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_APPLY, 1U);
+    pwm_requested_percent = percent;
+    return 1;
+}
+
+// (추가) Write configuration as one atomic 32-bit AXI register update.
+static void cds_commit_control(void)
+{
+    Xil_Out32(P2_05_CDS_BASEADDR + CDS_CTRL,
+              cds_control_word(cds_auto_enabled, cds_dark_when_low));
+}
+
+// (추가) Read sensor pins via AXI status, not by polling a physical GPIO.
+static void cds_print_reading(void)
+{
+    u32 bits = Xil_In32(P2_05_CDS_BASEADDR + CDS_STATUS);
+    uart_puts("CDS RAW="); uart_dec_u32(bits &amp; 1U);
+    uart_puts(" DARK="); uart_dec_u32((bits &gt;&gt; 1) &amp; 1U);
+    uart_puts(" VALID="); uart_dec_u32((bits &gt;&gt; 2) &amp; 1U);
+    uart_puts(" GATE="); uart_dec_u32((bits &gt;&gt; 3) &amp; 1U);
+    uart_puts(" AUTO="); uart_dec_u32((bits &gt;&gt; 4) &amp; 1U);
+    uart_puts(" POL="); uart_puts((bits &amp; (1U &lt;&lt; 5)) ? "LOW" : "HIGH");
+    uart_puts("\r\n");
+}
+
+static void fnd_commit(void)
+{
+    // P2-02: REG0 BCD digits, REG1 bit0 enable. No software scan loops.
+    Xil_Out32(P2_02_FND_BASEADDR + FND_VAL_REG,
+              p2_to_bcd4(p2_visible_decimal(&amp;app)));
+    Xil_Out32(P2_02_FND_BASEADDR + FND_CTRL_REG, (u32)app.display_on);
+}
+
+// Level interrupt: read PENDING, acknowledge W1C, count each asserted type.
+static void btn_irq_handler(void *unused)
+{
+    u32 pending;
+    unsigned i;
+    (void)unused;
+    pending = Xil_In32(P2_03_BTN_BASEADDR + BTN_PENDING) &amp; 0xFFU;
+    if (!pending) return;
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_PENDING, pending); // W1C
+    for (i = 0; i &lt; 8U; ++i)
+        if (pending &amp; (1U &lt;&lt; i)) irq_counts[i]++;
+}
+
+static int setup_button_interrupt(void)
+{
+    int status;
+#ifdef SDT
+    // The physical interrupt ID and parent are project-specific.
+    status = XSetupInterruptSystem(0, (void *)btn_irq_handler,
+        P2_03_BTN_INTR_ID, (UINTPTR)P2_03_BTN_INTR_PARENT,
+        XINTERRUPT_DEFAULT_PRIORITY);
+#else
+    status = XIntc_Initialize(&amp;intc, P2_03_INTC_DEVICE_ID);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Connect(&amp;intc, P2_03_BTN_INTR_ID,
+        (XInterruptHandler)btn_irq_handler, 0);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Start(&amp;intc, XIN_REAL_MODE);
+    if (status != XST_SUCCESS) return status;
+    XIntc_Enable(&amp;intc, P2_03_BTN_INTR_ID);
+    Xil_ExceptionInit();
+    Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT,
+        (Xil_ExceptionHandler)XIntc_InterruptHandler, &amp;intc);
+    Xil_ExceptionEnable();
+#endif
+    return status;
+}
+
+static void print_status(void)
+{
+    u32 led = Xil_In32(P2_01_LED_BASEADDR);
+    u32 fnd_bcd = Xil_In32(P2_02_FND_BASEADDR + FND_VAL_REG);
+    u32 fnd_ctrl = Xil_In32(P2_02_FND_BASEADDR + FND_CTRL_REG);
+    u32 pressed = Xil_In32(P2_03_BTN_BASEADDR + BTN_PRESSED);
+    u32 pending = Xil_In32(P2_03_BTN_BASEADDR + BTN_PENDING);
+    u32 lost = Xil_In32(P2_03_BTN_BASEADDR + BTN_COALESCED);
+    uart_puts("STATUS LED="); uart_puts((led &amp; 1U) ? "ON" : "OFF");
+    uart_puts(" REG0=0x"); uart_hex32(led);
+    uart_puts(" DISP="); uart_dec4(p2_visible_decimal(&amp;app));
+    uart_puts((fnd_ctrl &amp; 1U) ? " ON" : " OFF");
+    uart_puts(" MODE="); uart_puts(app.mode ? "EVENTS" : "VALUE");
+    uart_puts(" VALUE="); uart_dec4(app.value);
+    uart_puts(" EVENTS="); uart_dec4(app.event_count);
+    uart_puts(" FND_REG0=0x"); uart_hex32(fnd_bcd);
+    uart_puts(" BTN_PRESSED=0x"); uart_hex32(pressed);
+    uart_puts(" BTN_PENDING=0x"); uart_hex32(pending);
+    uart_puts(" COALESCED=0x"); uart_hex32(lost);
+    // (추가) 03장 STATUS 전체를 유지하고 PWM 상태를 뒤에 추가.
+    {
+        u32 flags = Xil_In32(P2_04_PWM_BASEADDR + PWM_STATUS);
+        u32 p = Xil_In32(P2_04_PWM_BASEADDR + PWM_PERIOD_ACT);
+        u32 d = Xil_In32(P2_04_PWM_BASEADDR + PWM_DUTY_ACT);
+        u32 pct = p ? (u32)(((uint64_t)d * 100U) / p) : 0U;
+        uart_puts(" PWM_SET="); uart_dec_u32(pwm_requested_percent);
+        uart_puts("% PWM_ACTIVE="); uart_dec_u32(pct);
+        uart_puts("% PWM_PENDING="); uart_puts((flags &amp; 1U) ? "1" : "0");
+        uart_puts(" PWM_ENABLE="); uart_puts((flags &amp; (1U &lt;&lt; 8)) ? "1" : "0");
+        uart_puts(" PWM_LED=1");
+    }
+    // (추가) Append CdS state without removing 04 status fields.
+    {
+        u32 bits = Xil_In32(P2_05_CDS_BASEADDR + CDS_STATUS);
+        uart_puts(" CDS_RAW="); uart_dec_u32(bits &amp; 1U);
+        uart_puts(" CDS_DARK="); uart_dec_u32((bits &gt;&gt; 1) &amp; 1U);
+        uart_puts(" CDS_VALID="); uart_dec_u32((bits &gt;&gt; 2) &amp; 1U);
+        uart_puts(" CDS_GATE="); uart_dec_u32((bits &gt;&gt; 3) &amp; 1U);
+        uart_puts(" CDS_AUTO="); uart_dec_u32((bits &gt;&gt; 4) &amp; 1U);
+        uart_puts(" CDS_POL="); uart_puts((bits &amp; (1U &lt;&lt; 5)) ? "LOW" : "HIGH");
+    }
+    uart_puts("\r\n");
+}
+
+static void handle_line(const char *line)
+{
+    uint16_t value = 0;
+    u8 pwm_percent = 0U;
+    // (추가) AUTO/CDS commands are recognized before existing PWM/LED/DISP.
+    CdsCommand cds_cmd = cds_parse_command(line);
+    PwmParseResult pwm_cmd = pwm_parse_command(line, &amp;pwm_percent);
+    P2Command cmd;
+    if (cds_cmd != CDS_NOT_COMMAND) {
+        switch (cds_cmd) {
+        case CDS_AUTO_ON:
+            cds_auto_enabled=1U; cds_commit_control();
+            uart_puts("OK AUTO ON (PWM duty retained)\r\n"); break;
+        case CDS_AUTO_OFF:
+            cds_auto_enabled=0U; cds_commit_control();
+            uart_puts("OK AUTO OFF (PWM manual)\r\n"); break;
+        case CDS_POL_LOW:
+            cds_dark_when_low=1U; cds_commit_control();
+            uart_puts("OK CDS POL LOW\r\n"); break;
+        case CDS_POL_HIGH:
+            cds_dark_when_low=0U; cds_commit_control();
+            uart_puts("OK CDS POL HIGH\r\n"); break;
+        case CDS_READ:
+            cds_print_reading(); break;
+        default:
+            uart_puts("ERROR: AUTO ON | AUTO OFF | CDS READ | CDS POL LOW | CDS POL HIGH\r\n");
+            break;
+        }
+        return;
+    }
+    if (pwm_cmd != PWM_NOT_COMMAND) {
+        if (pwm_cmd == PWM_INVALID) {
+            uart_puts("ERROR: PWM 0..100 (decimal, no leading zeroes)\r\n");
+        } else if (!pwm_queue_percent(pwm_percent)) {
+            uart_puts("BUSY: previous PWM update pending; retry\r\n");
+        } else {
+            uart_puts("OK PWM "); uart_dec_u32(pwm_percent);
+            uart_puts(" QUEUED\r\n"); // 실제 출력은 다음 주기 경계에서 반영됨.
+        }
+        return;
+    }
+    cmd = p2_parse_command(line, &amp;value);
+    switch (cmd) {
+    case P2_CMD_LED_ON:
+        Xil_Out32(P2_01_LED_BASEADDR, 1U);
+        uart_puts("OK LED ON\r\n"); break;
+    case P2_CMD_LED_OFF:
+        Xil_Out32(P2_01_LED_BASEADDR, 0U);
+        uart_puts("OK LED OFF\r\n"); break;
+    case P2_CMD_DISP_VALUE:
+        p2_set_disp(&amp;app, value); fnd_commit();
+        uart_puts("OK DISP "); uart_dec4(value); uart_puts("\r\n"); break;
+    case P2_CMD_DISP_OFF:
+        app.display_on = 0; fnd_commit(); uart_puts("OK DISP OFF\r\n"); break;
+    case P2_CMD_STATUS:
+        print_status(); break;
+    default:
+        uart_puts("ERROR: LED ON/OFF | DISP dddd/OFF | PWM 0..100 | AUTO ON/OFF | CDS READ/POL LOW/POL HIGH | STATUS\r\n");
+    }
+}
+
+static void poll_uart(void)
+{
+    static char line[LINE_CAP];
+    static u32 used = 0;
+    static int invalid = 0;
+    static int overflow = 0;
+    u8 ch;
+    if (XUartLite_IsReceiveEmpty(UART_BASEADDR)) return;
+    ch = XUartLite_RecvByte(UART_BASEADDR);
+    if (ch == '\r' || ch == '\n') {
+        line[used] = '\0';
+        if (overflow) uart_puts("ERROR: line too long\r\n");
+        else if (invalid) uart_puts("ERROR: invalid ASCII\r\n");
+        else if (used) handle_line(line);
+        used = 0; overflow = 0; invalid = 0;
+        return; // CRLF second terminator is ignored.
+    }
+    if (ch &lt; 0x20U || ch &gt; 0x7EU) { invalid = 1; return; }
+    if (used &lt; LINE_CAP-1U) line[used++] = (char)ch;
+    else overflow = 1;
+}
+
+static void service_button_events(void)
+{
+    unsigned i;
+    for (i = 0; i &lt; 8U; ++i) {
+        // Each 32-bit read is atomic on the target 32-bit CPU. ISR only increments.
+        u32 seen = irq_counts[i];
+        while (handled_counts[i] != seen) {
+            handled_counts[i]++;
+            p2_apply_button(&amp;app, i);
+            fnd_commit();
+        }
+    }
+}
+
+int main(void)
+{
+    int status;
+    unsigned i;
+    p2_init(&amp;app);
+    for (i=0; i&lt;8U; ++i) { irq_counts[i]=0U; handled_counts[i]=0U; }
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_ENABLE, 0U); // Mask IRQ while setting up.
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_PENDING, 0xFFU); // Clear stale events.
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_COALESCED, 0xFFU); // Clear stale loss flags.
+    if (Xil_In32(P2_03_BTN_BASEADDR + BTN_ID) != 0x00030001U) {
+        uart_puts("ERROR: button IP identity mismatch\r\n"); return XST_FAILURE;
+    }
+    // (추가) P2-05 identity check BEFORE enabling automatic operation.
+    if (Xil_In32(P2_05_CDS_BASEADDR + CDS_IP_ID) != CDS_EXPECTED_ID) {
+        uart_puts("ERROR: CdS IP identity mismatch\r\n");
+        return XST_FAILURE;
+    }
+    cds_auto_enabled = 0U; cds_dark_when_low = 1U;
+    cds_commit_control(); // Power-on always begins in manual bypass mode.
+    // (추가) IP ID를 확인하고 시작할 때 PWM OFF를 예약.
+    if (Xil_In32(P2_04_PWM_BASEADDR + PWM_ID) != PWM_IP_ID) {
+        uart_puts("ERROR: PWM IP identity mismatch\r\n");
+        return XST_FAILURE;
+    }
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_PERIOD_CFG, PWM_PERIOD_TICKS);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_DUTY_CFG, 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_CTRL_CFG, 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_APPLY, 1U);
+    fnd_commit();
+    status = setup_button_interrupt();
+    if (status != XST_SUCCESS) {
+        uart_puts("ERROR: interrupt initialization failed\r\n");
+        return XST_FAILURE;
+    }
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_ENABLE, 0xFFU);
+    uart_puts("P2-05: Digital CdS AUTO gate + PWM LED1 + BUTTON IRQ + FND + LED0\r\n");
+    uart_puts("UART: LED ON/OFF | DISP 1234/OFF | PWM 0..100 | AUTO ON/OFF | CDS READ/POL LOW/POL HIGH | STATUS\r\n");
+    while (1) {
+        poll_uart(); // Non-blocking: do not starve event processing.
+        service_button_events();
+    }
+}
+</code></pre></div><p>위 코드 블록은 현재 배포된 기존 파일 전체 내용과 일치합니다.</p>
+</section>
+<section class="section" id="clogic">
+<h2><span class="num">03</span>독립 CdS 명령 파서</h2>
+<div>B · 소스 + 코드 풀이</div><p><b>코드 풀이:</b> <code>strcmp()</code>는 완전히 같은 문자열인지 검사하고, <code>strncmp()</code>는 AUTO/CDS 접두어가 잘못된 형태인지 검사한다. <code>cds_control_word()</code>는 AUTO bit0과 POLARITY bit1을 결합한다. <code>cds_light_on()</code>은 실제 RTL 게이트와 같은 진리표를 갖는 C 기준 모델로 호스트 확인에 사용한다.</p><div><a href="#f-part02_1_ch05_sw_p2_05_cds_logic_c">소스 열기</a></div><div class="codeblock" id="f-part02_1_ch05_sw_p2_05_cds_logic_c"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>#include "p2_05_cds_logic.h"
+#include &lt;string.h&gt;
+
+CdsCommand cds_parse_command(const char *line)
+{
+    if (strcmp(line, "AUTO ON") == 0) return CDS_AUTO_ON;
+    if (strcmp(line, "AUTO OFF") == 0) return CDS_AUTO_OFF;
+    if (strcmp(line, "CDS POL LOW") == 0) return CDS_POL_LOW;
+    if (strcmp(line, "CDS POL HIGH") == 0) return CDS_POL_HIGH;
+    if (strcmp(line, "CDS READ") == 0) return CDS_READ;
+    // (추가) AUTO/CDS로 시작하지만 정해진 문자열과 다르면 명시적 오류.
+    if (strncmp(line, "AUTO", 4) == 0 || strncmp(line, "CDS", 3) == 0)
+        return CDS_INVALID;
+    return CDS_NOT_COMMAND;
+}
+
+uint32_t cds_control_word(uint8_t auto_on, uint8_t dark_when_low)
+{
+    // bit1: low -&gt; dark. bit0: allow CdS gating.
+    return ((dark_when_low ? 1U : 0U) &lt;&lt; 1) | (auto_on ? 1U : 0U);
+}
+
+uint8_t cds_light_on(uint8_t pwm_high, uint8_t auto_on,
+                     uint8_t dark_valid, uint8_t dark_filtered)
+{
+    // Matches auto_light_controller.v; AUTO ON cannot override PWM=0%.
+    return (uint8_t)((pwm_high != 0U) &amp;&amp;
+        ((auto_on == 0U) || ((dark_valid != 0U) &amp;&amp; (dark_filtered != 0U))));
+}
+</code></pre></div><p>위 코드 블록은 현재 배포된 기존 파일 전체 내용과 일치합니다.</p>
+</section>
+<section class="section" id="cheader">
+<h2><span class="num">04</span>CdS 파서 헤더</h2>
+<div>B · 소스 + 코드 풀이</div><p><b>코드 풀이:</b> ENUM은 문자열 명령 종류를 구분한다. 이 파일은 Xilinx BSP에 의존하지 않아 Ubuntu GCC에서도 단위 테스트가 가능하다.</p><div><a href="#f-part02_1_ch05_sw_p2_05_cds_logic_h">소스 열기</a></div><div class="codeblock" id="f-part02_1_ch05_sw_p2_05_cds_logic_h"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>#ifndef P2_05_CDS_LOGIC_H
+#define P2_05_CDS_LOGIC_H
+#include &lt;stdint.h&gt;
+
+// Reusable exact-match ASCII command parser, independent of AMD BSP.
+typedef enum {
+    CDS_NOT_COMMAND=0, CDS_AUTO_ON, CDS_AUTO_OFF,
+    CDS_POL_LOW, CDS_POL_HIGH, CDS_READ, CDS_INVALID
+} CdsCommand;
+CdsCommand cds_parse_command(const char *line);
+uint32_t cds_control_word(uint8_t auto_on, uint8_t dark_when_low);
+uint8_t cds_light_on(uint8_t pwm_high, uint8_t auto_on,
+                     uint8_t dark_valid, uint8_t dark_filtered);
+#endif
+</code></pre></div><p>위 코드 블록은 현재 배포된 기존 파일 전체 내용과 일치합니다.</p>
+</section>
+<section class="section" id="creuse4">
+<h2><span class="num">05</span>04장 PWM parser 재사용</h2>
+<div>B · 소스 + 코드 풀이</div><p><b>코드 풀이:</b> <code>PWM 0..100</code>의 숫자 범위를 검사하고 Duty를 64비트 중간 곱셈으로 안전하게 계산한다. 05장에서 이 파일을 수정하지 않았다.</p><div><a href="#f-part02_1_ch05_sw_p2_04_pwm_logic_c">소스 열기</a></div><div class="codeblock" id="f-part02_1_ch05_sw_p2_04_pwm_logic_c"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>#include "p2_04_pwm_logic.h"
+#include &lt;string.h&gt;
+
+PwmParseResult pwm_parse_command(const char *line, uint8_t *percent)
+{
+    unsigned value = 0U;
+    const char *p;
+    // (유지) 기존 LED/DISP 명령은 p2_parse_command()에서 처리.
+    if (strncmp(line, "PWM", 3) != 0) return PWM_NOT_COMMAND;
+    if (line[3] != ' ') return PWM_INVALID;
+    p = line + 4;
+    if (*p &lt; '0' || *p &gt; '9') return PWM_INVALID;
+    if (*p == '0' &amp;&amp; p[1] != '\0') return PWM_INVALID;
+    while (*p &gt;= '0' &amp;&amp; *p &lt;= '9') {
+        value = 10U * value + (unsigned)(*p - '0');
+        if (value &gt; 100U) return PWM_INVALID; // 100 초과는 곧바로 차단해 오버플로 방지.
+        ++p;
+    }
+    if (*p != '\0') return PWM_INVALID;
+    *percent = (uint8_t)value;
+    return PWM_VALID;
+}
+
+uint32_t pwm_duty_for_percent(uint32_t period, uint8_t percent)
+{
+    // (추가) 주기값 × 퍼센트의 곱셈을 64비트로 수행.
+    if (percent &gt; 100U) return period; // 방어적 상한 처리. UART parser에서는 오류로 차단.
+    return (uint32_t)(((uint64_t)period * percent) / 100U);
+}
+</code></pre></div><p>위 코드 블록은 현재 배포된 기존 파일 전체 내용과 일치합니다.</p>
+</section>
+<section class="section" id="creuse3">
+<h2><span class="num">06</span>03장 누적 명령 parser 재사용</h2>
+<div>B · 소스 + 코드 풀이</div><p><b>코드 풀이:</b> <code>LED ON/OFF</code>, <code>DISP 1234</code>, <code>STATUS</code> 등 기존 명령과 버튼 상태 해석을 유지한다. 05장 명령을 별도 parser로 분리했으므로 기존 코드를 재작성하지 않는다.</p><div><a href="#f-part02_1_ch05_sw_p2_03_logic_c">소스 열기</a></div><div class="codeblock" id="f-part02_1_ch05_sw_p2_03_logic_c"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>#include "p2_03_logic.h"
+#include &lt;string.h&gt;
+
+void p2_init(P2AppState *s)
+{
+    s-&gt;value = 0; s-&gt;event_count = 0;
+    s-&gt;mode = 0; s-&gt;display_on = 0; // Same FND reset-off policy as P2-02.
+}
+
+static uint16_t wrap_10000(int value)
+{
+    value %= 10000;
+    if (value &lt; 0) value += 10000;
+    return (uint16_t)value;
+}
+
+void p2_apply_button(P2AppState *s, unsigned event_bit)
+{
+    // Bit 0..3 short U/D/L/R; 4..7 long U/D/L/R.
+    if (event_bit &gt; 7U) return;
+    s-&gt;event_count = wrap_10000((int)s-&gt;event_count + 1);
+    switch (event_bit) {
+    case 0: s-&gt;value = wrap_10000((int)s-&gt;value + 1); break;
+    case 1: s-&gt;value = wrap_10000((int)s-&gt;value - 1); break;
+    case 2: s-&gt;mode ^= 1U; break;
+    case 3: s-&gt;display_on ^= 1U; break;
+    case 4: s-&gt;value = wrap_10000((int)s-&gt;value + 100); break;
+    case 5: s-&gt;value = wrap_10000((int)s-&gt;value - 100); break;
+    case 6: s-&gt;value = 0; break;
+    case 7: p2_init(s); s-&gt;display_on = 1; break; // Reset all, show 0000.
+    default: break;
+    }
+}
+
+void p2_set_disp(P2AppState *s, uint16_t value)
+{
+    s-&gt;value = value; s-&gt;mode = 0; s-&gt;display_on = 1;
+}
+
+uint16_t p2_visible_decimal(const P2AppState *s)
+{
+    return (s-&gt;mode == 0U) ? s-&gt;value : s-&gt;event_count;
+}
+
+uint16_t p2_to_bcd4(uint16_t value)
+{
+    // 0050 -&gt; 0x0050; do not use binary integer 50 as FND raw digits.
+    uint16_t thousands = (uint16_t)(value / 1000U);
+    uint16_t hundreds = (uint16_t)((value / 100U) % 10U);
+    uint16_t tens = (uint16_t)((value / 10U) % 10U);
+    uint16_t ones = (uint16_t)(value % 10U);
+    return (uint16_t)((thousands &lt;&lt; 12) | (hundreds &lt;&lt; 8) |
+                      (tens &lt;&lt; 4) | ones);
+}
+
+P2Command p2_parse_command(const char *text, uint16_t *disp_value)
+{
+    unsigned i;
+    unsigned v = 0;
+    if (strcmp(text, "LED ON") == 0) return P2_CMD_LED_ON;
+    if (strcmp(text, "LED OFF") == 0) return P2_CMD_LED_OFF;
+    if (strcmp(text, "STATUS") == 0) return P2_CMD_STATUS;
+    if (strcmp(text, "DISP OFF") == 0) return P2_CMD_DISP_OFF;
+    if (strlen(text) != 9U || memcmp(text, "DISP ", 5U) != 0)
+        return P2_CMD_INVALID;
+    for (i = 5U; i &lt; 9U; ++i) {
+        if (text[i] &lt; '0' || text[i] &gt; '9') return P2_CMD_INVALID;
+        v = v * 10U + (unsigned)(text[i] - '0');
+    }
+    *disp_value = (uint16_t)v;
+    return P2_CMD_DISP_VALUE;
+}
+</code></pre></div><p>위 코드 블록은 현재 배포된 기존 파일 전체 내용과 일치합니다.</p>
+</section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

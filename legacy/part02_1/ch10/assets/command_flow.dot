@@ -1,0 +1,15 @@
+digraph Command {
+ graph [rankdir=LR,bgcolor="white",pad="0.25",nodesep="0.82",ranksep="1.13",splines=polyline,outputorder=edgesfirst];
+ node [shape=box,style="rounded,filled",fontname="DejaVu Sans",fontsize=13,fillcolor="#F5F3FF",color="#8B7BBB",margin="0.29,0.23"];
+ edge [color="#667188",penwidth=1.7,arrowsize=.7];
+ A[label="poll_uart()\nEnter로 명령 확정"];
+ B[label="handle_line()\ncap_handle_line()"];
+ C[label="p2_10_parse()\nRUN 명령 판별",fillcolor="#FFF6DE"];
+ START[label="RUN START\np2_10_start()\n조건 충족 시 FWD 요청"];
+ STOP[label="RUN STOP\np2_10_stop()\n모터 CMD=STOP"];
+ RESET[label="RUN RESET\np2_10_reset()\n정지 확인 후 latch 해제"];
+ STATUS[label="RUN STATUS\ncap_run_status()"];
+ LEGACY[label="기존 01~09장 명령\nMODE / ADC / PWM 등"];
+ A->B->C;
+ C->START; C->STOP; C->RESET; C->STATUS;C->LEGACY;
+}

@@ -1,0 +1,11 @@
+flowchart LR
+    PC["PC 터미널"] --> UART["AXI UART Lite"]
+    UART --> CPU["MicroBlaze V / main_p2_06.c"]
+    CPU --> REG["p2_06_axi_sonic_v1_0 / AXI 레지스터"]
+    REG --> CORE["hc_sr04_core / TRIG 타이밍 · ECHO 폭 측정"]
+    CORE -->|"sonic_trig / JA2 L2"| SENSOR["HC-SR04"]
+    SENSOR -->|"ECHO 5V"| DIV["레벨 변환 5V → 3.3V"]
+    DIV -->|"sonic_echo / JA3 J2"| CORE
+    REG --> ALERT["sonic_alert / LED2"]
+    REG -->|"DIST_CM · STATUS · SEQ"| CPU
+    CPU --> FND["기존 FND 사용자 IP / 4자리 cm"]

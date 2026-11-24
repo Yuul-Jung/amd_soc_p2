@@ -1,0 +1,1172 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="제2부 09장 MicroBlaze V UART 인터럽트 자동 수동 운전모드 통합 실습"><title>09.1 · C 코드 전체 및 이해 중심 해설</title><style>
+:root{--paper:#F1F2EE;--card:#fff;--ink:#15171C;--muted:#505765;--line:#DDDFD8;--accent:#4635B1;--yellow:#FFD24A;--warn:#805719;--ok:#176045}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic",system-ui,sans-serif;line-height:1.72;font-size:15px}
+a{color:var(--accent)}.top{background:white;border-bottom:1px solid var(--line);padding:12px max(24px,calc((100vw - 1460px)/2));font-size:13px}
+.hero{background:#171820;color:#fff;padding:51px max(24px,calc((100vw - 1460px)/2)) 44px}.hero small{font-weight:800;color:var(--yellow);letter-spacing:1.7px}.hero h1{font-size:clamp(25px,3.4vw,43px);margin:11px 0 7px;line-height:1.28}.hero p{color:#C8CBD5;max-width:1000px}.chips{display:flex;flex-wrap:wrap;gap:8px}.chips span{border:1px solid #656578;padding:4px 11px;font-size:12px}
+.layout{max-width:1520px;margin:auto;display:grid;grid-template-columns:260px minmax(0,1fr);gap:28px;padding:22px}.side{background:white;border:1px solid var(--line);padding:17px 19px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}.side h2{font-size:15px;color:var(--accent);margin:0 0 12px}.side a{display:block;text-decoration:none;padding:7px 0;border-bottom:1px solid #eff0ed;font-size:12.8px}.side a:hover{text-decoration:underline}.content{min-width:0}
+.section{background:var(--card);padding:30px 36px;margin-bottom:17px;border:1px solid var(--line);scroll-margin-top:16px}.section h2{font-size:24px;line-height:1.35;margin:4px 0 17px}.section h3{font-size:17px;margin:20px 0 8px}.section p,.section li{color:#424954}.step-tag{font-size:12px;color:var(--accent);letter-spacing:.1em;font-weight:900}.lead{font-size:16px}.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.box{border:1px solid #e1e3eb;background:#fafbfe;padding:13px 15px}.box h3{margin:0 0 5px;font-size:14px;color:#4635B1}.box p{margin:0;font-size:13.5px}.g{font-weight:700;color:#262938}
+.table-wrap{overflow:auto;margin:13px 0 20px}table{border-collapse:collapse;width:100%;min-width:610px}td,th{padding:10px 13px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:13.5px}th{background:#f4f6fa;color:#495268}
+code,pre{font-family:Consolas,"Liberation Mono",monospace}code{background:#f4f4f7;padding:2px 5px}pre{background:#f8f9fc;border:1px solid #dfe3ea;padding:17px;overflow:auto;line-height:1.58;font-size:12.5px;white-space:pre;max-height:780px}pre code{background:none;padding:0}
+.fig{border:1px solid var(--line);background:#fff;margin:17px 0;padding:15px;overflow:auto}.fig img{display:block;width:100%;min-width:500px;height:auto}.fig figcaption{font-size:12px;color:#65707d;text-align:center;margin-top:9px}.note{border-left:4px solid var(--accent);padding:13px 16px;background:#f5f3fb;margin:14px 0;color:#30275a}.warn{border-left:4px solid #c18734;padding:13px 16px;background:#fff7e8;color:#64461e;margin:14px 0}.ok{border-left:4px solid #27865b;padding:13px 16px;background:#eff9f2;color:#1f593c;margin:14px 0}.links{display:flex;flex-wrap:wrap;gap:9px;margin:15px 0}.links a{padding:7px 11px;border:1px solid #cbc6e8;background:#f7f5fe;text-decoration:none;font-size:13px;font-weight:750}
+.steps{list-style:decimal-leading-zero;padding-left:21px}.steps li{margin:8px 0}.procedure{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.procedure>div{background:#fbfbfd;border:1px solid #e1e3ea;padding:13px 15px}.procedure strong{font-size:12.5px;color:#4b35a0}.procedure p{margin:5px 0;font-size:13.5px}.footer{padding:20px 0 50px;color:#647080;font-size:12px}.checklist li{margin:7px 0}.small{font-size:13px;color:#65717e}.stretch{overflow-wrap:anywhere}
+@media(max-width:960px){.layout{display:block;padding:13px}.side{position:static;max-height:none;margin-bottom:12px}.section{padding:18px}.cols,.procedure{grid-template-columns:1fr}.hero{padding:36px 18px}.fig img{min-width:620px}}
+@media print{.side{display:none}.layout{display:block}.hero{background:#222!important}.section{break-inside:avoid}}
+</style></head><body><div class="top"><a href="P2_09_Study_Guide.html">제2부 09장</a> · 09.1 · C 코드 전체 및 이해 중심 해설</div><header class="hero"><small>PART 02 · CHAPTER 09 · C</small><h1>09.1 · C 코드 전체 및 이해 중심 해설</h1><p>C 코드의 전체 원문과 MODE/IRQ 분기, AMD Timer·GPIO·INTC API를 실제 함수 기준으로 풀이</p><div class="chips"><span>Basys3 XC7A35T</span><span>Vivado/Vitis 2024.2</span><span>AXI Timer + GPIO + INTC</span><span>UART ASCII 문자열</span></div></header><div class="layout"><nav class="side"><h2>실습 목차</h2><a href="#overview">1. 프로그램 역할과 함수 호출</a><a href="#types">2. C 기본형·AMD 함수 필수 해설</a><a href="#parser">3. MODE/IRQ 문자열 파서가 기존 명령을 보존하는 방식</a><a href="#mode">4. 자동/수동 전환과 위험 명령 차단</a><a href="#interrupt">5. 버튼·Timer IRQ의 단일 공유 제어</a><a href="#leds">6. LED14·LED15 주기와 출력 소유권</a><a href="#status">7. STATUS와 IRQ STATUS의 의미</a><a href="#full">8. main_p2_09.c 전체 원문</a><a href="#helper">9. p2_09_mode_logic.[ch] 전체 원문</a><a href="#prev">10. 기존 03~08장 함수 재사용·회귀</a></nav><main class="content"><section class="section" id="overview"><span class="step-tag">CODE</span><h2>1. 프로그램 역할과 함수 호출</h2><p>제2부 09장은 새로운 AXI Slave를 만들지 않습니다. 기존 08장 <code>main()</code>의 UART 수신·버튼 IRQ·초음파 FND 갱신 루프에 <code>MODE</code>·<code>IRQ</code> 명령과 Timer/LED14·15 서비스를 추가합니다.</p><figure class="fig"><img src="assets/command_flow.svg" alt="모드 명령 분기 흐름"></figure></section><section class="section" id="types"><span class="step-tag">CODE</span><h2>2. C 기본형·AMD 함수 필수 해설</h2><div class="table-wrap"><table><thead><tr><th>표현</th><th>의미</th><th>09장 실제 사용</th></tr></thead><tbody><tr><td><code>u8</code></td><td>AMD 정의 8비트 부호 없는 정수</td><td>UART 문자·Timer 번호</td></tr><tr><td><code>u32</code></td><td>AMD 정의 32비트 부호 없는 정수</td><td>타이머 IRQ 카운트, AXI 레지스터</td></tr><tr><td><code>UINTPTR</code></td><td>주소를 저장할 수 있는 정수형</td><td>SDT 인터럽트 상위 장치 정보</td></tr><tr><td><code>volatile</code></td><td>값이 예상 밖에서도 바뀔 수 있음을 컴파일러에 알림</td><td>ISR과 main이 함께 보는 <code>timer_irq_count</code></td></tr><tr><td><code>Xil_In32()</code></td><td>메모리맵 주변장치 32비트 읽기</td><td>MOTOR STATUS, SONIC SEQ</td></tr><tr><td><code>Xil_Out32()</code></td><td>메모리맵 주변장치 32비트 쓰기</td><td>MOTOR STOP, CDS AUTO</td></tr><tr><td><code>XUartLite_RecvByte()</code></td><td>UART 1바이트 수신</td><td>poll_uart()</td></tr><tr><td><code>XTmrCtr_SetHandler()</code></td><td>Timer 인터럽트 후 호출될 콜백 등록</td><td>timer_callback()</td></tr><tr><td><code>XTmrCtr_SetResetValue()</code></td><td>카운터 시작/재적재 값 설정</td><td>P2_09_TIMER_CLK_HZ 기반</td></tr><tr><td><code>XTmrCtr_Start()</code></td><td>Timer 시작</td><td>IRQ 연결 후 호출</td></tr><tr><td><code>XIntc_Connect()</code></td><td>Classic INTC 소스별 ISR 연결</td><td>버튼 + Timer 각자 등록</td></tr><tr><td><code>XSetupInterruptSystem()</code></td><td>SDT 환경의 인터럽트 연결·등록</td><td>Timer.Config.IntrId/Parent 사용</td></tr><tr><td><code>XGpio_DiscreteWrite()</code></td><td>AXI GPIO 출력 채널 기록</td><td>LED14/15 출력 워드</td></tr><tr><td><code>#error</code></td><td>필수 주소/IRQ/클록 입력 누락을 컴파일 중단</td><td>잘못된 매핑 사전 차단</td></tr><tr><td><code>const char *</code></td><td>수정하지 않을 문자열의 시작 주소</td><td>파서의 line 매개변수</td></tr><tr><td><code>strcmp()</code></td><td>문자열 완전 일치 판별</td><td>MODE AUTO, IRQ STATUS</td></tr><tr><td><code>&amp; / | / &lt;&lt;</code></td><td>비트 선택·결합·좌측 시프트</td><td>LED14/15, BTN Pending</td></tr></tbody></table></div></section><section class="section" id="parser"><span class="step-tag">CODE</span><h2>3. MODE/IRQ 문자열 파서가 기존 명령을 보존하는 방식</h2><pre><code class="c">#include &quot;p2_09_mode_logic.h&quot;
+#include &lt;string.h&gt;
+/* 문자열 전체 일치, 대소문자/공백을 임의 정규화하지 않는다. */
+P2_09_Command p2_09_parse_command(const char *line)
+{
+    if (line == 0) return P2_09_MODE_INVALID;
+    if (strcmp(line, &quot;MODE AUTO&quot;) == 0) return P2_09_MODE_AUTO;
+    if (strcmp(line, &quot;MODE MANUAL&quot;) == 0) return P2_09_MODE_MANUAL;
+    if (strcmp(line, &quot;MODE STATUS&quot;) == 0) return P2_09_MODE_STATUS;
+    if (strcmp(line, &quot;IRQ STATUS&quot;) == 0) return P2_09_IRQ_STATUS;
+    if (strncmp(line, &quot;MODE&quot;, 4U) == 0) return P2_09_MODE_INVALID;
+    if (strncmp(line, &quot;IRQ&quot;, 3U) == 0) return P2_09_IRQ_INVALID;
+    return P2_09_NOT_COMMAND;
+}
+const char *p2_09_mode_name(P2_09_Mode mode)
+{
+    return mode == P2_09_AUTO ? &quot;AUTO&quot; : &quot;MANUAL&quot;;
+}
+int p2_09_allowed_in_auto(const char *line)
+{
+    if (line == 0) return 0;
+    /* (필수) AUTO 모드 중 안전 감시/조도 게이트를 해제하지 않는다. */
+    if (strcmp(line, &quot;AUTO OFF&quot;) == 0) return 0;
+    if (strcmp(line, &quot;SONIC OFF&quot;) == 0) return 0;
+    /* (필수) AUTO 모드는 모터 자체를 기동하지 않는다. */
+    if (strcmp(line, &quot;MOTOR FWD&quot;) == 0) return 0;
+    if (strcmp(line, &quot;MOTOR REV&quot;) == 0) return 0;
+    return 1;
+}
+</code></pre><p><code>strcmp()</code> 결과가 0일 때만 해당 명령입니다. <code>MODE AUTO </code>처럼 공백이 남으면 거부합니다. 명령이 <code>P2_09_NOT_COMMAND</code>이면 08장 ADC·MOTOR·SONIC·CDS·PWM·LED/DISP 처리기로 전달합니다.</p></section><section class="section" id="mode"><span class="step-tag">CODE</span><h2>4. 자동/수동 전환과 위험 명령 차단</h2><pre><code class="c">static void enter_auto_mode(void)
+{
+    if (control_mode == P2_09_AUTO) {
+        uart_puts(&quot;OK MODE AUTO (already active)\r\n&quot;); return;
+    }
+    Xil_Out32(P2_07_MOTOR_BASEADDR + MOTOR_CMD_REG, 0U); /* STOP 요청 */
+    sonic_seq_seen = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+    sonic_view_fresh = 0U; sonic_auto_enabled=1U; sonic_view=1U;
+    sonic_commit_ctrl(); /* 근접 안전 감시는 유지 */
+    cds_auto_enabled=1U; cds_commit_control();
+    control_mode=P2_09_AUTO;
+    fnd_commit();
+    uart_puts(&quot;OK MODE AUTO: MOTOR STOP REQUESTED; CDS+SONIC ON; FND DIST\r\n&quot;);
+}
+
+static void enter_manual_mode(void)
+{
+    /* MANUAL 중 AUTO ON을 직접 켠 경우에도 명시적 MODE MANUAL은 해제. */
+    cds_auto_enabled=0U; cds_commit_control();
+    sonic_view=0U; sonic_view_fresh=0U; fnd_commit();
+    /* 근접 감시를 OFF하지 않는다. MOTOR STOP 요청도 유지된다. */
+    control_mode=P2_09_MANUAL;
+    uart_puts(&quot;OK MODE MANUAL: CDS AUTO OFF; SONIC SAFETY RETAINED\r\n&quot;);
+}
+
+</code></pre><p><b>전환 순서:</b> <code>MOTOR_CMD_REG</code>에 STOP 기록 → SONIC 연속 측정 활성화 → CdS 자동 게이트 활성화 → <code>control_mode</code>를 AUTO로 변경 → FND 표시 갱신. AUTO 중 MOTOR FWD/REV 및 AUTO OFF/SONIC OFF는 CPU 정책에서 거부합니다. 명령 차단이 실제 모터 하드웨어 인터록을 대체하지 않습니다.</p></section><section class="section" id="interrupt"><span class="step-tag">CODE</span><h2>5. 버튼·Timer IRQ의 단일 공유 제어</h2><pre><code class="c">static void timer_callback(void *ref, u8 timer_index)
+{
+    (void)ref;
+    (void)timer_index;
+    timer_irq_count++;
+}
+
+/* (추가) Classic은 하나의 AXI INTC 인스턴스에 버튼과 Timer를 모두 등록한다.
+ * SDT는 실제 BSP의 XSetupInterruptSystem 다중 소스 동작을 확인해야 한다. */
+static int setup_integrated_interrupts(void)
+{
+    int status;
+#ifndef SDT
+    status = XIntc_Initialize(&amp;intc, P2_03_INTC_DEVICE_ID);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Connect(&amp;intc, P2_03_BTN_INTR_ID,
+        (XInterruptHandler)btn_irq_handler, 0);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Connect(&amp;intc, P2_09_TIMER_INTR_ID,
+        (XInterruptHandler)XTmrCtr_InterruptHandler, &amp;timer);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Start(&amp;intc, XIN_REAL_MODE);
+    if (status != XST_SUCCESS) return status;
+    XIntc_Enable(&amp;intc, P2_03_BTN_INTR_ID);
+    XIntc_Enable(&amp;intc, P2_09_TIMER_INTR_ID);
+    Xil_ExceptionInit();
+    Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT,
+        (Xil_ExceptionHandler)XIntc_InterruptHandler, &amp;intc);
+    Xil_ExceptionEnable();
+#else
+    status = XSetupInterruptSystem(0, (void *)btn_irq_handler,
+        P2_03_BTN_INTR_ID, (UINTPTR)P2_03_BTN_INTR_PARENT,
+        XINTERRUPT_DEFAULT_PRIORITY);
+    if (status != XST_SUCCESS) return status;
+    status = XSetupInterruptSystem(&amp;timer,
+        (void *)XTmrCtr_InterruptHandler,
+        timer.Config.IntrId, timer.Config.IntrParent,
+        XINTERRUPT_DEFAULT_PRIORITY);
+    if (status != XST_SUCCESS) return status;
+#endif
+    return XST_SUCCESS;
+}
+
+/* (추가) Timer의 실제 클록은 BD에서 확인한 값으로 주입한다. */
+static int setup_legacy_timer_and_gpio(void)
+{
+    int status;
+#ifndef SDT
+    status = XGpio_Initialize(&amp;gpio, P2_09_GPIO_DEVICE_ID);
+#else
+    status = XGpio_Initialize(&amp;gpio, P2_09_GPIO_BASEADDR);
+#endif
+    if (status != XST_SUCCESS) return status;
+    XGpio_SetDataDirection(&amp;gpio, 1U, 0x00000000U); /* LED 채널 출력 */
+    XGpio_DiscreteWrite(&amp;gpio, 1U, 0U); /* 기존 GPIO 상위 출력 초기화 */
+#ifndef SDT
+    status = XTmrCtr_Initialize(&amp;timer, P2_09_TIMER_DEVICE_ID);
+#else
+    status = XTmrCtr_Initialize(&amp;timer, P2_09_TIMER_BASEADDR);
+#endif
+    if (status != XST_SUCCESS) return status;
+    XTmrCtr_SetHandler(&amp;timer, timer_callback, &amp;timer);
+    XTmrCtr_SetOptions(&amp;timer, TIMER0,
+        XTC_DOWN_COUNT_OPTION | XTC_AUTO_RELOAD_OPTION | XTC_INT_MODE_OPTION);
+    XTmrCtr_SetResetValue(&amp;timer, TIMER0, TIMER_RESET_VALUE);
+    return XST_SUCCESS;
+}
+
+/* (추가) LED0~2는 별도 사용자 IP, GPIO는 LED14/15만 구동한다. */
+static void service_legacy_gpio_leds(void)
+{
+    u32 target = (uart_line_activity ? UART_ACTIVITY_LED14 : 0U)
+        | ((timer_irq_count &amp; 1U) ? TIMER_HEARTBEAT_LED15 : 0U);
+    if (target != led_gpio_shadow) {
+        led_gpio_shadow = target;
+        XGpio_DiscreteWrite(&amp;gpio, 1U, led_gpio_shadow);
+    }
+}
+
+static void print_irq_status(void)
+{
+    unsigned i;
+    uart_puts(&quot;IRQ TIMER=&quot;); uart_dec_u32(timer_irq_count);
+    uart_puts(&quot; BTN=&quot;);
+    for (i=0; i&lt;8U; ++i) {
+        if (i) uart_puts(&quot;,&quot;);
+        uart_dec_u32(irq_counts[i]);
+    }
+    uart_puts(&quot; COALESCED=0x&quot;);
+    uart_hex32(Xil_In32(P2_03_BTN_BASEADDR + BTN_COALESCED));
+    uart_puts(&quot; (non-atomic snapshot)\r\n&quot;);
+}
+
+/* (추가) MODE AUTO는 모터 재기동 없이 센서 관찰·CdS 게이트만 구성. */
+static void enter_auto_mode(void)
+{
+    if (control_mode == P2_09_AUTO) {
+        uart_puts(&quot;OK MODE AUTO (already active)\r\n&quot;); return;
+    }
+    Xil_Out32(P2_07_MOTOR_BASEADDR + MOTOR_CMD_REG, 0U); /* STOP 요청 */
+    sonic_seq_seen = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+    sonic_view_fresh = 0U; sonic_auto_enabled=1U; sonic_view=1U;
+    sonic_commit_ctrl(); /* 근접 안전 감시는 유지 */
+    cds_auto_enabled=1U; cds_commit_control();
+    control_mode=P2_09_AUTO;
+    fnd_commit();
+    uart_puts(&quot;OK MODE AUTO: MOTOR STOP REQUESTED; CDS+SONIC ON; FND DIST\r\n&quot;);
+}
+
+static void enter_manual_mode(void)
+{
+    /* MANUAL 중 AUTO ON을 직접 켠 경우에도 명시적 MODE MANUAL은 해제. */
+    cds_auto_enabled=0U; cds_commit_control();
+    sonic_view=0U; sonic_view_fresh=0U; fnd_commit();
+    /* 근접 감시를 OFF하지 않는다. MOTOR STOP 요청도 유지된다. */
+    control_mode=P2_09_MANUAL;
+    uart_puts(&quot;OK MODE MANUAL: CDS AUTO OFF; SONIC SAFETY RETAINED\r\n&quot;);
+}
+
+</code></pre><p><b>Classic:</b> 하나의 <code>XIntc</code>를 초기화한 뒤 버튼 IRQ와 Timer IRQ를 서로 다른 ID에 연결합니다. <b>SDT:</b> 실제 BSP의 <code>IntrId</code>·<code>IntrParent</code> 값을 확인해야 하며, 사용 중인 2024.2 배포본의 인터럽트 래퍼 동작을 실물로 검증합니다.</p><p>ISR는 카운터만 갱신합니다. GPIO 쓰기·긴 UART 메시지 출력은 메인 루프가 맡습니다.</p></section><section class="section" id="leds"><span class="step-tag">CODE</span><h2>6. LED14·LED15 주기와 출력 소유권</h2><pre><code class="c">static void service_legacy_gpio_leds(void)
+{
+    u32 target = (uart_line_activity ? UART_ACTIVITY_LED14 : 0U)
+        | ((timer_irq_count &amp; 1U) ? TIMER_HEARTBEAT_LED15 : 0U);
+    if (target != led_gpio_shadow) {
+        led_gpio_shadow = target;
+        XGpio_DiscreteWrite(&amp;gpio, 1U, led_gpio_shadow);
+    }
+}
+
+</code></pre><p><code>UART_ACTIVITY_LED14</code>는 bit14, <code>TIMER_HEARTBEAT_LED15</code>는 bit15를 뜻합니다. LED0/1/2는 사용자 IP·자동 조명·초음파 경고에 이미 할당되어 있으므로 이 GPIO 출력 워드에서는 0입니다. 실제 Top의 LED14/15는 <code>gpio_led[15:3]</code>에서만 연결됩니다.</p><p>LED14는 명령마다 반전하는 활동 표시이며 1회 점멸 펄스가 아닙니다. LED15는 Timer IRQ 카운트 홀짝에 따라 반전합니다.</p></section><section class="section" id="status"><span class="step-tag">CODE</span><h2>7. STATUS와 IRQ STATUS의 의미</h2><pre><code class="c">static void print_irq_status(void)
+{
+    unsigned i;
+    uart_puts(&quot;IRQ TIMER=&quot;); uart_dec_u32(timer_irq_count);
+    uart_puts(&quot; BTN=&quot;);
+    for (i=0; i&lt;8U; ++i) {
+        if (i) uart_puts(&quot;,&quot;);
+        uart_dec_u32(irq_counts[i]);
+    }
+    uart_puts(&quot; COALESCED=0x&quot;);
+    uart_hex32(Xil_In32(P2_03_BTN_BASEADDR + BTN_COALESCED));
+    uart_puts(&quot; (non-atomic snapshot)\r\n&quot;);
+}
+
+</code></pre><p><code>IRQ STATUS</code>는 버튼 종류별 누적 카운터와 Timer 누적 카운터를 나누어 출력합니다. 순차 레지스터 조회이므로 전체 값은 원자적 시점의 스냅샷이 아닙니다. <code>COALESCED</code>는 중복·유실 가능성을 진단하는 기존 03장 필드입니다.</p><p>통합 <code>STATUS</code>는 기존 08장 전체를 유지한 뒤 <code>CTRL_MODE</code>, <code>IRQ_TIMER</code>, <code>LED14_ACTIVITY</code>, <code>LED15_HEARTBEAT</code>을 추가합니다.</p></section><section class="section" id="full"><span class="step-tag">CODE</span><h2>8. main_p2_09.c 전체 원문</h2><p><a href="sw/main_p2_09.c">C 소스 파일</a> · 아래 코드는 링크 파일과 동일합니다.</p><pre><code class="c">/* P2-09: integrate P2-01..08 commands, button IRQ and Timer heartbeat.
+ * NOTE: Base addresses, Interrupt ID/Parent MUST be read from actual BSP.
+ * This source intentionally rejects unknown constants before target build.
+ */
+#include &quot;xparameters.h&quot;
+#include &quot;xil_types.h&quot;      /* u8, u32, UINTPTR */
+#include &quot;xil_io.h&quot;         /* Xil_In32, Xil_Out32 */
+#include &quot;xuartlite_l.h&quot;    /* UART Lite byte functions + FIFO empty check */
+#include &quot;xstatus.h&quot;
+#include &quot;xgpio.h&quot;        /* AXI GPIO LED14/15: legacy output path */
+#include &quot;xtmrctr.h&quot;      /* AXI Timer + heartbeat IRQ */
+#include &quot;p2_09_mode_logic.h&quot; /* MODE / IRQ string grammar */
+#include &quot;xil_exception.h&quot;
+#ifdef SDT
+#include &quot;xinterrupt_wrap.h&quot; /* SDT interrupt API */
+#else
+#include &quot;xintc.h&quot;          /* Classic interrupt controller API */
+#endif
+#include &quot;p2_03_logic.h&quot;
+#include &quot;p2_04_pwm_logic.h&quot; // Reused 04 PWM parser / duty calculation
+#include &quot;p2_05_cds_logic.h&quot; // Existing AUTO/CDS command parser
+#include &quot;p2_06_sonic_logic.h&quot; // (유지) SONIC/WARN command parser
+#include &quot;p2_07_motor_logic.h&quot; // (추가) MOTOR FWD/REV/STOP/STATUS parser
+#include &quot;p2_08_adc_logic.h&quot; // (추가) XADC 12비트·mV·PWM 변환 및 명령 처리
+
+#ifndef P2_04_PWM_BASEADDR
+#define P2_04_PWM_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_04_PWM_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set P2_04_PWM_BASEADDR from CURRENT Vivado Address Editor/xparameters.h&quot;
+#endif
+// (추가) Never guess the fifth AXI IP base: use CURRENT generated BSP.
+#ifndef P2_05_CDS_BASEADDR
+#define P2_05_CDS_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_05_CDS_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set P2_05_CDS_BASEADDR from CURRENT Address Editor/xparameters.h&quot;
+#endif
+#ifndef P2_01_LED_BASEADDR
+#define P2_01_LED_BASEADDR 0xFFFFFFFFU
+#endif
+#ifndef P2_02_FND_BASEADDR
+#define P2_02_FND_BASEADDR 0xFFFFFFFFU
+#endif
+#ifndef P2_03_BTN_BASEADDR
+#define P2_03_BTN_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_01_LED_BASEADDR == 0xFFFFFFFFU || P2_02_FND_BASEADDR == 0xFFFFFFFFU || P2_03_BTN_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set all three AXI IP addresses from CURRENT Address Editor/xparameters.h&quot;
+#endif
+#if P2_01_LED_BASEADDR == P2_02_FND_BASEADDR || P2_01_LED_BASEADDR == P2_03_BTN_BASEADDR || P2_02_FND_BASEADDR == P2_03_BTN_BASEADDR
+#error &quot;Three user AXI IP base addresses must be unique&quot;
+#endif
+#ifndef P2_03_BTN_INTR_ID
+#error &quot;Fill P2_03_BTN_INTR_ID from CURRENT generated BSP interrupt map&quot;
+#endif
+#ifdef SDT
+#ifndef P2_03_BTN_INTR_PARENT
+#error &quot;Fill P2_03_BTN_INTR_PARENT (SDT encoded interrupt parent) from actual BSP&quot;
+#endif
+#else
+#ifndef P2_03_INTC_DEVICE_ID
+#error &quot;Fill P2_03_INTC_DEVICE_ID from Classic BSP&quot;
+#endif
+#endif
+
+#if defined(XPAR_XUARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_XUARTLITE_0_BASEADDR
+#elif defined(XPAR_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_UARTLITE_0_BASEADDR
+#elif defined(XPAR_AXI_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_AXI_UARTLITE_0_BASEADDR
+#else
+#error &quot;Check UART Lite base macro in the generated xparameters.h&quot;
+#endif
+
+#define FND_VAL_REG  0x00U
+#define FND_CTRL_REG 0x04U
+#define BTN_PENDING  0x00U
+#define BTN_ENABLE   0x04U
+#define BTN_PRESSED  0x08U
+#define BTN_ID       0x0CU
+#define BTN_COALESCED 0x10U
+// P2-04 register offsets: 32-bit, byte-addressed.
+#define PWM_PERIOD_CFG 0x00U
+#define PWM_DUTY_CFG   0x04U
+#define PWM_CTRL_CFG   0x08U
+#define PWM_APPLY      0x0CU
+#define PWM_STATUS     0x10U
+#define PWM_PERIOD_ACT 0x14U
+#define PWM_DUTY_ACT   0x18U
+#define PWM_ID         0x1CU
+#define PWM_IP_ID      0x00040001U
+#define PWM_PERIOD_TICKS 100000U // AXI Clock이 실제 100MHz일 때 1kHz.
+#if P2_04_PWM_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_04_PWM_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_04_PWM_BASEADDR == P2_03_BTN_BASEADDR
+#error &quot;New PWM IP base must differ from all prior IP addresses&quot;
+#endif
+// (추가) P2-05 digital CdS AXI register map (32-bit byte offsets).
+#define CDS_CTRL    0x00U
+#define CDS_STATUS  0x04U
+#define CDS_IP_ID   0x08U
+#define CDS_FILTER  0x0CU
+#define CDS_EXPECTED_ID 0x00050001U
+#ifndef P2_06_SONIC_BASEADDR
+#define P2_06_SONIC_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_06_SONIC_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set P2_06_SONIC_BASEADDR from CURRENT Address Editor and BSP&quot;
+#endif
+#if P2_05_CDS_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_05_CDS_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_05_CDS_BASEADDR == P2_03_BTN_BASEADDR || \
+    P2_05_CDS_BASEADDR == P2_04_PWM_BASEADDR
+#error &quot;P2-05 CdS IP base address must differ from P2-01~04&quot;
+#endif
+// (추가) P2-06 AXI4-Lite offsets; all byte offsets.
+#define SONIC_CTRL       0x00U
+#define SONIC_STATUS     0x04U
+#define SONIC_DIST_CM    0x08U
+#define SONIC_ECHO_US    0x0CU
+#define SONIC_WARN_CFG   0x10U
+#define SONIC_SEQ        0x14U
+#define SONIC_ID         0x18U
+#define SONIC_CLK_HZ     0x1CU
+#define SONIC_EXPECTED_ID 0x00060001U
+#if P2_06_SONIC_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_06_SONIC_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_06_SONIC_BASEADDR == P2_03_BTN_BASEADDR || \
+    P2_06_SONIC_BASEADDR == P2_04_PWM_BASEADDR || \
+    P2_06_SONIC_BASEADDR == P2_05_CDS_BASEADDR
+#error &quot;P2-06 SONIC AXI base must be distinct from all previous IPs&quot;
+#endif
+// (추가) All AXI motor addresses are BSP-derived; never invent a base.
+#ifndef P2_07_MOTOR_BASEADDR
+#define P2_07_MOTOR_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_07_MOTOR_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set P2_07_MOTOR_BASEADDR from CURRENT Vivado Address Editor/xparameters.h&quot;
+#endif
+#if P2_07_MOTOR_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_07_MOTOR_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_07_MOTOR_BASEADDR == P2_03_BTN_BASEADDR || \
+    P2_07_MOTOR_BASEADDR == P2_04_PWM_BASEADDR || \
+    P2_07_MOTOR_BASEADDR == P2_05_CDS_BASEADDR || \
+    P2_07_MOTOR_BASEADDR == P2_06_SONIC_BASEADDR
+#error &quot;P2-07 motor AXI base must be distinct from all other IPs&quot;
+#endif
+// (추가) 새 XADC Wizard AXI 주소는 실제 Address Editor에서만 가져온다.
+#ifndef P2_08_XADC_BASEADDR
+#define P2_08_XADC_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_08_XADC_BASEADDR == 0xFFFFFFFFU
+#error &quot;Set P2_08_XADC_BASEADDR from CURRENT Vivado Address Editor/xparameters.h&quot;
+#endif
+#if P2_08_XADC_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_08_XADC_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_08_XADC_BASEADDR == P2_03_BTN_BASEADDR || \
+    P2_08_XADC_BASEADDR == P2_04_PWM_BASEADDR || \
+    P2_08_XADC_BASEADDR == P2_05_CDS_BASEADDR || \
+    P2_08_XADC_BASEADDR == P2_06_SONIC_BASEADDR || \
+    P2_08_XADC_BASEADDR == P2_07_MOTOR_BASEADDR
+#error &quot;P2-08 XADC AXI base must differ from every previously used AXI IP base&quot;
+#endif
+/* AMD sysmon xsysmon_hw.h: XSM_AUX06_OFFSET, Artix-7 offset 0x258.
+ * XADC의 전용 Status Register이며 사용자 IP가 아니다. */
+#define XADC_AUX06_OFFSET 0x258U
+#define MOTOR_CMD_REG     0x00U
+#define MOTOR_STATUS_REG  0x04U
+#define MOTOR_ID_REG      0x08U
+#define MOTOR_DEADTIME    0x0CU
+#define MOTOR_FRESHNESS   0x10U
+#define MOTOR_CLK_HZ      0x14U
+#define MOTOR_EXPECTED_ID 0x00070001U
+#define LINE_CAP     32U
+/* 실제 BD의 0.5초 타이머 클록 확인 없이 주기를 단정하지 않는다. */
+#ifndef P2_09_TIMER_CLK_HZ
+#error &quot;Define P2_09_TIMER_CLK_HZ from the CURRENT Timer clock connection&quot;
+#endif
+#if P2_09_TIMER_CLK_HZ &lt; 4U
+#error &quot;Timer clock must be at least 4Hz for this lesson&quot;
+#endif
+#define TIMER0 0U
+#define TIMER_RESET_VALUE ((P2_09_TIMER_CLK_HZ/2U)-2U)
+#define UART_ACTIVITY_LED14 0x00004000U
+#define TIMER_HEARTBEAT_LED15 0x00008000U
+#ifndef SDT
+#ifndef P2_09_TIMER_DEVICE_ID
+#error &quot;Define P2_09_TIMER_DEVICE_ID from Classic BSP&quot;
+#endif
+#ifndef P2_09_TIMER_INTR_ID
+#error &quot;Define P2_09_TIMER_INTR_ID from Classic BSP AXI INTC map&quot;
+#endif
+#if P2_09_TIMER_INTR_ID == P2_03_BTN_INTR_ID
+#error &quot;Button IRQ ID and Timer IRQ ID must be different&quot;
+#endif
+#ifndef P2_09_GPIO_DEVICE_ID
+#error &quot;Define P2_09_GPIO_DEVICE_ID from Classic BSP&quot;
+#endif
+#else
+#ifndef P2_09_TIMER_BASEADDR
+#error &quot;Define P2_09_TIMER_BASEADDR from SDT BSP&quot;
+#endif
+#ifndef P2_09_GPIO_BASEADDR
+#error &quot;Define P2_09_GPIO_BASEADDR from SDT BSP&quot;
+#endif
+/* (추가) 09장의 기존 GPIO/Timer 주소는 앞선 사용자 IP와 분리. */
+#if P2_09_TIMER_BASEADDR == P2_09_GPIO_BASEADDR || \
+    P2_09_TIMER_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_09_TIMER_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_09_TIMER_BASEADDR == P2_03_BTN_BASEADDR || \
+    P2_09_TIMER_BASEADDR == P2_04_PWM_BASEADDR || \
+    P2_09_TIMER_BASEADDR == P2_05_CDS_BASEADDR || \
+    P2_09_TIMER_BASEADDR == P2_06_SONIC_BASEADDR || \
+    P2_09_TIMER_BASEADDR == P2_07_MOTOR_BASEADDR || \
+    P2_09_TIMER_BASEADDR == P2_08_XADC_BASEADDR
+#error &quot;Timer base address aliases GPIO or another AXI IP&quot;
+#endif
+#if P2_09_GPIO_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_09_GPIO_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_09_GPIO_BASEADDR == P2_03_BTN_BASEADDR || \
+    P2_09_GPIO_BASEADDR == P2_04_PWM_BASEADDR || \
+    P2_09_GPIO_BASEADDR == P2_05_CDS_BASEADDR || \
+    P2_09_GPIO_BASEADDR == P2_06_SONIC_BASEADDR || \
+    P2_09_GPIO_BASEADDR == P2_07_MOTOR_BASEADDR || \
+    P2_09_GPIO_BASEADDR == P2_08_XADC_BASEADDR
+#error &quot;AXI GPIO base address aliases a custom IP&quot;
+#endif
+#endif
+
+static P2AppState app;
+static u8 pwm_requested_percent = 0U;
+// (추가) The C application owns control policy; RTL filters raw CdS signal.
+static u8 cds_auto_enabled = 0U;
+static u8 sonic_auto_enabled = 0U;
+static u8 sonic_warn_enabled = 1U;
+static u8 sonic_view = 0U; // 1: DIST(cm) FND view overrides VALUE/EVENTS.
+static u8 sonic_view_fresh = 0U; // Blank stale result until next completion after ON.
+static u32 sonic_seq_seen = 0U;
+static u8 cds_dark_when_low = 1U; // Start assumption; verify DO via CDS READ.
+static u8 adc_last_applied = 0U; // (추가) ADC PWM 명령의 마지막 요청 Duty
+static u8 adc_apply_seen = 0U; // (추가) 아직 적용한 적 없음을 구분
+
+static P2_09_Mode control_mode = P2_09_MANUAL;
+static volatile u32 timer_irq_count = 0U; /* ISR 단순 카운트 */
+static u32 led_gpio_shadow = 0U;  /* GPIO LED14/15만 씀; LED0~2는 별도 IP */
+static u8 uart_line_activity = 0U; /* 완료된 문자열 명령마다 LED14 토글 */
+static XTmrCtr timer;
+static XGpio gpio;
+static volatile u32 irq_counts[8]; // ISR writes monotonically; main reads.
+static u32 handled_counts[8];      // Main-only processed counts.
+#ifndef SDT
+static XIntc intc;
+#endif
+
+static void uart_puts(const char *s)
+{
+    while (*s) XUartLite_SendByte(UART_BASEADDR, (u8)*s++);
+}
+static void uart_hex32(u32 v)
+{
+    const char hex[] = &quot;0123456789ABCDEF&quot;;
+    int shift;
+    for (shift = 28; shift &gt;= 0; shift -= 4)
+        XUartLite_SendByte(UART_BASEADDR, (u8)hex[(v &gt;&gt; shift) &amp; 15U]);
+}
+static void uart_dec4(u32 value)
+{
+    int d;
+    u32 divisors[4] = {1000U, 100U, 10U, 1U};
+    for (d = 0; d &lt; 4; ++d) {
+        u32 n = (value / divisors[d]) % 10U;
+        XUartLite_SendByte(UART_BASEADDR, (u8)(&#x27;0&#x27; + n));
+    }
+}
+
+// (추가) 0~4294967295를 선행 0 없이 UART에 출력.
+static void uart_dec_u32(u32 value)
+{
+    char tmp[10]; // u32 십진수 최대 10자리.
+    unsigned used = 0U;
+    do {
+        tmp[used++] = (char)(&#x27;0&#x27; + (value % 10U));
+        value /= 10U;
+    } while (value != 0U);
+    while (used != 0U)
+        XUartLite_SendByte(UART_BASEADDR, (u8)tmp[--used]);
+}
+
+// (추가) 이전 설정이 반영 중이면 BUSY, 아니면 다음 주기 적용을 예약.
+static int pwm_queue_percent(u8 percent)
+{
+    u32 duty;
+    if ((Xil_In32(P2_04_PWM_BASEADDR + PWM_STATUS) &amp; 1U) != 0U)
+        return 0; // 기존 Pending 설정을 덮지 않는다.
+    duty = pwm_duty_for_percent(PWM_PERIOD_TICKS, percent);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_PERIOD_CFG, PWM_PERIOD_TICKS);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_DUTY_CFG, duty);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_CTRL_CFG, percent ? 1U : 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_APPLY, 1U);
+    pwm_requested_percent = percent;
+    return 1;
+}
+
+// (추가) 7-series XADC AXI 데이터 Status는 상위 12비트가 유효하다.
+static uint16_t adc_sample_raw12(void)
+{
+    u32 reg32 = Xil_In32(P2_08_XADC_BASEADDR + XADC_AUX06_OFFSET);
+    return (uint16_t)adc_raw12_from_status(reg32);
+}
+
+// (추가) 샘플 레지스터의 현재 저장값을 출력한다; 신규 변환 완료 여부를 나타내지 않는다.
+static void adc_print_reading(void)
+{
+    uint16_t raw = adc_sample_raw12();
+    uart_puts(&quot;ADC AUX6 RAW=&quot;); uart_dec_u32(raw);
+    uart_puts(&quot; MV=&quot;); uart_dec_u32(adc_millivolts_from_raw(raw));
+    uart_puts(&quot; PWM_REF=&quot;); uart_dec_u32(adc_percent_from_raw(raw));
+    uart_puts(&quot;% (stored sample; freshness not guaranteed)\r\n&quot;);
+}
+
+// (추가) Write configuration as one atomic 32-bit AXI register update.
+static void cds_commit_control(void)
+{
+    Xil_Out32(P2_05_CDS_BASEADDR + CDS_CTRL,
+              cds_control_word(cds_auto_enabled, cds_dark_when_low));
+}
+
+// (추가) Read sensor pins via AXI status, not by polling a physical GPIO.
+static void cds_print_reading(void)
+{
+    u32 bits = Xil_In32(P2_05_CDS_BASEADDR + CDS_STATUS);
+    uart_puts(&quot;CDS RAW=&quot;); uart_dec_u32(bits &amp; 1U);
+    uart_puts(&quot; DARK=&quot;); uart_dec_u32((bits &gt;&gt; 1) &amp; 1U);
+    uart_puts(&quot; VALID=&quot;); uart_dec_u32((bits &gt;&gt; 2) &amp; 1U);
+    uart_puts(&quot; GATE=&quot;); uart_dec_u32((bits &gt;&gt; 3) &amp; 1U);
+    uart_puts(&quot; AUTO=&quot;); uart_dec_u32((bits &gt;&gt; 4) &amp; 1U);
+    uart_puts(&quot; POL=&quot;); uart_puts((bits &amp; (1U &lt;&lt; 5)) ? &quot;LOW&quot; : &quot;HIGH&quot;);
+    uart_puts(&quot;\r\n&quot;);
+}
+
+// (추가) 06장 STATUS는 최근 완료된 샘플(VALID/TIMEOUT/RANGE)을 보존.
+// SEQ is a lightweight change marker; the HW has no atomic multiword latch.
+static void sonic_read_state(u32 *status, u32 *cm, u32 *seq)
+{
+    u32 a, b;
+    unsigned tries;
+    for (tries = 0; tries &lt; 3U; ++tries) {
+        a = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+        *status = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_STATUS);
+        *cm = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_DIST_CM);
+        b = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+        if (a == b) { *seq = b; return; }
+    }
+    *seq = b; // Contended snapshot: STATUS logs must not claim atomicity.
+}
+
+static void sonic_commit_ctrl(void)
+{
+    Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_CTRL,
+              (u32)sonic_auto_enabled | ((u32)sonic_warn_enabled &lt;&lt; 2));
+}
+
+static void sonic_print_reading(void)
+{
+    u32 st, cm, seq, echo_us;
+    sonic_read_state(&amp;st,&amp;cm,&amp;seq);
+    echo_us = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_ECHO_US);
+    uart_puts(&quot;SONIC CM=&quot;); uart_dec_u32(cm);
+    uart_puts(&quot; ECHO_US=&quot;); uart_dec_u32(echo_us);
+    uart_puts(&quot; VALID=&quot;); uart_dec_u32((st &gt;&gt; 1) &amp; 1U);
+    uart_puts(&quot; TIMEOUT=&quot;); uart_dec_u32((st &gt;&gt; 2) &amp; 1U);
+    uart_puts(&quot; RANGE_ERROR=&quot;); uart_dec_u32((st &gt;&gt; 3) &amp; 1U);
+    uart_puts(&quot; BUSY=&quot;); uart_dec_u32(st &amp; 1U);
+    uart_puts(&quot; ALERT=&quot;); uart_dec_u32((st &gt;&gt; 4) &amp; 1U);
+    uart_puts(&quot; UNSAFE=&quot;); uart_dec_u32((st &gt;&gt; 5) &amp; 1U);
+    uart_puts(&quot; SEQ=&quot;); uart_dec_u32(seq);
+    uart_puts(&quot; WARN_CM=&quot;); uart_dec_u32(
+        Xil_In32(P2_06_SONIC_BASEADDR + SONIC_WARN_CFG));
+    uart_puts(&quot;\r\n&quot;);
+}
+
+static void fnd_commit(void)
+{
+    if (sonic_view) {
+        u32 st, cm, seq;
+        uint16_t visible;
+        sonic_read_state(&amp;st,&amp;cm,&amp;seq);
+        visible = sonic_visible_cm(st,cm);
+        // (추가) D3..D0: decimal 0002..0400 cm; no unit/dot hardware.
+        // Invalid/timeout =&gt; FND blank, not a misleading &#x27;0000&#x27;.
+        Xil_Out32(P2_02_FND_BASEADDR + FND_VAL_REG, p2_to_bcd4(visible));
+        Xil_Out32(P2_02_FND_BASEADDR + FND_CTRL_REG,
+                  (sonic_view_fresh &amp;&amp; sonic_sample_valid(st,cm)) ? 1U : 0U);
+        return;
+    }
+    // (유지) P2-03 VALUE/EVENTS shown when SONIC OFF.
+    Xil_Out32(P2_02_FND_BASEADDR + FND_VAL_REG,
+              p2_to_bcd4(p2_visible_decimal(&amp;app)));
+    Xil_Out32(P2_02_FND_BASEADDR + FND_CTRL_REG, (u32)app.display_on);
+}
+
+static void service_sonic_display(void)
+{
+    u32 seq = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+    if (seq != sonic_seq_seen) {
+        sonic_seq_seen = seq;
+        if (sonic_view) { sonic_view_fresh = 1U; fnd_commit(); }
+    }
+}
+
+// Level interrupt: read PENDING, acknowledge W1C, count each asserted type.
+static void btn_irq_handler(void *unused)
+{
+    u32 pending;
+    unsigned i;
+    (void)unused;
+    pending = Xil_In32(P2_03_BTN_BASEADDR + BTN_PENDING) &amp; 0xFFU;
+    if (!pending) return;
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_PENDING, pending); // W1C
+    for (i = 0; i &lt; 8U; ++i)
+        if (pending &amp; (1U &lt;&lt; i)) irq_counts[i]++;
+}
+
+/* (추가) 제1부 Timer callback: ISR에서는 출력하지 않고 카운터만 갱신. */
+static void timer_callback(void *ref, u8 timer_index)
+{
+    (void)ref;
+    (void)timer_index;
+    timer_irq_count++;
+}
+
+/* (추가) Classic은 하나의 AXI INTC 인스턴스에 버튼과 Timer를 모두 등록한다.
+ * SDT는 실제 BSP의 XSetupInterruptSystem 다중 소스 동작을 확인해야 한다. */
+static int setup_integrated_interrupts(void)
+{
+    int status;
+#ifndef SDT
+    status = XIntc_Initialize(&amp;intc, P2_03_INTC_DEVICE_ID);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Connect(&amp;intc, P2_03_BTN_INTR_ID,
+        (XInterruptHandler)btn_irq_handler, 0);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Connect(&amp;intc, P2_09_TIMER_INTR_ID,
+        (XInterruptHandler)XTmrCtr_InterruptHandler, &amp;timer);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Start(&amp;intc, XIN_REAL_MODE);
+    if (status != XST_SUCCESS) return status;
+    XIntc_Enable(&amp;intc, P2_03_BTN_INTR_ID);
+    XIntc_Enable(&amp;intc, P2_09_TIMER_INTR_ID);
+    Xil_ExceptionInit();
+    Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT,
+        (Xil_ExceptionHandler)XIntc_InterruptHandler, &amp;intc);
+    Xil_ExceptionEnable();
+#else
+    status = XSetupInterruptSystem(0, (void *)btn_irq_handler,
+        P2_03_BTN_INTR_ID, (UINTPTR)P2_03_BTN_INTR_PARENT,
+        XINTERRUPT_DEFAULT_PRIORITY);
+    if (status != XST_SUCCESS) return status;
+    status = XSetupInterruptSystem(&amp;timer,
+        (void *)XTmrCtr_InterruptHandler,
+        timer.Config.IntrId, timer.Config.IntrParent,
+        XINTERRUPT_DEFAULT_PRIORITY);
+    if (status != XST_SUCCESS) return status;
+#endif
+    return XST_SUCCESS;
+}
+
+/* (추가) Timer의 실제 클록은 BD에서 확인한 값으로 주입한다. */
+static int setup_legacy_timer_and_gpio(void)
+{
+    int status;
+#ifndef SDT
+    status = XGpio_Initialize(&amp;gpio, P2_09_GPIO_DEVICE_ID);
+#else
+    status = XGpio_Initialize(&amp;gpio, P2_09_GPIO_BASEADDR);
+#endif
+    if (status != XST_SUCCESS) return status;
+    XGpio_SetDataDirection(&amp;gpio, 1U, 0x00000000U); /* LED 채널 출력 */
+    XGpio_DiscreteWrite(&amp;gpio, 1U, 0U); /* 기존 GPIO 상위 출력 초기화 */
+#ifndef SDT
+    status = XTmrCtr_Initialize(&amp;timer, P2_09_TIMER_DEVICE_ID);
+#else
+    status = XTmrCtr_Initialize(&amp;timer, P2_09_TIMER_BASEADDR);
+#endif
+    if (status != XST_SUCCESS) return status;
+    XTmrCtr_SetHandler(&amp;timer, timer_callback, &amp;timer);
+    XTmrCtr_SetOptions(&amp;timer, TIMER0,
+        XTC_DOWN_COUNT_OPTION | XTC_AUTO_RELOAD_OPTION | XTC_INT_MODE_OPTION);
+    XTmrCtr_SetResetValue(&amp;timer, TIMER0, TIMER_RESET_VALUE);
+    return XST_SUCCESS;
+}
+
+/* (추가) LED0~2는 별도 사용자 IP, GPIO는 LED14/15만 구동한다. */
+static void service_legacy_gpio_leds(void)
+{
+    u32 target = (uart_line_activity ? UART_ACTIVITY_LED14 : 0U)
+        | ((timer_irq_count &amp; 1U) ? TIMER_HEARTBEAT_LED15 : 0U);
+    if (target != led_gpio_shadow) {
+        led_gpio_shadow = target;
+        XGpio_DiscreteWrite(&amp;gpio, 1U, led_gpio_shadow);
+    }
+}
+
+static void print_irq_status(void)
+{
+    unsigned i;
+    uart_puts(&quot;IRQ TIMER=&quot;); uart_dec_u32(timer_irq_count);
+    uart_puts(&quot; BTN=&quot;);
+    for (i=0; i&lt;8U; ++i) {
+        if (i) uart_puts(&quot;,&quot;);
+        uart_dec_u32(irq_counts[i]);
+    }
+    uart_puts(&quot; COALESCED=0x&quot;);
+    uart_hex32(Xil_In32(P2_03_BTN_BASEADDR + BTN_COALESCED));
+    uart_puts(&quot; (non-atomic snapshot)\r\n&quot;);
+}
+
+/* (추가) MODE AUTO는 모터 재기동 없이 센서 관찰·CdS 게이트만 구성. */
+static void enter_auto_mode(void)
+{
+    if (control_mode == P2_09_AUTO) {
+        uart_puts(&quot;OK MODE AUTO (already active)\r\n&quot;); return;
+    }
+    Xil_Out32(P2_07_MOTOR_BASEADDR + MOTOR_CMD_REG, 0U); /* STOP 요청 */
+    sonic_seq_seen = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+    sonic_view_fresh = 0U; sonic_auto_enabled=1U; sonic_view=1U;
+    sonic_commit_ctrl(); /* 근접 안전 감시는 유지 */
+    cds_auto_enabled=1U; cds_commit_control();
+    control_mode=P2_09_AUTO;
+    fnd_commit();
+    uart_puts(&quot;OK MODE AUTO: MOTOR STOP REQUESTED; CDS+SONIC ON; FND DIST\r\n&quot;);
+}
+
+static void enter_manual_mode(void)
+{
+    /* MANUAL 중 AUTO ON을 직접 켠 경우에도 명시적 MODE MANUAL은 해제. */
+    cds_auto_enabled=0U; cds_commit_control();
+    sonic_view=0U; sonic_view_fresh=0U; fnd_commit();
+    /* 근접 감시를 OFF하지 않는다. MOTOR STOP 요청도 유지된다. */
+    control_mode=P2_09_MANUAL;
+    uart_puts(&quot;OK MODE MANUAL: CDS AUTO OFF; SONIC SAFETY RETAINED\r\n&quot;);
+}
+
+// (추가) Report command vs physical output separately. Command != rotation.
+static void motor_print_status(void)
+{
+    u32 cmd = Xil_In32(P2_07_MOTOR_BASEADDR + MOTOR_CMD_REG);
+    u32 st = Xil_In32(P2_07_MOTOR_BASEADDR + MOTOR_STATUS_REG);
+    uart_puts(&quot; MOTOR_REQ=&quot;); uart_puts(motor_direction_name(cmd));
+    uart_puts(&quot; MOTOR_ACT=&quot;);
+    uart_puts((st &amp; (1U &lt;&lt; 1)) ? &quot;FWD&quot; : ((st &amp; (1U &lt;&lt; 2)) ? &quot;REV&quot; : &quot;STOP&quot;));
+    uart_puts(&quot; MOTOR_EN=&quot;); uart_dec_u32(st &amp; 1U);
+    uart_puts(&quot; MOTOR_TRIP=&quot;); uart_dec_u32((st &gt;&gt; 3) &amp; 1U);
+    uart_puts(&quot; MOTOR_DEADTIME=&quot;); uart_dec_u32((st &gt;&gt; 4) &amp; 1U);
+    uart_puts(&quot; MOTOR_SAFE=&quot;); uart_dec_u32((st &gt;&gt; 5) &amp; 1U);
+    uart_puts(&quot; MOTOR_FRESH=&quot;); uart_dec_u32((st &gt;&gt; 6) &amp; 1U);
+    uart_puts(&quot; MOTOR_AUTO=&quot;); uart_dec_u32((st &gt;&gt; 7) &amp; 1U);
+    uart_puts(&quot; MOTOR_BLOCKED=&quot;); uart_dec_u32((st &gt;&gt; 9) &amp; 1U);
+}
+
+static void print_status(void)
+{
+    u32 led = Xil_In32(P2_01_LED_BASEADDR);
+    u32 fnd_bcd = Xil_In32(P2_02_FND_BASEADDR + FND_VAL_REG);
+    u32 fnd_ctrl = Xil_In32(P2_02_FND_BASEADDR + FND_CTRL_REG);
+    u32 pressed = Xil_In32(P2_03_BTN_BASEADDR + BTN_PRESSED);
+    u32 pending = Xil_In32(P2_03_BTN_BASEADDR + BTN_PENDING);
+    u32 lost = Xil_In32(P2_03_BTN_BASEADDR + BTN_COALESCED);
+    uart_puts(&quot;STATUS LED=&quot;); uart_puts((led &amp; 1U) ? &quot;ON&quot; : &quot;OFF&quot;);
+    uart_puts(&quot; REG0=0x&quot;); uart_hex32(led);
+    uart_puts(&quot; DISP=&quot;); uart_dec4(p2_visible_decimal(&amp;app));
+    uart_puts((fnd_ctrl &amp; 1U) ? &quot; ON&quot; : &quot; OFF&quot;);
+    uart_puts(&quot; MODE=&quot;); uart_puts(app.mode ? &quot;EVENTS&quot; : &quot;VALUE&quot;);
+    uart_puts(&quot; VALUE=&quot;); uart_dec4(app.value);
+    uart_puts(&quot; EVENTS=&quot;); uart_dec4(app.event_count);
+    uart_puts(&quot; FND_REG0=0x&quot;); uart_hex32(fnd_bcd);
+    uart_puts(&quot; BTN_PRESSED=0x&quot;); uart_hex32(pressed);
+    uart_puts(&quot; BTN_PENDING=0x&quot;); uart_hex32(pending);
+    uart_puts(&quot; COALESCED=0x&quot;); uart_hex32(lost);
+    // (추가) 03장 STATUS 전체를 유지하고 PWM 상태를 뒤에 추가.
+    {
+        u32 flags = Xil_In32(P2_04_PWM_BASEADDR + PWM_STATUS);
+        u32 p = Xil_In32(P2_04_PWM_BASEADDR + PWM_PERIOD_ACT);
+        u32 d = Xil_In32(P2_04_PWM_BASEADDR + PWM_DUTY_ACT);
+        u32 pct = p ? (u32)(((uint64_t)d * 100U) / p) : 0U;
+        uart_puts(&quot; PWM_SET=&quot;); uart_dec_u32(pwm_requested_percent);
+        uart_puts(&quot;% PWM_ACTIVE=&quot;); uart_dec_u32(pct);
+        uart_puts(&quot;% PWM_PENDING=&quot;); uart_puts((flags &amp; 1U) ? &quot;1&quot; : &quot;0&quot;);
+        uart_puts(&quot; PWM_ENABLE=&quot;); uart_puts((flags &amp; (1U &lt;&lt; 8)) ? &quot;1&quot; : &quot;0&quot;);
+        uart_puts(&quot; PWM_LED=1&quot;);
+    }
+    // (추가) Append CdS state without removing 04 status fields.
+    {
+        u32 bits = Xil_In32(P2_05_CDS_BASEADDR + CDS_STATUS);
+        uart_puts(&quot; CDS_RAW=&quot;); uart_dec_u32(bits &amp; 1U);
+        uart_puts(&quot; CDS_DARK=&quot;); uart_dec_u32((bits &gt;&gt; 1) &amp; 1U);
+        uart_puts(&quot; CDS_VALID=&quot;); uart_dec_u32((bits &gt;&gt; 2) &amp; 1U);
+        uart_puts(&quot; CDS_GATE=&quot;); uart_dec_u32((bits &gt;&gt; 3) &amp; 1U);
+        uart_puts(&quot; CDS_AUTO=&quot;); uart_dec_u32((bits &gt;&gt; 4) &amp; 1U);
+        uart_puts(&quot; CDS_POL=&quot;); uart_puts((bits &amp; (1U &lt;&lt; 5)) ? &quot;LOW&quot; : &quot;HIGH&quot;);
+    }
+    // (추가) Append 06 status fields; do not remove 01~05 fields.
+    {
+        u32 st, cm, seq;
+        sonic_read_state(&amp;st,&amp;cm,&amp;seq);
+        uart_puts(&quot; SONIC_VIEW=&quot;); uart_puts(sonic_view ? &quot;DIST&quot; : &quot;VALUE/EVENTS&quot;);
+        uart_puts(&quot; SONIC_CM=&quot;); uart_dec_u32(cm);
+        uart_puts(&quot; SONIC_VALID=&quot;); uart_dec_u32((st &gt;&gt; 1) &amp; 1U);
+        uart_puts(&quot; SONIC_TIMEOUT=&quot;); uart_dec_u32((st &gt;&gt; 2) &amp; 1U);
+        uart_puts(&quot; SONIC_RANGE=&quot;); uart_dec_u32((st &gt;&gt; 3) &amp; 1U);
+        uart_puts(&quot; SONIC_ALERT=&quot;); uart_dec_u32((st &gt;&gt; 4) &amp; 1U);
+        uart_puts(&quot; SONIC_UNSAFE=&quot;); uart_dec_u32((st &gt;&gt; 5) &amp; 1U);
+        uart_puts(&quot; SONIC_SEQ=&quot;); uart_dec_u32(seq);
+    }
+    // (추가) 07장 상태 필드; 01~06장 내용 삭제 금지.
+    motor_print_status();
+    // (추가) 제1부~07장의 모든 STATUS 필드를 보존하고 XADC를 덧붙인다.
+    {
+        uint16_t raw = adc_sample_raw12();
+        uart_puts(&quot; ADC_RAW=&quot;); uart_dec_u32(raw);
+        uart_puts(&quot; ADC_MV=&quot;); uart_dec_u32(adc_millivolts_from_raw(raw));
+        uart_puts(&quot; ADC_PWM_LAST=&quot;);
+        if (adc_apply_seen) uart_dec_u32(adc_last_applied);
+        else uart_puts(&quot;NONE&quot;);
+        uart_puts(&quot; ADC_FRESH=UNVERIFIED&quot;);
+    }
+    /* (추가) 기존 출력 필드 삭제 없이 09장 통합 상태를 덧붙인다. */
+    uart_puts(&quot; CTRL_MODE=&quot;); uart_puts(p2_09_mode_name(control_mode));
+    uart_puts(&quot; IRQ_TIMER=&quot;); uart_dec_u32(timer_irq_count);
+    uart_puts(&quot; LED14_ACTIVITY=&quot;); uart_dec_u32(uart_line_activity);
+    uart_puts(&quot; LED15_HEARTBEAT=&quot;); uart_dec_u32(timer_irq_count &amp; 1U);
+    uart_puts(&quot;\r\n&quot;);
+}
+
+static void handle_line(const char *line)
+{
+    uint16_t value = 0;
+    u8 pwm_percent = 0U;
+    /* (추가) MODE/IRQ 문자열을 기존 파서보다 먼저 처리한다. */
+    P2_09_Command integrated_cmd = p2_09_parse_command(line);
+    switch (integrated_cmd) {
+    case P2_09_MODE_AUTO: enter_auto_mode(); return;
+    case P2_09_MODE_MANUAL: enter_manual_mode(); return;
+    case P2_09_MODE_STATUS:
+        uart_puts(&quot;MODE=&quot;); uart_puts(p2_09_mode_name(control_mode));
+        uart_puts(&quot; CDS_AUTO=&quot;); uart_dec_u32(cds_auto_enabled);
+        uart_puts(&quot; SONIC_AUTO=&quot;); uart_dec_u32(sonic_auto_enabled);
+        uart_puts(&quot; MOTOR_REQ=&quot;);
+        uart_puts(motor_direction_name(Xil_In32(P2_07_MOTOR_BASEADDR+MOTOR_CMD_REG)));
+        uart_puts(&quot; (actual motor state: MOTOR STATUS)\r\n&quot;); return;
+    case P2_09_IRQ_STATUS: print_irq_status(); return;
+    case P2_09_MODE_INVALID: uart_puts(&quot;ERROR: MODE AUTO | MODE MANUAL | MODE STATUS\r\n&quot;); return;
+    case P2_09_IRQ_INVALID: uart_puts(&quot;ERROR: IRQ STATUS\r\n&quot;); return;
+    default: break;
+    }
+    if (control_mode == P2_09_AUTO &amp;&amp; !p2_09_allowed_in_auto(line)) {
+        uart_puts(&quot;BLOCKED: MODE AUTO safety; use MODE MANUAL first\r\n&quot;);
+        return;
+    }
+    // (추가) 08장 ADC READ / ADC PWM 명령은 기존 명령과 독립적으로 파싱.
+    AdcCommand adc_cmd = adc_parse_command(line);
+    if (adc_cmd != ADC_NOT_COMMAND) {
+        if (adc_cmd == ADC_READ) {
+            adc_print_reading();
+        } else if (adc_cmd == ADC_PWM) {
+            uint16_t raw = adc_sample_raw12();
+            u8 percent = adc_percent_from_raw(raw);
+            // (추가) 실제 모터 PWM이나 보호 RTL은 변경하지 않는다.
+            if (!pwm_queue_percent(percent)) {
+                uart_puts(&quot;BUSY: previous PWM update pending; retry ADC PWM\r\n&quot;);
+            } else {
+                adc_last_applied = percent;
+                adc_apply_seen = 1U;
+                uart_puts(&quot;OK ADC PWM &quot;); uart_dec_u32(percent);
+                uart_puts(&quot;% QUEUED (LED1; next PWM period)\r\n&quot;);
+            }
+        } else {
+            uart_puts(&quot;ERROR: ADC READ | ADC PWM\r\n&quot;);
+        }
+        return;
+    }
+    MotorCommand motor_cmd = motor_parse_command(line);
+    if (motor_cmd != MOTOR_NOT_COMMAND) {
+        switch (motor_cmd) {
+        case MOTOR_STOP:
+            // (추가) STOP always accepted, even when sensor is unsafe.
+            // Also clears a latched trip; restart requires new FWD/REV.
+            Xil_Out32(P2_07_MOTOR_BASEADDR + MOTOR_CMD_REG, 0U);
+            uart_puts(&quot;OK MOTOR STOP REQUESTED\r\n&quot;);
+            break;
+        case MOTOR_FWD:
+        case MOTOR_REV: {
+            u32 st = Xil_In32(P2_07_MOTOR_BASEADDR + MOTOR_STATUS_REG);
+            if ((st &amp; (1U &lt;&lt; 5)) == 0U || (st &amp; (1U &lt;&lt; 3)) != 0U) {
+                uart_puts(&quot;BLOCKED: SONIC AUTO + fresh safe distance required; &quot;
+                          &quot;after TRIP use MOTOR STOP\r\n&quot;);
+            } else {
+                Xil_Out32(P2_07_MOTOR_BASEADDR + MOTOR_CMD_REG,
+                          motor_cmd == MOTOR_FWD ? 1U : 2U);
+                uart_puts(&quot;OK MOTOR REQUESTED &quot;);
+                uart_puts(motor_cmd == MOTOR_FWD ? &quot;FWD&quot; : &quot;REV&quot;);
+                uart_puts(&quot; (check MOTOR STATUS for physical output)\r\n&quot;);
+            }
+            break;
+        }
+        case MOTOR_STATUS:
+            uart_puts(&quot;MOTOR STATUS&quot;); motor_print_status(); uart_puts(&quot;\r\n&quot;);
+            break;
+        default:
+            uart_puts(&quot;ERROR: MOTOR FWD | MOTOR REV | MOTOR STOP | MOTOR STATUS\r\n&quot;);
+            break;
+        }
+        return;
+    }
+    // (추가) SONIC / WARN commands are parsed before legacy commands.
+    uint16_t warn_cm=0U;
+    SonicCommand sonic_cmd = sonic_parse_command(line,&amp;warn_cm);
+    CdsCommand cds_cmd = cds_parse_command(line);
+    PwmParseResult pwm_cmd = pwm_parse_command(line, &amp;pwm_percent);
+    P2Command cmd;
+    if (sonic_cmd != SONIC_NOT_COMMAND) {
+        switch (sonic_cmd) {
+        case SONIC_ON:
+            sonic_seq_seen = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+            sonic_view_fresh=0U; sonic_auto_enabled=1U; sonic_view=1U;
+            sonic_commit_ctrl(); fnd_commit();
+            uart_puts(&quot;OK SONIC ON (FND DIST cm)\r\n&quot;); break;
+        case SONIC_OFF:
+            sonic_auto_enabled=0U; sonic_view=0U; sonic_view_fresh=0U;
+            sonic_commit_ctrl(); fnd_commit();
+            uart_puts(&quot;OK SONIC OFF (FND VALUE/EVENTS restored)\r\n&quot;); break;
+        case SONIC_READ: sonic_print_reading(); break;
+        case SONIC_SHOT:
+            if (sonic_auto_enabled ||
+                ((Xil_In32(P2_06_SONIC_BASEADDR + SONIC_STATUS) &gt;&gt; 8) &amp; 1U)==0U) {
+                uart_puts(&quot;BUSY: SONIC SHOT unavailable; retry or SONIC OFF\r\n&quot;);
+            } else {
+                // W1P START bit1; preserve WARN_EN bit2, AUTO remains off.
+                Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_CTRL,
+                          ((u32)sonic_warn_enabled &lt;&lt; 2) | 2U);
+                uart_puts(&quot;OK SONIC SHOT QUEUED; use SONIC READ\r\n&quot;);
+            }
+            break;
+        case SONIC_WARN_CM:
+            Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_WARN_CFG, warn_cm);
+            sonic_warn_enabled=1U; sonic_commit_ctrl();
+            uart_puts(&quot;OK WARN &quot;);uart_dec_u32(warn_cm);uart_puts(&quot; CM\r\n&quot;); break;
+        case SONIC_WARN_OFF:
+            sonic_warn_enabled=0U; sonic_commit_ctrl();
+            uart_puts(&quot;OK WARN OFF (UNSAFE status remains active)\r\n&quot;); break;
+        default: uart_puts(&quot;ERROR: SONIC ON/OFF/READ/SHOT | WARN 1..400/OFF\r\n&quot;);
+        }
+        return;
+    }
+    if (cds_cmd != CDS_NOT_COMMAND) {
+        switch (cds_cmd) {
+        case CDS_AUTO_ON:
+            cds_auto_enabled=1U; cds_commit_control();
+            uart_puts(&quot;OK AUTO ON (PWM duty retained)\r\n&quot;); break;
+        case CDS_AUTO_OFF:
+            cds_auto_enabled=0U; cds_commit_control();
+            uart_puts(&quot;OK AUTO OFF (PWM manual)\r\n&quot;); break;
+        case CDS_POL_LOW:
+            cds_dark_when_low=1U; cds_commit_control();
+            uart_puts(&quot;OK CDS POL LOW\r\n&quot;); break;
+        case CDS_POL_HIGH:
+            cds_dark_when_low=0U; cds_commit_control();
+            uart_puts(&quot;OK CDS POL HIGH\r\n&quot;); break;
+        case CDS_READ:
+            cds_print_reading(); break;
+        default:
+            uart_puts(&quot;ERROR: AUTO ON | AUTO OFF | CDS READ | CDS POL LOW | CDS POL HIGH\r\n&quot;);
+            break;
+        }
+        return;
+    }
+    if (pwm_cmd != PWM_NOT_COMMAND) {
+        if (pwm_cmd == PWM_INVALID) {
+            uart_puts(&quot;ERROR: PWM 0..100 (decimal, no leading zeroes)\r\n&quot;);
+        } else if (!pwm_queue_percent(pwm_percent)) {
+            uart_puts(&quot;BUSY: previous PWM update pending; retry\r\n&quot;);
+        } else {
+            uart_puts(&quot;OK PWM &quot;); uart_dec_u32(pwm_percent);
+            uart_puts(&quot; QUEUED\r\n&quot;); // 실제 출력은 다음 주기 경계에서 반영됨.
+        }
+        return;
+    }
+    cmd = p2_parse_command(line, &amp;value);
+    switch (cmd) {
+    case P2_CMD_LED_ON:
+        Xil_Out32(P2_01_LED_BASEADDR, 1U);
+        uart_puts(&quot;OK LED ON\r\n&quot;); break;
+    case P2_CMD_LED_OFF:
+        Xil_Out32(P2_01_LED_BASEADDR, 0U);
+        uart_puts(&quot;OK LED OFF\r\n&quot;); break;
+    case P2_CMD_DISP_VALUE:
+        p2_set_disp(&amp;app, value); fnd_commit();
+        uart_puts(&quot;OK DISP &quot;); uart_dec4(value); uart_puts(&quot;\r\n&quot;); break;
+    case P2_CMD_DISP_OFF:
+        app.display_on = 0; fnd_commit(); uart_puts(&quot;OK DISP OFF\r\n&quot;); break;
+    case P2_CMD_STATUS:
+        print_status(); break;
+    default:
+        uart_puts(&quot;ERROR: ADC READ/PWM | MOTOR FWD/REV/STOP/STATUS | LED ON/OFF | DISP dddd/OFF | PWM 0..100 | AUTO ON/OFF | CDS READ/POL | SONIC ON/OFF/READ/SHOT | WARN 1..400/OFF | STATUS\r\n&quot;);
+    }
+}
+
+static void poll_uart(void)
+{
+    static char line[LINE_CAP];
+    static u32 used = 0;
+    static int invalid = 0;
+    static int overflow = 0;
+    u8 ch;
+    if (XUartLite_IsReceiveEmpty(UART_BASEADDR)) return;
+    ch = XUartLite_RecvByte(UART_BASEADDR);
+    if (ch == &#x27;\r&#x27; || ch == &#x27;\n&#x27;) {
+        line[used] = &#x27;\0&#x27;;
+        if (overflow) uart_puts(&quot;ERROR: line too long\r\n&quot;);
+        else if (invalid) uart_puts(&quot;ERROR: invalid ASCII\r\n&quot;);
+        else if (used) handle_line(line);
+        /* (추가) Enter로 완성된 명령 행이 있을 때 LED14 활동 비트 반전. */
+        if (used || overflow || invalid) uart_line_activity ^= 1U;
+        used = 0; overflow = 0; invalid = 0;
+        return; // CRLF second terminator is ignored.
+    }
+    if (ch &lt; 0x20U || ch &gt; 0x7EU) { invalid = 1; return; }
+    if (used &lt; LINE_CAP-1U) line[used++] = (char)ch;
+    else overflow = 1;
+}
+
+static void service_button_events(void)
+{
+    unsigned i;
+    for (i = 0; i &lt; 8U; ++i) {
+        // Each 32-bit read is atomic on the target 32-bit CPU. ISR only increments.
+        u32 seen = irq_counts[i];
+        while (handled_counts[i] != seen) {
+            handled_counts[i]++;
+            p2_apply_button(&amp;app, i);
+            fnd_commit();
+        }
+    }
+}
+
+int main(void)
+{
+    int status;
+    unsigned i;
+    p2_init(&amp;app);
+    for (i=0; i&lt;8U; ++i) { irq_counts[i]=0U; handled_counts[i]=0U; }
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_ENABLE, 0U); // Mask IRQ while setting up.
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_PENDING, 0xFFU); // Clear stale events.
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_COALESCED, 0xFFU); // Clear stale loss flags.
+    if (Xil_In32(P2_03_BTN_BASEADDR + BTN_ID) != 0x00030001U) {
+        uart_puts(&quot;ERROR: button IP identity mismatch\r\n&quot;); return XST_FAILURE;
+    }
+    // (추가) P2-05 identity check BEFORE enabling automatic operation.
+    if (Xil_In32(P2_05_CDS_BASEADDR + CDS_IP_ID) != CDS_EXPECTED_ID) {
+        uart_puts(&quot;ERROR: CdS IP identity mismatch\r\n&quot;);
+        return XST_FAILURE;
+    }
+    cds_auto_enabled = 0U; cds_dark_when_low = 1U;
+    cds_commit_control(); // Power-on always begins in manual bypass mode.
+    // (추가) Motor hardware boot state: STOP before configuring other devices.
+    if (Xil_In32(P2_07_MOTOR_BASEADDR + MOTOR_ID_REG) != MOTOR_EXPECTED_ID) {
+        uart_puts(&quot;ERROR: motor IP identity mismatch\r\n&quot;);
+        return XST_FAILURE;
+    }
+    Xil_Out32(P2_07_MOTOR_BASEADDR + MOTOR_CMD_REG, 0U);
+    // (추가) Validate 06 IP before enabling a continuous trigger.
+    if (Xil_In32(P2_06_SONIC_BASEADDR + SONIC_ID) != SONIC_EXPECTED_ID) {
+        uart_puts(&quot;ERROR: HC-SR04 IP identity mismatch\r\n&quot;);
+        return XST_FAILURE;
+    }
+    sonic_auto_enabled=0U; sonic_warn_enabled=1U; sonic_view=0U; sonic_view_fresh=0U;
+    Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_WARN_CFG, 20U);
+    sonic_commit_ctrl();
+    sonic_seq_seen=Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+    // (추가) IP ID를 확인하고 시작할 때 PWM OFF를 예약.
+    if (Xil_In32(P2_04_PWM_BASEADDR + PWM_ID) != PWM_IP_ID) {
+        uart_puts(&quot;ERROR: PWM IP identity mismatch\r\n&quot;);
+        return XST_FAILURE;
+    }
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_PERIOD_CFG, PWM_PERIOD_TICKS);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_DUTY_CFG, 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_CTRL_CFG, 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_APPLY, 1U);
+    fnd_commit();
+    /* (추가) 기존 GPIO LED14/15와 Timer 준비 후 IRQ 공유 연결. */
+    status = setup_legacy_timer_and_gpio();
+    if (status != XST_SUCCESS) {
+        uart_puts(&quot;ERROR: legacy GPIO/Timer init failed\r\n&quot;);
+        return XST_FAILURE;
+    }
+    status = setup_integrated_interrupts();
+    if (status != XST_SUCCESS) {
+        uart_puts(&quot;ERROR: interrupt initialization failed\r\n&quot;);
+        return XST_FAILURE;
+    }
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_ENABLE, 0xFFU);
+    XTmrCtr_Start(&amp;timer, TIMER0); /* (추가) IRQ 연결 후 0.5초 Tick 시작. */
+    uart_puts(&quot;P2-09: UART/IRQ + MODE AUTO/MANUAL integrated\r\n&quot;);
+    uart_puts(&quot;UART: MODE AUTO/MANUAL/STATUS | IRQ STATUS | ADC READ/PWM | MOTOR FWD/REV/STOP/STATUS | SONIC ON/OFF/READ/SHOT | WARN 1..400/OFF | LED ON/OFF | DISP 1234/OFF | PWM 0..100 | AUTO ON/OFF | CDS READ/POL LOW/HIGH | STATUS\r\n&quot;);
+    while (1) {
+        poll_uart(); // Non-blocking: do not starve event processing.
+        service_button_events();
+        service_sonic_display(); // (유지) FND 거리의 최신 완료 샘플 반영.
+        service_legacy_gpio_leds(); // (추가) LED14 활동·LED15 타이머 표시.
+    }
+}
+</code></pre></section><section class="section" id="helper"><span class="step-tag">CODE</span><h2>9. p2_09_mode_logic.[ch] 전체 원문</h2><p><a href="sw/p2_09_mode_logic.c">파서 소스</a> · <a href="sw/p2_09_mode_logic.h">헤더</a></p><h3>p2_09_mode_logic.c</h3><pre><code class="c">#include &quot;p2_09_mode_logic.h&quot;
+#include &lt;string.h&gt;
+/* 문자열 전체 일치, 대소문자/공백을 임의 정규화하지 않는다. */
+P2_09_Command p2_09_parse_command(const char *line)
+{
+    if (line == 0) return P2_09_MODE_INVALID;
+    if (strcmp(line, &quot;MODE AUTO&quot;) == 0) return P2_09_MODE_AUTO;
+    if (strcmp(line, &quot;MODE MANUAL&quot;) == 0) return P2_09_MODE_MANUAL;
+    if (strcmp(line, &quot;MODE STATUS&quot;) == 0) return P2_09_MODE_STATUS;
+    if (strcmp(line, &quot;IRQ STATUS&quot;) == 0) return P2_09_IRQ_STATUS;
+    if (strncmp(line, &quot;MODE&quot;, 4U) == 0) return P2_09_MODE_INVALID;
+    if (strncmp(line, &quot;IRQ&quot;, 3U) == 0) return P2_09_IRQ_INVALID;
+    return P2_09_NOT_COMMAND;
+}
+const char *p2_09_mode_name(P2_09_Mode mode)
+{
+    return mode == P2_09_AUTO ? &quot;AUTO&quot; : &quot;MANUAL&quot;;
+}
+int p2_09_allowed_in_auto(const char *line)
+{
+    if (line == 0) return 0;
+    /* (필수) AUTO 모드 중 안전 감시/조도 게이트를 해제하지 않는다. */
+    if (strcmp(line, &quot;AUTO OFF&quot;) == 0) return 0;
+    if (strcmp(line, &quot;SONIC OFF&quot;) == 0) return 0;
+    /* (필수) AUTO 모드는 모터 자체를 기동하지 않는다. */
+    if (strcmp(line, &quot;MOTOR FWD&quot;) == 0) return 0;
+    if (strcmp(line, &quot;MOTOR REV&quot;) == 0) return 0;
+    return 1;
+}
+</code></pre><h3>p2_09_mode_logic.h</h3><pre><code class="c">#ifndef P2_09_MODE_LOGIC_H
+#define P2_09_MODE_LOGIC_H
+#include &lt;stdint.h&gt;
+/* P2-09: 보드에 종속되지 않는 운전 모드/문자열 명령 계약. */
+typedef enum {
+    P2_09_NOT_COMMAND = 0,
+    P2_09_MODE_AUTO,
+    P2_09_MODE_MANUAL,
+    P2_09_MODE_STATUS,
+    P2_09_MODE_INVALID,
+    P2_09_IRQ_STATUS,
+    P2_09_IRQ_INVALID
+} P2_09_Command;
+typedef enum { P2_09_MANUAL=0, P2_09_AUTO=1 } P2_09_Mode;
+P2_09_Command p2_09_parse_command(const char *line);
+const char *p2_09_mode_name(P2_09_Mode mode);
+/* AUTO에서는 안전정책 해제 및 모터 기동 명령을 금지한다. */
+int p2_09_allowed_in_auto(const char *line);
+#endif
+</code></pre></section><section class="section" id="prev"><span class="step-tag">CODE</span><h2>10. 기존 03~08장 함수 재사용·회귀</h2><div class="table-wrap"><table><thead><tr><th>원본</th><th>유지 대상</th><th>원문</th></tr></thead><tbody><tr><td>03장</td><td>FND/버튼</td><td><a href="sw/p2_03_logic.c">C 원문</a></td></tr><tr><td>04장</td><td>PWM</td><td><a href="sw/p2_04_pwm_logic.c">C 원문</a></td></tr><tr><td>05장</td><td>CdS</td><td><a href="sw/p2_05_cds_logic.c">C 원문</a></td></tr><tr><td>06장</td><td>SONIC</td><td><a href="sw/p2_06_sonic_logic.c">C 원문</a></td></tr><tr><td>07장</td><td>MOTOR</td><td><a href="sw/p2_07_motor_logic.c">C 원문</a></td></tr><tr><td>08장</td><td>ADC</td><td><a href="sw/p2_08_adc_logic.c">C 원문</a></td></tr></tbody></table></div><p>기존 08장 메인은 <a href="reference/main_p2_08.c">원본</a>에 별도 보존되어 있습니다. 실제 09장 Vitis Application에는 08장 <code>main()</code>을 중복 포함하지 않습니다.</p></section></main></div></body></html>

@@ -1,0 +1,1220 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 06.1장 · C 코드 풀이">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 06.1장 · C 코드 풀이 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-06-1">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 06.1장 <span class="vbadge">v02</span></p>
+    <h1>제2부 06.1장 · C 코드 풀이</h1>
+    <p>main_p2_06.c와 SONIC/CdS/PWM/Button Parser를 동일한 버전으로 제시한다.</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+ <section class="section" id="overview">
+<h2><span class="num">00</span>이 장의 목표</h2>
+<p>main_p2_06.c와 SONIC/CdS/PWM/Button Parser를 동일한 버전으로 제시한다. 정수 계산과 레지스터 접근의 의미를 함께 설명한다.</p>
+<ul aria-label="핵심 용어" class="chips"><li>Basys3 XC7A35T</li><li>MicroBlaze V</li><li>Vivado/Vitis 2024.2</li><li>SONIC / WARN</li><li>RTL + AXI</li></ul>
+</section>
+<section class="section" id="concept">
+<h2><span class="num">01</span>C 자료형·AMD 전용 함수·호출 구조</h2>
+<div>C · 개념</div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>코드 기호</th><th>읽기·개념</th><th>실제 용도</th></tr></thead><tbody><tr><td><code>u8</code></td><td>유 에이트 / 8비트 부호 없는 정수</td><td>UART 1바이트, 명령 상태</td></tr><tr><td><code>u32</code></td><td>유 서티투 / 32비트 부호 없는 정수</td><td>AXI 레지스터, 측정값, SEQ</td></tr><tr><td><code>uint16_t</code></td><td>유인트 식스틴 티 / 고정 16비트 정수</td><td>2~400 cm·경고 임계값</td></tr><tr><td><code>Xil_In32()</code></td><td>자일 인 서티투 / 32비트 메모리 읽기</td><td>주소에 매핑된 STATUS·DIST_CM 읽기</td></tr><tr><td><code>Xil_Out32()</code></td><td>자일 아웃 서티투 / 32비트 메모리 쓰기</td><td>AUTO, WARN_CM, FND 레지스터 기록</td></tr><tr><td><code>XUartLite_RecvByte()</code></td><td>엑스 유아트 라이트 리시브 바이트 / 1바이트 수신</td><td>UART 한 글자 수신</td></tr><tr><td><code>XUartLite_IsReceiveEmpty()</code></td><td>... 이즈 리시브 엠프티 / 수신 FIFO 비었는지 검사</td><td>논블로킹 명령 처리</td></tr><tr><td><code>SONIC_SEQ</code></td><td>시퀀스 / 새 측정 완료 횟수</td><td>거리가 새로 갱신됐는지 확인</td></tr><tr><td><code>#error</code></td><td>컴파일 타임 오류</td><td>미확정 AXI 주소로 빌드하지 않도록 차단</td></tr><tr><td><code>SDT</code></td><td>에스디티 / System Device Tree(시스템 장치 트리)</td><td>프로젝트 BSP에 따른 IRQ 설정 분기</td></tr></tbody></table></div><p>서브 프로그램의 역할: <code>sonic_parse_command()</code>는 UART 텍스트를 확인하고, <code>sonic_read_state()</code>는 AXI 상태를 읽으며, <code>fnd_commit()</code>는 화면 우선순위에 따라 기존 FND IP에 값을 쓴다. <code>service_sonic_display()</code>는 완료 횟수(SEQ)가 증가할 때만 표시를 갱신한다.</p><div><img alt="C 명령 처리 플로우차트" class="zoom" loading="lazy" src="diagrams/p2_06_command_flow.svg"/></div>
+</section>
+<section class="section" id="examples">
+<h2><span class="num">02</span>구체적 코드 풀이</h2>
+<div>C · 동작</div><h3>① Echo 폭 5800μs의 거리 환산</h3><div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>echo_us_o = 5800;
+distance_cm_o = (5800 + 29) / 58;  // 반올림 근사 → 100</code></pre></div></div><p>정수 연산의 오차를 줄이기 위해 58의 절반인 29를 더해 가까운 cm로 반올림한다. 실측 정확도가 1cm라는 의미는 아니다.</p><h3>② 50cm 표시 전환</h3><div><div class="codeblock"><div class="codebar"><span>명령·출력</span></div><pre tabindex="0"><code>visible = sonic_visible_cm(st, cm);  // valid면 거리, invalid면 0
+Xil_Out32(P2_02_FND_BASEADDR + FND_VAL_REG, p2_to_bcd4(visible));
+Xil_Out32(P2_02_FND_BASEADDR + FND_CTRL_REG,
+          (sonic_view_fresh &amp;&amp; sonic_sample_valid(st, cm)) ? 1U : 0U);</code></pre></div></div><p><code>p2_to_bcd4(50)</code>의 결과는 0x0050이다. 소프트웨어가 FND 자리 신호를 직접 토글하지 않고, 기존 02장 FND RTL이 하드웨어 시분할 스캔을 수행한다.</p><h3>③ SONIC SHOT</h3><div><div class="codeblock"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_CTRL,
+          ((u32)sonic_warn_enabled &lt;&lt; 2) | 2U);</code></pre></div></div><p>bit1의 1은 START 원샷 펄스이며, bit2는 LED 경고 허용 상태를 유지한다. 실제 Core는 busy 상태에서 새 요청을 받아서는 안 되므로 C가 READY 상태를 먼저 확인한다.</p><h3>④ 읽기 상태</h3><div><div class="codeblock"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>u32 st = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_STATUS);
+// bit1 VALID, bit2 TIMEOUT, bit3 RANGE_ERROR, bit5 UNSAFE</code></pre></div></div><p>VALID=0과 DIST_CM=0을 물체가 실제로 0cm에 있다고 판단하면 안 된다. 센서 물리 측정 범위의 최소값은 2cm다.</p>
+</section>
+<section class="section" id="cfile0">
+<h2><span class="num">03</span>sw/main_p2_06.c</h2>
+<div>C · 전체 코드</div><p><b>소스:</b> <a href="#f-part02_1_ch06_sw_main_p2_06_c">코드 파일 열기</a> — 아래는 배포 파일과 동일한 전체 코드다.</p><div><div class="codeblock" id="f-part02_1_ch06_sw_main_p2_06_c"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>/* P2-06: retain P2-01~05 and add HC-SR04 measurement + FND/LED2.
+ * NOTE: Base addresses, Interrupt ID/Parent MUST be read from actual BSP.
+ * This source intentionally rejects unknown constants before target build.
+ */
+#include "xparameters.h"
+#include "xil_types.h"      /* u8, u32, UINTPTR */
+#include "xil_io.h"         /* Xil_In32, Xil_Out32 */
+#include "xuartlite_l.h"    /* UART Lite byte functions + FIFO empty check */
+#include "xstatus.h"
+#include "xil_exception.h"
+#ifdef SDT
+#include "xinterrupt_wrap.h" /* SDT interrupt API */
+#else
+#include "xintc.h"          /* Classic interrupt controller API */
+#endif
+#include "p2_03_logic.h"
+#include "p2_04_pwm_logic.h" // Reused 04 PWM parser / duty calculation
+#include "p2_05_cds_logic.h" // Existing AUTO/CDS command parser
+#include "p2_06_sonic_logic.h" // (추가) Strict SONIC/WARN command parser
+
+#ifndef P2_04_PWM_BASEADDR
+#define P2_04_PWM_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_04_PWM_BASEADDR == 0xFFFFFFFFU
+#error "Set P2_04_PWM_BASEADDR from CURRENT Vivado Address Editor/xparameters.h"
+#endif
+// (추가) Never guess the fifth AXI IP base: use CURRENT generated BSP.
+#ifndef P2_05_CDS_BASEADDR
+#define P2_05_CDS_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_05_CDS_BASEADDR == 0xFFFFFFFFU
+#error "Set P2_05_CDS_BASEADDR from CURRENT Address Editor/xparameters.h"
+#endif
+#ifndef P2_01_LED_BASEADDR
+#define P2_01_LED_BASEADDR 0xFFFFFFFFU
+#endif
+#ifndef P2_02_FND_BASEADDR
+#define P2_02_FND_BASEADDR 0xFFFFFFFFU
+#endif
+#ifndef P2_03_BTN_BASEADDR
+#define P2_03_BTN_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_01_LED_BASEADDR == 0xFFFFFFFFU || P2_02_FND_BASEADDR == 0xFFFFFFFFU || P2_03_BTN_BASEADDR == 0xFFFFFFFFU
+#error "Set all three AXI IP addresses from CURRENT Address Editor/xparameters.h"
+#endif
+#if P2_01_LED_BASEADDR == P2_02_FND_BASEADDR || P2_01_LED_BASEADDR == P2_03_BTN_BASEADDR || P2_02_FND_BASEADDR == P2_03_BTN_BASEADDR
+#error "Three user AXI IP base addresses must be unique"
+#endif
+#ifndef P2_03_BTN_INTR_ID
+#error "Fill P2_03_BTN_INTR_ID from CURRENT generated BSP interrupt map"
+#endif
+#ifdef SDT
+#ifndef P2_03_BTN_INTR_PARENT
+#error "Fill P2_03_BTN_INTR_PARENT (SDT encoded interrupt parent) from actual BSP"
+#endif
+#else
+#ifndef P2_03_INTC_DEVICE_ID
+#error "Fill P2_03_INTC_DEVICE_ID from Classic BSP"
+#endif
+#endif
+
+#if defined(XPAR_XUARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_XUARTLITE_0_BASEADDR
+#elif defined(XPAR_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_UARTLITE_0_BASEADDR
+#elif defined(XPAR_AXI_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_AXI_UARTLITE_0_BASEADDR
+#else
+#error "Check UART Lite base macro in the generated xparameters.h"
+#endif
+
+#define FND_VAL_REG  0x00U
+#define FND_CTRL_REG 0x04U
+#define BTN_PENDING  0x00U
+#define BTN_ENABLE   0x04U
+#define BTN_PRESSED  0x08U
+#define BTN_ID       0x0CU
+#define BTN_COALESCED 0x10U
+// P2-04 register offsets: 32-bit, byte-addressed.
+#define PWM_PERIOD_CFG 0x00U
+#define PWM_DUTY_CFG   0x04U
+#define PWM_CTRL_CFG   0x08U
+#define PWM_APPLY      0x0CU
+#define PWM_STATUS     0x10U
+#define PWM_PERIOD_ACT 0x14U
+#define PWM_DUTY_ACT   0x18U
+#define PWM_ID         0x1CU
+#define PWM_IP_ID      0x00040001U
+#define PWM_PERIOD_TICKS 100000U // AXI Clock이 실제 100MHz일 때 1kHz.
+#if P2_04_PWM_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_04_PWM_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_04_PWM_BASEADDR == P2_03_BTN_BASEADDR
+#error "New PWM IP base must differ from all prior IP addresses"
+#endif
+// (추가) P2-05 digital CdS AXI register map (32-bit byte offsets).
+#define CDS_CTRL    0x00U
+#define CDS_STATUS  0x04U
+#define CDS_IP_ID   0x08U
+#define CDS_FILTER  0x0CU
+#define CDS_EXPECTED_ID 0x00050001U
+#ifndef P2_06_SONIC_BASEADDR
+#define P2_06_SONIC_BASEADDR 0xFFFFFFFFU
+#endif
+#if P2_06_SONIC_BASEADDR == 0xFFFFFFFFU
+#error "Set P2_06_SONIC_BASEADDR from CURRENT Address Editor and BSP"
+#endif
+#if P2_05_CDS_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_05_CDS_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_05_CDS_BASEADDR == P2_03_BTN_BASEADDR || \
+    P2_05_CDS_BASEADDR == P2_04_PWM_BASEADDR
+#error "P2-05 CdS IP base address must differ from P2-01~04"
+#endif
+// (추가) P2-06 AXI4-Lite offsets; all byte offsets.
+#define SONIC_CTRL       0x00U
+#define SONIC_STATUS     0x04U
+#define SONIC_DIST_CM    0x08U
+#define SONIC_ECHO_US    0x0CU
+#define SONIC_WARN_CFG   0x10U
+#define SONIC_SEQ        0x14U
+#define SONIC_ID         0x18U
+#define SONIC_CLK_HZ     0x1CU
+#define SONIC_EXPECTED_ID 0x00060001U
+#if P2_06_SONIC_BASEADDR == P2_01_LED_BASEADDR || \
+    P2_06_SONIC_BASEADDR == P2_02_FND_BASEADDR || \
+    P2_06_SONIC_BASEADDR == P2_03_BTN_BASEADDR || \
+    P2_06_SONIC_BASEADDR == P2_04_PWM_BASEADDR || \
+    P2_06_SONIC_BASEADDR == P2_05_CDS_BASEADDR
+#error "P2-06 SONIC AXI base must be distinct from all previous IPs"
+#endif
+#define LINE_CAP     32U
+
+static P2AppState app;
+static u8 pwm_requested_percent = 0U;
+// (추가) The C application owns control policy; RTL filters raw CdS signal.
+static u8 cds_auto_enabled = 0U;
+static u8 sonic_auto_enabled = 0U;
+static u8 sonic_warn_enabled = 1U;
+static u8 sonic_view = 0U; // 1: DIST(cm) FND view overrides VALUE/EVENTS.
+static u8 sonic_view_fresh = 0U; // Blank stale result until next completion after ON.
+static u32 sonic_seq_seen = 0U;
+static u8 cds_dark_when_low = 1U; // Start assumption; verify DO via CDS READ.
+
+static volatile u32 irq_counts[8]; // ISR writes monotonically; main reads.
+static u32 handled_counts[8];      // Main-only processed counts.
+#ifndef SDT
+static XIntc intc;
+#endif
+
+static void uart_puts(const char *s)
+{
+    while (*s) XUartLite_SendByte(UART_BASEADDR, (u8)*s++);
+}
+static void uart_hex32(u32 v)
+{
+    const char hex[] = "0123456789ABCDEF";
+    int shift;
+    for (shift = 28; shift &gt;= 0; shift -= 4)
+        XUartLite_SendByte(UART_BASEADDR, (u8)hex[(v &gt;&gt; shift) &amp; 15U]);
+}
+static void uart_dec4(u32 value)
+{
+    int d;
+    u32 divisors[4] = {1000U, 100U, 10U, 1U};
+    for (d = 0; d &lt; 4; ++d) {
+        u32 n = (value / divisors[d]) % 10U;
+        XUartLite_SendByte(UART_BASEADDR, (u8)('0' + n));
+    }
+}
+
+// (추가) 0~4294967295를 선행 0 없이 UART에 출력.
+static void uart_dec_u32(u32 value)
+{
+    char tmp[10]; // u32 십진수 최대 10자리.
+    unsigned used = 0U;
+    do {
+        tmp[used++] = (char)('0' + (value % 10U));
+        value /= 10U;
+    } while (value != 0U);
+    while (used != 0U)
+        XUartLite_SendByte(UART_BASEADDR, (u8)tmp[--used]);
+}
+
+// (추가) 이전 설정이 반영 중이면 BUSY, 아니면 다음 주기 적용을 예약.
+static int pwm_queue_percent(u8 percent)
+{
+    u32 duty;
+    if ((Xil_In32(P2_04_PWM_BASEADDR + PWM_STATUS) &amp; 1U) != 0U)
+        return 0; // 기존 Pending 설정을 덮지 않는다.
+    duty = pwm_duty_for_percent(PWM_PERIOD_TICKS, percent);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_PERIOD_CFG, PWM_PERIOD_TICKS);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_DUTY_CFG, duty);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_CTRL_CFG, percent ? 1U : 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_APPLY, 1U);
+    pwm_requested_percent = percent;
+    return 1;
+}
+
+// (추가) Write configuration as one atomic 32-bit AXI register update.
+static void cds_commit_control(void)
+{
+    Xil_Out32(P2_05_CDS_BASEADDR + CDS_CTRL,
+              cds_control_word(cds_auto_enabled, cds_dark_when_low));
+}
+
+// (추가) Read sensor pins via AXI status, not by polling a physical GPIO.
+static void cds_print_reading(void)
+{
+    u32 bits = Xil_In32(P2_05_CDS_BASEADDR + CDS_STATUS);
+    uart_puts("CDS RAW="); uart_dec_u32(bits &amp; 1U);
+    uart_puts(" DARK="); uart_dec_u32((bits &gt;&gt; 1) &amp; 1U);
+    uart_puts(" VALID="); uart_dec_u32((bits &gt;&gt; 2) &amp; 1U);
+    uart_puts(" GATE="); uart_dec_u32((bits &gt;&gt; 3) &amp; 1U);
+    uart_puts(" AUTO="); uart_dec_u32((bits &gt;&gt; 4) &amp; 1U);
+    uart_puts(" POL="); uart_puts((bits &amp; (1U &lt;&lt; 5)) ? "LOW" : "HIGH");
+    uart_puts("\r\n");
+}
+
+// (추가) 06장 STATUS는 최근 완료된 샘플(VALID/TIMEOUT/RANGE)을 보존.
+// SEQ is a lightweight change marker; the HW has no atomic multiword latch.
+static void sonic_read_state(u32 *status, u32 *cm, u32 *seq)
+{
+    u32 a, b;
+    unsigned tries;
+    for (tries = 0; tries &lt; 3U; ++tries) {
+        a = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+        *status = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_STATUS);
+        *cm = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_DIST_CM);
+        b = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+        if (a == b) { *seq = b; return; }
+    }
+    *seq = b; // Contended snapshot: STATUS logs must not claim atomicity.
+}
+
+static void sonic_commit_ctrl(void)
+{
+    Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_CTRL,
+              (u32)sonic_auto_enabled | ((u32)sonic_warn_enabled &lt;&lt; 2));
+}
+
+static void sonic_print_reading(void)
+{
+    u32 st, cm, seq, echo_us;
+    sonic_read_state(&amp;st,&amp;cm,&amp;seq);
+    echo_us = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_ECHO_US);
+    uart_puts("SONIC CM="); uart_dec_u32(cm);
+    uart_puts(" ECHO_US="); uart_dec_u32(echo_us);
+    uart_puts(" VALID="); uart_dec_u32((st &gt;&gt; 1) &amp; 1U);
+    uart_puts(" TIMEOUT="); uart_dec_u32((st &gt;&gt; 2) &amp; 1U);
+    uart_puts(" RANGE_ERROR="); uart_dec_u32((st &gt;&gt; 3) &amp; 1U);
+    uart_puts(" BUSY="); uart_dec_u32(st &amp; 1U);
+    uart_puts(" ALERT="); uart_dec_u32((st &gt;&gt; 4) &amp; 1U);
+    uart_puts(" UNSAFE="); uart_dec_u32((st &gt;&gt; 5) &amp; 1U);
+    uart_puts(" SEQ="); uart_dec_u32(seq);
+    uart_puts(" WARN_CM="); uart_dec_u32(
+        Xil_In32(P2_06_SONIC_BASEADDR + SONIC_WARN_CFG));
+    uart_puts("\r\n");
+}
+
+static void fnd_commit(void)
+{
+    if (sonic_view) {
+        u32 st, cm, seq;
+        uint16_t visible;
+        sonic_read_state(&amp;st,&amp;cm,&amp;seq);
+        visible = sonic_visible_cm(st,cm);
+        // (추가) D3..D0: decimal 0002..0400 cm; no unit/dot hardware.
+        // Invalid/timeout =&gt; FND blank, not a misleading '0000'.
+        Xil_Out32(P2_02_FND_BASEADDR + FND_VAL_REG, p2_to_bcd4(visible));
+        Xil_Out32(P2_02_FND_BASEADDR + FND_CTRL_REG,
+                  (sonic_view_fresh &amp;&amp; sonic_sample_valid(st,cm)) ? 1U : 0U);
+        return;
+    }
+    // (유지) P2-03 VALUE/EVENTS shown when SONIC OFF.
+    Xil_Out32(P2_02_FND_BASEADDR + FND_VAL_REG,
+              p2_to_bcd4(p2_visible_decimal(&amp;app)));
+    Xil_Out32(P2_02_FND_BASEADDR + FND_CTRL_REG, (u32)app.display_on);
+}
+
+static void service_sonic_display(void)
+{
+    u32 seq = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+    if (seq != sonic_seq_seen) {
+        sonic_seq_seen = seq;
+        if (sonic_view) { sonic_view_fresh = 1U; fnd_commit(); }
+    }
+}
+
+// Level interrupt: read PENDING, acknowledge W1C, count each asserted type.
+static void btn_irq_handler(void *unused)
+{
+    u32 pending;
+    unsigned i;
+    (void)unused;
+    pending = Xil_In32(P2_03_BTN_BASEADDR + BTN_PENDING) &amp; 0xFFU;
+    if (!pending) return;
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_PENDING, pending); // W1C
+    for (i = 0; i &lt; 8U; ++i)
+        if (pending &amp; (1U &lt;&lt; i)) irq_counts[i]++;
+}
+
+static int setup_button_interrupt(void)
+{
+    int status;
+#ifdef SDT
+    // The physical interrupt ID and parent are project-specific.
+    status = XSetupInterruptSystem(0, (void *)btn_irq_handler,
+        P2_03_BTN_INTR_ID, (UINTPTR)P2_03_BTN_INTR_PARENT,
+        XINTERRUPT_DEFAULT_PRIORITY);
+#else
+    status = XIntc_Initialize(&amp;intc, P2_03_INTC_DEVICE_ID);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Connect(&amp;intc, P2_03_BTN_INTR_ID,
+        (XInterruptHandler)btn_irq_handler, 0);
+    if (status != XST_SUCCESS) return status;
+    status = XIntc_Start(&amp;intc, XIN_REAL_MODE);
+    if (status != XST_SUCCESS) return status;
+    XIntc_Enable(&amp;intc, P2_03_BTN_INTR_ID);
+    Xil_ExceptionInit();
+    Xil_ExceptionRegisterHandler(XIL_EXCEPTION_ID_INT,
+        (Xil_ExceptionHandler)XIntc_InterruptHandler, &amp;intc);
+    Xil_ExceptionEnable();
+#endif
+    return status;
+}
+
+static void print_status(void)
+{
+    u32 led = Xil_In32(P2_01_LED_BASEADDR);
+    u32 fnd_bcd = Xil_In32(P2_02_FND_BASEADDR + FND_VAL_REG);
+    u32 fnd_ctrl = Xil_In32(P2_02_FND_BASEADDR + FND_CTRL_REG);
+    u32 pressed = Xil_In32(P2_03_BTN_BASEADDR + BTN_PRESSED);
+    u32 pending = Xil_In32(P2_03_BTN_BASEADDR + BTN_PENDING);
+    u32 lost = Xil_In32(P2_03_BTN_BASEADDR + BTN_COALESCED);
+    uart_puts("STATUS LED="); uart_puts((led &amp; 1U) ? "ON" : "OFF");
+    uart_puts(" REG0=0x"); uart_hex32(led);
+    uart_puts(" DISP="); uart_dec4(p2_visible_decimal(&amp;app));
+    uart_puts((fnd_ctrl &amp; 1U) ? " ON" : " OFF");
+    uart_puts(" MODE="); uart_puts(app.mode ? "EVENTS" : "VALUE");
+    uart_puts(" VALUE="); uart_dec4(app.value);
+    uart_puts(" EVENTS="); uart_dec4(app.event_count);
+    uart_puts(" FND_REG0=0x"); uart_hex32(fnd_bcd);
+    uart_puts(" BTN_PRESSED=0x"); uart_hex32(pressed);
+    uart_puts(" BTN_PENDING=0x"); uart_hex32(pending);
+    uart_puts(" COALESCED=0x"); uart_hex32(lost);
+    // (추가) 03장 STATUS 전체를 유지하고 PWM 상태를 뒤에 추가.
+    {
+        u32 flags = Xil_In32(P2_04_PWM_BASEADDR + PWM_STATUS);
+        u32 p = Xil_In32(P2_04_PWM_BASEADDR + PWM_PERIOD_ACT);
+        u32 d = Xil_In32(P2_04_PWM_BASEADDR + PWM_DUTY_ACT);
+        u32 pct = p ? (u32)(((uint64_t)d * 100U) / p) : 0U;
+        uart_puts(" PWM_SET="); uart_dec_u32(pwm_requested_percent);
+        uart_puts("% PWM_ACTIVE="); uart_dec_u32(pct);
+        uart_puts("% PWM_PENDING="); uart_puts((flags &amp; 1U) ? "1" : "0");
+        uart_puts(" PWM_ENABLE="); uart_puts((flags &amp; (1U &lt;&lt; 8)) ? "1" : "0");
+        uart_puts(" PWM_LED=1");
+    }
+    // (추가) Append CdS state without removing 04 status fields.
+    {
+        u32 bits = Xil_In32(P2_05_CDS_BASEADDR + CDS_STATUS);
+        uart_puts(" CDS_RAW="); uart_dec_u32(bits &amp; 1U);
+        uart_puts(" CDS_DARK="); uart_dec_u32((bits &gt;&gt; 1) &amp; 1U);
+        uart_puts(" CDS_VALID="); uart_dec_u32((bits &gt;&gt; 2) &amp; 1U);
+        uart_puts(" CDS_GATE="); uart_dec_u32((bits &gt;&gt; 3) &amp; 1U);
+        uart_puts(" CDS_AUTO="); uart_dec_u32((bits &gt;&gt; 4) &amp; 1U);
+        uart_puts(" CDS_POL="); uart_puts((bits &amp; (1U &lt;&lt; 5)) ? "LOW" : "HIGH");
+    }
+    // (추가) Append 06 status fields; do not remove 01~05 fields.
+    {
+        u32 st, cm, seq;
+        sonic_read_state(&amp;st,&amp;cm,&amp;seq);
+        uart_puts(" SONIC_VIEW="); uart_puts(sonic_view ? "DIST" : "VALUE/EVENTS");
+        uart_puts(" SONIC_CM="); uart_dec_u32(cm);
+        uart_puts(" SONIC_VALID="); uart_dec_u32((st &gt;&gt; 1) &amp; 1U);
+        uart_puts(" SONIC_TIMEOUT="); uart_dec_u32((st &gt;&gt; 2) &amp; 1U);
+        uart_puts(" SONIC_RANGE="); uart_dec_u32((st &gt;&gt; 3) &amp; 1U);
+        uart_puts(" SONIC_ALERT="); uart_dec_u32((st &gt;&gt; 4) &amp; 1U);
+        uart_puts(" SONIC_UNSAFE="); uart_dec_u32((st &gt;&gt; 5) &amp; 1U);
+        uart_puts(" SONIC_SEQ="); uart_dec_u32(seq);
+    }
+    uart_puts("\r\n");
+}
+
+static void handle_line(const char *line)
+{
+    uint16_t value = 0;
+    u8 pwm_percent = 0U;
+    // (추가) SONIC / WARN commands are parsed before legacy commands.
+    uint16_t warn_cm=0U;
+    SonicCommand sonic_cmd = sonic_parse_command(line,&amp;warn_cm);
+    CdsCommand cds_cmd = cds_parse_command(line);
+    PwmParseResult pwm_cmd = pwm_parse_command(line, &amp;pwm_percent);
+    P2Command cmd;
+    if (sonic_cmd != SONIC_NOT_COMMAND) {
+        switch (sonic_cmd) {
+        case SONIC_ON:
+            sonic_seq_seen = Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+            sonic_view_fresh=0U; sonic_auto_enabled=1U; sonic_view=1U;
+            sonic_commit_ctrl(); fnd_commit();
+            uart_puts("OK SONIC ON (FND DIST cm)\r\n"); break;
+        case SONIC_OFF:
+            sonic_auto_enabled=0U; sonic_view=0U; sonic_view_fresh=0U;
+            sonic_commit_ctrl(); fnd_commit();
+            uart_puts("OK SONIC OFF (FND VALUE/EVENTS restored)\r\n"); break;
+        case SONIC_READ: sonic_print_reading(); break;
+        case SONIC_SHOT:
+            if (sonic_auto_enabled ||
+                ((Xil_In32(P2_06_SONIC_BASEADDR + SONIC_STATUS) &gt;&gt; 8) &amp; 1U)==0U) {
+                uart_puts("BUSY: SONIC SHOT unavailable; retry or SONIC OFF\r\n");
+            } else {
+                // W1P START bit1; preserve WARN_EN bit2, AUTO remains off.
+                Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_CTRL,
+                          ((u32)sonic_warn_enabled &lt;&lt; 2) | 2U);
+                uart_puts("OK SONIC SHOT QUEUED; use SONIC READ\r\n");
+            }
+            break;
+        case SONIC_WARN_CM:
+            Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_WARN_CFG, warn_cm);
+            sonic_warn_enabled=1U; sonic_commit_ctrl();
+            uart_puts("OK WARN ");uart_dec_u32(warn_cm);uart_puts(" CM\r\n"); break;
+        case SONIC_WARN_OFF:
+            sonic_warn_enabled=0U; sonic_commit_ctrl();
+            uart_puts("OK WARN OFF (UNSAFE status remains active)\r\n"); break;
+        default: uart_puts("ERROR: SONIC ON/OFF/READ/SHOT | WARN 1..400/OFF\r\n");
+        }
+        return;
+    }
+    if (cds_cmd != CDS_NOT_COMMAND) {
+        switch (cds_cmd) {
+        case CDS_AUTO_ON:
+            cds_auto_enabled=1U; cds_commit_control();
+            uart_puts("OK AUTO ON (PWM duty retained)\r\n"); break;
+        case CDS_AUTO_OFF:
+            cds_auto_enabled=0U; cds_commit_control();
+            uart_puts("OK AUTO OFF (PWM manual)\r\n"); break;
+        case CDS_POL_LOW:
+            cds_dark_when_low=1U; cds_commit_control();
+            uart_puts("OK CDS POL LOW\r\n"); break;
+        case CDS_POL_HIGH:
+            cds_dark_when_low=0U; cds_commit_control();
+            uart_puts("OK CDS POL HIGH\r\n"); break;
+        case CDS_READ:
+            cds_print_reading(); break;
+        default:
+            uart_puts("ERROR: AUTO ON | AUTO OFF | CDS READ | CDS POL LOW | CDS POL HIGH\r\n");
+            break;
+        }
+        return;
+    }
+    if (pwm_cmd != PWM_NOT_COMMAND) {
+        if (pwm_cmd == PWM_INVALID) {
+            uart_puts("ERROR: PWM 0..100 (decimal, no leading zeroes)\r\n");
+        } else if (!pwm_queue_percent(pwm_percent)) {
+            uart_puts("BUSY: previous PWM update pending; retry\r\n");
+        } else {
+            uart_puts("OK PWM "); uart_dec_u32(pwm_percent);
+            uart_puts(" QUEUED\r\n"); // 실제 출력은 다음 주기 경계에서 반영됨.
+        }
+        return;
+    }
+    cmd = p2_parse_command(line, &amp;value);
+    switch (cmd) {
+    case P2_CMD_LED_ON:
+        Xil_Out32(P2_01_LED_BASEADDR, 1U);
+        uart_puts("OK LED ON\r\n"); break;
+    case P2_CMD_LED_OFF:
+        Xil_Out32(P2_01_LED_BASEADDR, 0U);
+        uart_puts("OK LED OFF\r\n"); break;
+    case P2_CMD_DISP_VALUE:
+        p2_set_disp(&amp;app, value); fnd_commit();
+        uart_puts("OK DISP "); uart_dec4(value); uart_puts("\r\n"); break;
+    case P2_CMD_DISP_OFF:
+        app.display_on = 0; fnd_commit(); uart_puts("OK DISP OFF\r\n"); break;
+    case P2_CMD_STATUS:
+        print_status(); break;
+    default:
+        uart_puts("ERROR: LED ON/OFF | DISP dddd/OFF | PWM 0..100 | AUTO ON/OFF | CDS READ/POL | SONIC ON/OFF/READ/SHOT | WARN 1..400/OFF | STATUS\r\n");
+    }
+}
+
+static void poll_uart(void)
+{
+    static char line[LINE_CAP];
+    static u32 used = 0;
+    static int invalid = 0;
+    static int overflow = 0;
+    u8 ch;
+    if (XUartLite_IsReceiveEmpty(UART_BASEADDR)) return;
+    ch = XUartLite_RecvByte(UART_BASEADDR);
+    if (ch == '\r' || ch == '\n') {
+        line[used] = '\0';
+        if (overflow) uart_puts("ERROR: line too long\r\n");
+        else if (invalid) uart_puts("ERROR: invalid ASCII\r\n");
+        else if (used) handle_line(line);
+        used = 0; overflow = 0; invalid = 0;
+        return; // CRLF second terminator is ignored.
+    }
+    if (ch &lt; 0x20U || ch &gt; 0x7EU) { invalid = 1; return; }
+    if (used &lt; LINE_CAP-1U) line[used++] = (char)ch;
+    else overflow = 1;
+}
+
+static void service_button_events(void)
+{
+    unsigned i;
+    for (i = 0; i &lt; 8U; ++i) {
+        // Each 32-bit read is atomic on the target 32-bit CPU. ISR only increments.
+        u32 seen = irq_counts[i];
+        while (handled_counts[i] != seen) {
+            handled_counts[i]++;
+            p2_apply_button(&amp;app, i);
+            fnd_commit();
+        }
+    }
+}
+
+int main(void)
+{
+    int status;
+    unsigned i;
+    p2_init(&amp;app);
+    for (i=0; i&lt;8U; ++i) { irq_counts[i]=0U; handled_counts[i]=0U; }
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_ENABLE, 0U); // Mask IRQ while setting up.
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_PENDING, 0xFFU); // Clear stale events.
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_COALESCED, 0xFFU); // Clear stale loss flags.
+    if (Xil_In32(P2_03_BTN_BASEADDR + BTN_ID) != 0x00030001U) {
+        uart_puts("ERROR: button IP identity mismatch\r\n"); return XST_FAILURE;
+    }
+    // (추가) P2-05 identity check BEFORE enabling automatic operation.
+    if (Xil_In32(P2_05_CDS_BASEADDR + CDS_IP_ID) != CDS_EXPECTED_ID) {
+        uart_puts("ERROR: CdS IP identity mismatch\r\n");
+        return XST_FAILURE;
+    }
+    cds_auto_enabled = 0U; cds_dark_when_low = 1U;
+    cds_commit_control(); // Power-on always begins in manual bypass mode.
+    // (추가) Validate 06 IP before enabling a continuous trigger.
+    if (Xil_In32(P2_06_SONIC_BASEADDR + SONIC_ID) != SONIC_EXPECTED_ID) {
+        uart_puts("ERROR: HC-SR04 IP identity mismatch\r\n");
+        return XST_FAILURE;
+    }
+    sonic_auto_enabled=0U; sonic_warn_enabled=1U; sonic_view=0U; sonic_view_fresh=0U;
+    Xil_Out32(P2_06_SONIC_BASEADDR + SONIC_WARN_CFG, 20U);
+    sonic_commit_ctrl();
+    sonic_seq_seen=Xil_In32(P2_06_SONIC_BASEADDR + SONIC_SEQ);
+    // (추가) IP ID를 확인하고 시작할 때 PWM OFF를 예약.
+    if (Xil_In32(P2_04_PWM_BASEADDR + PWM_ID) != PWM_IP_ID) {
+        uart_puts("ERROR: PWM IP identity mismatch\r\n");
+        return XST_FAILURE;
+    }
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_PERIOD_CFG, PWM_PERIOD_TICKS);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_DUTY_CFG, 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_CTRL_CFG, 0U);
+    Xil_Out32(P2_04_PWM_BASEADDR + PWM_APPLY, 1U);
+    fnd_commit();
+    status = setup_button_interrupt();
+    if (status != XST_SUCCESS) {
+        uart_puts("ERROR: interrupt initialization failed\r\n");
+        return XST_FAILURE;
+    }
+    Xil_Out32(P2_03_BTN_BASEADDR + BTN_ENABLE, 0xFFU);
+    uart_puts("P2-06: HC-SR04 DIST + near/fault LED2; P2-01..05 retained\r\n");
+    uart_puts("UART: SONIC ON/OFF/READ/SHOT | WARN 1..400/OFF | LED ON/OFF | DISP 1234/OFF | PWM 0..100 | AUTO ON/OFF | CDS READ/POL LOW/HIGH | STATUS\r\n");
+    while (1) {
+        poll_uart(); // Non-blocking: do not starve event processing.
+        service_button_events();
+        service_sonic_display(); // (추가) Refresh FND once per completed sample.
+    }
+}</code></pre></div></div>
+</section>
+<section class="section" id="cfile1">
+<h2><span class="num">04</span>sw/p2_06_sonic_logic.h</h2>
+<div>C · 전체 코드</div><p><b>소스:</b> <a href="#f-part02_1_ch06_sw_p2_06_sonic_logic_h">코드 파일 열기</a> — 아래는 배포 파일과 동일한 전체 코드다.</p><div><div class="codeblock" id="f-part02_1_ch06_sw_p2_06_sonic_logic_h"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>#ifndef P2_06_SONIC_LOGIC_H
+#define P2_06_SONIC_LOGIC_H
+#include &lt;stdint.h&gt;
+// Strict ASCII command grammar; never guess a sensor value from text.
+typedef enum {
+    SONIC_NOT_COMMAND=0, SONIC_ON, SONIC_OFF, SONIC_READ, SONIC_SHOT,
+    SONIC_WARN_CM, SONIC_WARN_OFF, SONIC_INVALID
+} SonicCommand;
+SonicCommand sonic_parse_command(const char *line, uint16_t *warn_cm);
+// Only a completed, valid 2..400cm reading can be displayed.
+uint16_t sonic_visible_cm(uint32_t status, uint32_t distance);
+// bit1 valid. Invalid/timeout/out-of-range =&gt; 0 (blank FND externally).
+int sonic_sample_valid(uint32_t status, uint32_t distance);
+#endif</code></pre></div></div>
+</section>
+<section class="section" id="cfile2">
+<h2><span class="num">05</span>sw/p2_06_sonic_logic.c</h2>
+<div>C · 전체 코드</div><p><b>소스:</b> <a href="#f-part02_1_ch06_sw_p2_06_sonic_logic_c">코드 파일 열기</a> — 아래는 배포 파일과 동일한 전체 코드다.</p><div><div class="codeblock" id="f-part02_1_ch06_sw_p2_06_sonic_logic_c"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>#include "p2_06_sonic_logic.h"
+#include &lt;string.h&gt;
+
+SonicCommand sonic_parse_command(const char *line, uint16_t *warn_cm)
+{
+    unsigned value=0U, n=0U;
+    const char *p;
+    if (!line || !warn_cm) return SONIC_INVALID;
+    if (strcmp(line, "SONIC ON") == 0) return SONIC_ON;
+    if (strcmp(line, "SONIC OFF") == 0) return SONIC_OFF;
+    if (strcmp(line, "SONIC READ") == 0) return SONIC_READ;
+    if (strcmp(line, "SONIC SHOT") == 0) return SONIC_SHOT;
+    if (strcmp(line, "WARN OFF") == 0) return SONIC_WARN_OFF;
+    if (strncmp(line, "SONIC", 5U) == 0 ||
+        strncmp(line, "WARN", 4U) == 0) {
+        if (strncmp(line, "WARN ", 5U) != 0) return SONIC_INVALID;
+        p = line + 5;
+        if (*p &lt; '1' || *p &gt; '9') return SONIC_INVALID;
+        while (*p) {
+            if (*p &lt; '0' || *p &gt; '9' || ++n &gt; 3U) return SONIC_INVALID;
+            value = value*10U+(unsigned)(*p-'0');
+            ++p;
+        }
+        if (value &gt; 400U) return SONIC_INVALID;
+        *warn_cm=(uint16_t)value;
+        return SONIC_WARN_CM;
+    }
+    return SONIC_NOT_COMMAND;
+}
+
+int sonic_sample_valid(uint32_t status, uint32_t distance)
+{
+    return ((status &amp; (1U&lt;&lt;1)) != 0U &amp;&amp; distance &gt;= 2U &amp;&amp; distance &lt;= 400U);
+}
+
+uint16_t sonic_visible_cm(uint32_t status, uint32_t distance)
+{
+    return sonic_sample_valid(status,distance) ? (uint16_t)distance : 0U;
+}</code></pre></div></div>
+</section>
+<section class="section" id="cfile3">
+<h2><span class="num">06</span>sw/p2_05_cds_logic.h</h2>
+<div>C · 전체 코드</div><p><b>소스:</b> <a href="#f-part02_1_ch06_sw_p2_05_cds_logic_h">코드 파일 열기</a> — 아래는 배포 파일과 동일한 전체 코드다.</p><div><div class="codeblock" id="f-part02_1_ch06_sw_p2_05_cds_logic_h"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>#ifndef P2_05_CDS_LOGIC_H
+#define P2_05_CDS_LOGIC_H
+#include &lt;stdint.h&gt;
+
+// Reusable exact-match ASCII command parser, independent of AMD BSP.
+typedef enum {
+    CDS_NOT_COMMAND=0, CDS_AUTO_ON, CDS_AUTO_OFF,
+    CDS_POL_LOW, CDS_POL_HIGH, CDS_READ, CDS_INVALID
+} CdsCommand;
+CdsCommand cds_parse_command(const char *line);
+uint32_t cds_control_word(uint8_t auto_on, uint8_t dark_when_low);
+uint8_t cds_light_on(uint8_t pwm_high, uint8_t auto_on,
+                     uint8_t dark_valid, uint8_t dark_filtered);
+#endif</code></pre></div></div>
+</section>
+<section class="section" id="cfile4">
+<h2><span class="num">07</span>sw/p2_05_cds_logic.c</h2>
+<div>C · 전체 코드</div><p><b>소스:</b> <a href="#f-part02_1_ch06_sw_p2_05_cds_logic_c">코드 파일 열기</a> — 아래는 배포 파일과 동일한 전체 코드다.</p><div><div class="codeblock" id="f-part02_1_ch06_sw_p2_05_cds_logic_c"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>#include "p2_05_cds_logic.h"
+#include &lt;string.h&gt;
+
+CdsCommand cds_parse_command(const char *line)
+{
+    if (strcmp(line, "AUTO ON") == 0) return CDS_AUTO_ON;
+    if (strcmp(line, "AUTO OFF") == 0) return CDS_AUTO_OFF;
+    if (strcmp(line, "CDS POL LOW") == 0) return CDS_POL_LOW;
+    if (strcmp(line, "CDS POL HIGH") == 0) return CDS_POL_HIGH;
+    if (strcmp(line, "CDS READ") == 0) return CDS_READ;
+    // (추가) AUTO/CDS로 시작하지만 정해진 문자열과 다르면 명시적 오류.
+    if (strncmp(line, "AUTO", 4) == 0 || strncmp(line, "CDS", 3) == 0)
+        return CDS_INVALID;
+    return CDS_NOT_COMMAND;
+}
+
+uint32_t cds_control_word(uint8_t auto_on, uint8_t dark_when_low)
+{
+    // bit1: low -&gt; dark. bit0: allow CdS gating.
+    return ((dark_when_low ? 1U : 0U) &lt;&lt; 1) | (auto_on ? 1U : 0U);
+}
+
+uint8_t cds_light_on(uint8_t pwm_high, uint8_t auto_on,
+                     uint8_t dark_valid, uint8_t dark_filtered)
+{
+    // Matches auto_light_controller.v; AUTO ON cannot override PWM=0%.
+    return (uint8_t)((pwm_high != 0U) &amp;&amp;
+        ((auto_on == 0U) || ((dark_valid != 0U) &amp;&amp; (dark_filtered != 0U))));
+}</code></pre></div></div>
+</section>
+<section class="section" id="cfile5">
+<h2><span class="num">08</span>sw/p2_04_pwm_logic.h</h2>
+<div>C · 전체 코드</div><p><b>소스:</b> <a href="#f-part02_1_ch06_sw_p2_04_pwm_logic_h">코드 파일 열기</a> — 아래는 배포 파일과 동일한 전체 코드다.</p><div><div class="codeblock" id="f-part02_1_ch06_sw_p2_04_pwm_logic_h"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>#ifndef P2_04_PWM_LOGIC_H
+#define P2_04_PWM_LOGIC_H
+#include &lt;stdint.h&gt;
+
+typedef enum {PWM_NOT_COMMAND=0, PWM_VALID, PWM_INVALID} PwmParseResult;
+// Accept exactly "PWM 0".."PWM 100" with no extra spaces/leading zeroes.
+PwmParseResult pwm_parse_command(const char *line, uint8_t *percent);
+uint32_t pwm_duty_for_percent(uint32_t period, uint8_t percent);
+#endif</code></pre></div></div>
+</section>
+<section class="section" id="cfile6">
+<h2><span class="num">09</span>sw/p2_04_pwm_logic.c</h2>
+<div>C · 전체 코드</div><p><b>소스:</b> <a href="#f-part02_1_ch06_sw_p2_04_pwm_logic_c">코드 파일 열기</a> — 아래는 배포 파일과 동일한 전체 코드다.</p><div><div class="codeblock" id="f-part02_1_ch06_sw_p2_04_pwm_logic_c"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>#include "p2_04_pwm_logic.h"
+#include &lt;string.h&gt;
+
+PwmParseResult pwm_parse_command(const char *line, uint8_t *percent)
+{
+    unsigned value = 0U;
+    const char *p;
+    // (유지) 기존 LED/DISP 명령은 p2_parse_command()에서 처리.
+    if (strncmp(line, "PWM", 3) != 0) return PWM_NOT_COMMAND;
+    if (line[3] != ' ') return PWM_INVALID;
+    p = line + 4;
+    if (*p &lt; '0' || *p &gt; '9') return PWM_INVALID;
+    if (*p == '0' &amp;&amp; p[1] != '\0') return PWM_INVALID;
+    while (*p &gt;= '0' &amp;&amp; *p &lt;= '9') {
+        value = 10U * value + (unsigned)(*p - '0');
+        if (value &gt; 100U) return PWM_INVALID; // 100 초과는 곧바로 차단해 오버플로 방지.
+        ++p;
+    }
+    if (*p != '\0') return PWM_INVALID;
+    *percent = (uint8_t)value;
+    return PWM_VALID;
+}
+
+uint32_t pwm_duty_for_percent(uint32_t period, uint8_t percent)
+{
+    // (추가) 주기값 × 퍼센트의 곱셈을 64비트로 수행.
+    if (percent &gt; 100U) return period; // 방어적 상한 처리. UART parser에서는 오류로 차단.
+    return (uint32_t)(((uint64_t)period * percent) / 100U);
+}</code></pre></div></div>
+</section>
+<section class="section" id="cfile7">
+<h2><span class="num">10</span>sw/p2_03_logic.h</h2>
+<div>C · 전체 코드</div><p><b>소스:</b> <a href="#f-part02_1_ch06_sw_p2_03_logic_h">코드 파일 열기</a> — 아래는 배포 파일과 동일한 전체 코드다.</p><div><div class="codeblock" id="f-part02_1_ch06_sw_p2_03_logic_h"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>#ifndef P2_03_LOGIC_H
+#define P2_03_LOGIC_H
+#include &lt;stdint.h&gt;
+
+// Board-independent application state and event semantics (testable on PC).
+typedef struct {
+    uint16_t value;       // 0000..9999, used in VALUE mode
+    uint16_t event_count; // 0000..9999, used in EVENTS mode
+    uint8_t mode;         // 0: VALUE, 1: EVENTS
+    uint8_t display_on;   // 0/1, independent of mode
+} P2AppState;
+
+typedef enum {
+    P2_CMD_INVALID = 0, P2_CMD_LED_ON, P2_CMD_LED_OFF,
+    P2_CMD_STATUS, P2_CMD_DISP_OFF, P2_CMD_DISP_VALUE
+} P2Command;
+
+void p2_init(P2AppState *s);
+void p2_apply_button(P2AppState *s, unsigned event_bit);
+void p2_set_disp(P2AppState *s, uint16_t value);
+uint16_t p2_visible_decimal(const P2AppState *s);
+uint16_t p2_to_bcd4(uint16_t value);
+P2Command p2_parse_command(const char *text, uint16_t *disp_value);
+#endif</code></pre></div></div>
+</section>
+<section class="section" id="cfile8">
+<h2><span class="num">11</span>sw/p2_03_logic.c</h2>
+<div>C · 전체 코드</div><p><b>소스:</b> <a href="#f-part02_1_ch06_sw_p2_03_logic_c">코드 파일 열기</a> — 아래는 배포 파일과 동일한 전체 코드다.</p><div><div class="codeblock" id="f-part02_1_ch06_sw_p2_03_logic_c"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>#include "p2_03_logic.h"
+#include &lt;string.h&gt;
+
+void p2_init(P2AppState *s)
+{
+    s-&gt;value = 0; s-&gt;event_count = 0;
+    s-&gt;mode = 0; s-&gt;display_on = 0; // Same FND reset-off policy as P2-02.
+}
+
+static uint16_t wrap_10000(int value)
+{
+    value %= 10000;
+    if (value &lt; 0) value += 10000;
+    return (uint16_t)value;
+}
+
+void p2_apply_button(P2AppState *s, unsigned event_bit)
+{
+    // Bit 0..3 short U/D/L/R; 4..7 long U/D/L/R.
+    if (event_bit &gt; 7U) return;
+    s-&gt;event_count = wrap_10000((int)s-&gt;event_count + 1);
+    switch (event_bit) {
+    case 0: s-&gt;value = wrap_10000((int)s-&gt;value + 1); break;
+    case 1: s-&gt;value = wrap_10000((int)s-&gt;value - 1); break;
+    case 2: s-&gt;mode ^= 1U; break;
+    case 3: s-&gt;display_on ^= 1U; break;
+    case 4: s-&gt;value = wrap_10000((int)s-&gt;value + 100); break;
+    case 5: s-&gt;value = wrap_10000((int)s-&gt;value - 100); break;
+    case 6: s-&gt;value = 0; break;
+    case 7: p2_init(s); s-&gt;display_on = 1; break; // Reset all, show 0000.
+    default: break;
+    }
+}
+
+void p2_set_disp(P2AppState *s, uint16_t value)
+{
+    s-&gt;value = value; s-&gt;mode = 0; s-&gt;display_on = 1;
+}
+
+uint16_t p2_visible_decimal(const P2AppState *s)
+{
+    return (s-&gt;mode == 0U) ? s-&gt;value : s-&gt;event_count;
+}
+
+uint16_t p2_to_bcd4(uint16_t value)
+{
+    // 0050 -&gt; 0x0050; do not use binary integer 50 as FND raw digits.
+    uint16_t thousands = (uint16_t)(value / 1000U);
+    uint16_t hundreds = (uint16_t)((value / 100U) % 10U);
+    uint16_t tens = (uint16_t)((value / 10U) % 10U);
+    uint16_t ones = (uint16_t)(value % 10U);
+    return (uint16_t)((thousands &lt;&lt; 12) | (hundreds &lt;&lt; 8) |
+                      (tens &lt;&lt; 4) | ones);
+}
+
+P2Command p2_parse_command(const char *text, uint16_t *disp_value)
+{
+    unsigned i;
+    unsigned v = 0;
+    if (strcmp(text, "LED ON") == 0) return P2_CMD_LED_ON;
+    if (strcmp(text, "LED OFF") == 0) return P2_CMD_LED_OFF;
+    if (strcmp(text, "STATUS") == 0) return P2_CMD_STATUS;
+    if (strcmp(text, "DISP OFF") == 0) return P2_CMD_DISP_OFF;
+    if (strlen(text) != 9U || memcmp(text, "DISP ", 5U) != 0)
+        return P2_CMD_INVALID;
+    for (i = 5U; i &lt; 9U; ++i) {
+        if (text[i] &lt; '0' || text[i] &gt; '9') return P2_CMD_INVALID;
+        v = v * 10U + (unsigned)(text[i] - '0');
+    }
+    *disp_value = (uint16_t)v;
+    return P2_CMD_DISP_VALUE;
+}</code></pre></div></div>
+</section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

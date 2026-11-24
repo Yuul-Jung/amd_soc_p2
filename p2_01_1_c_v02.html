@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Basys3 제2부 01.1장 · C 코드 풀이">
+<meta name="generator" content="tools/guide/build_part.py — 직접 수정 금지">
+<title>제2부 01.1장 · C 코드 풀이 (v02)</title>
+<link rel="stylesheet" href="assets/education/site.css">
+<style>
+.access-skip{position:absolute;left:-9999px;top:0}
+.access-skip:focus{left:12px;top:12px;z-index:1003;background:#fff;color:#15171c;padding:6px 10px}
+.vbadge{display:inline-block;padding:.15em .6em;border-radius:4px;font-size:.78em;font-weight:700;background:#d4edda;color:#155724;vertical-align:middle}
+.hero p{max-width:none}
+.hero h1,.section h2{overflow-wrap:anywhere}
+.section :not(pre)>code{overflow-wrap:anywhere}
+.section p,.section li,.section .callout,.section .cards>div,.section figcaption{overflow-wrap:anywhere}
+.section label{display:block;margin:4px 0;overflow-wrap:anywhere}
+.section img{max-width:100%;height:auto;display:block}
+.section .lead{color:var(--ink-2);font-weight:500}
+.section .minor:not(text){color:var(--ink-3);font-size:.9em}
+.table-wrap{overflow-x:auto;margin:12px 0}
+.table-wrap th{white-space:nowrap}
+.section .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;padding:0;list-style:none}
+.chips li{border:1px solid var(--line);background:#fff;padding:3px 10px;border-radius:3px;font:500 12px "IBM Plex Mono",monospace;color:var(--ink-2);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.cards>div{border:1px solid var(--line);border-left:3px solid var(--accent);background:#fff;padding:12px 14px}
+.cards b,.cards strong{display:block;margin-bottom:4px}
+.cards small{display:block;color:var(--ink-3)}
+.callout{border:1px solid #d9d3f5;border-left:4px solid var(--accent);background:#f7f5fe;padding:12px 16px;margin:14px 0}
+.callout.warn{border-color:#f0d9a8;border-left-color:#b07a12;background:#fffaf0}
+.callout>:first-child{margin-top:0}.callout>:last-child{margin-bottom:0}
+.flow{white-space:pre-wrap;font:500 .86rem/1.7 "IBM Plex Mono",monospace;background:#fbfbf9;border:1px solid var(--line);padding:12px 16px;margin:14px 0;overflow-x:auto}
+.flow code{background:none;padding:0}
+.fig{margin:16px 0;border:1px solid var(--line);background:#fff;padding:10px}
+.fig img,.fig svg{margin:0 auto;max-width:100%;height:auto}
+.fig figcaption{font-size:.84rem;color:var(--ink-2);margin-top:8px}
+.fig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:14px 0}
+.fig-grid .fig{margin:0}
+.gui-walkthrough{border:1px solid var(--line);background:#fbfbf9;padding:12px 18px;margin:14px 0}
+.section details{border:1px solid var(--line);background:#fff;padding:8px 14px;margin:14px 0}
+.section summary{cursor:pointer;font-weight:600}
+.codeblock pre{max-height:780px;white-space:pre}
+img.zoom{cursor:zoom-in}
+.zoom-view{position:fixed;inset:0;z-index:2000;background:rgba(21,23,28,.86);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.zoom-view img{max-width:100%;max-height:100%;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.codebar{gap:8px}.codebar span{min-width:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body data-chapter="p2-01-1">
+<a class="access-skip" href="#main-content">본문 바로가기</a>
+<button type="button" class="mobile-menu" id="mobile-menu" aria-controls="course-nav" aria-expanded="false">☰ 장·목차</button>
+<div class="shade" id="shade"></div>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">BASYS3 · 제2부 사용자 AXI IP와 주변장치 · 01.1장 <span class="vbadge">v02</span></p>
+    <h1>제2부 01.1장 · C 코드 풀이</h1>
+    <p>u8·u32·메모리 주소·문자열 비교·UART 송수신·레지스터 읽기/쓰기를 실제 코드로 해설합니다.</p>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="toc" id="course-nav" aria-label="전체 장과 절 탐색"></nav>
+  <main class="content" id="main-content">
+ <section class="section" id="overview">
+<h2><span class="num">00</span>이 장의 목표</h2>
+<p>u8·u32·메모리 주소·문자열 비교·UART 송수신·레지스터 읽기/쓰기를 실제 코드로 해설합니다.</p>
+<ul aria-label="핵심 용어" class="chips"><li>Basys3</li><li>MicroBlaze V</li><li>Vivado / Vitis 2024.2</li><li>AXI4-Lite</li></ul>
+</section>
+<section class="section" id="route">
+<h2><span class="num">01</span>C 프로그램 전체 흐름</h2>
+<div>A · 코드 실행</div><div>main() → read_command_line() → handle_command() → Xil_Out32()/report_status() → UART 응답</div><figure class="fig"><img alt="P2-01 C 함수 흐름도" class="zoom" loading="lazy" src="diagrams/p2_01_command_flow.svg"/><figcaption>C 함수명·명령문·복귀 루프가 실제 코드와 대응합니다.</figcaption></figure>
+</section>
+<section class="section" id="full">
+<h2><span class="num">02</span>main.c 전체 소스</h2>
+<div>B · 전체 코드</div><p>아래 코드는 <a href="#f-part02_1_ch01_P2_01_main_c">다운로드 소스와 동일</a>합니다. <code>USER_IP_BASEADDR</code>를 실제 Address Editor 값으로 바꿉니다.</p><div class="codeblock" id="f-part02_1_ch01_P2_01_main_c"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>/* P2-01: UART 문자열 명령으로 사용자 AXI IP의 LED0를 제어한다. */
+#include "xparameters.h"   /* Vitis BSP의 하드웨어 주소 정의 */
+#include "xil_types.h"     /* u8(8비트), u32(32비트) 자료형 */
+#include "xil_io.h"        /* Xil_In32(), Xil_Out32() */
+#include "xuartlite_l.h"   /* XUartLite_RecvByte(), SendByte() */
+#include &lt;string.h&gt;        /* strcmp(): 두 문자열 비교 */
+
+/* (필수 수정) Vivado Address Editor의 사용자 IP 주소를 입력한다. */
+#ifndef USER_IP_BASEADDR
+#define USER_IP_BASEADDR   0xFFFFFFFFU
+#endif
+#if USER_IP_BASEADDR == 0xFFFFFFFFU
+#error "USER_IP_BASEADDR를 실제 Vivado AXI IP Base Address로 수정하세요"
+#endif
+
+#define LED_REG_OFFSET    0x00U  /* slv_reg0: bit0가 LED0 출력 */
+#define LINE_CAPACITY     32U    /* 최대 31문자 + 종료문자 */
+
+/* 제1부에서 사용한 AXI UART Lite를 재사용한다. */
+#if defined(XPAR_XUARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_XUARTLITE_0_BASEADDR
+#elif defined(XPAR_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_UARTLITE_0_BASEADDR
+#elif defined(XPAR_AXI_UARTLITE_0_BASEADDR)
+#define UART_BASEADDR XPAR_AXI_UARTLITE_0_BASEADDR
+#else
+#error "xparameters.h에서 UART Lite BASEADDR 매크로를 확인하세요"
+#endif
+
+/* 문자열의 각 문자를 UART로 보낸다. */
+static void uart_puts(const char *text)
+{
+    while (*text != '\0') {  /* '\0': 문자열의 끝 */
+        XUartLite_SendByte(UART_BASEADDR, (u8)*text);
+        text++;
+    }
+}
+
+/* u32 값을 8자리 16진수 문자열로 출력한다. */
+static void uart_hex32(u32 value)
+{
+    const char digits[] = "0123456789ABCDEF";
+    int shift;
+    for (shift = 28; shift &gt;= 0; shift -= 4) {
+        u8 nibble = (u8)((value &gt;&gt; shift) &amp; 0x0FU);
+        XUartLite_SendByte(UART_BASEADDR, (u8)digits[nibble]);
+    }
+}
+
+/* REG0 읽기값에서 LED0 상태를 해석해 출력한다. */
+static void report_status(const char *prefix)
+{
+    u32 value = Xil_In32(USER_IP_BASEADDR + LED_REG_OFFSET);
+    uart_puts(prefix);
+    uart_puts((value &amp; 1U) ? "LED=ON REG0=0x" : "LED=OFF REG0=0x");
+    uart_hex32(value);
+    uart_puts("\r\n");
+}
+
+/* Enter까지 입력받는다. 반환: 1=명령, 0=빈 줄, -1=초과, -2=제어문자. */
+static int read_command_line(char *line, u32 capacity)
+{
+    u32 used = 0U;
+    int overflow = 0;
+    int invalid = 0;  /* NUL 등 제어문자 포함 명령 거부 */
+    while (1) {
+        u8 ch = XUartLite_RecvByte(UART_BASEADDR); /* 1바이트 대기 수신 */
+        if (ch == (u8)'\r' || ch == (u8)'\n') {
+            line[used] = '\0';       /* 항상 문자열을 종료한다. */
+            if (overflow) return -1; /* 버퍼 밖에 쓰지 않는다. */
+            if (invalid) return -2;  /* 제어문자가 포함되면 거부 */
+            return used ? 1 : 0;
+        }
+        if (ch &lt; (u8)0x20U || ch &gt; (u8)0x7EU) {
+            invalid = 1;  /* 출력 가능한 ASCII만 허용 */
+            continue;
+        }
+        if (used &lt; capacity - 1U) {
+            line[used++] = (char)ch;
+        } else {
+            overflow = 1; /* Enter 전까지 초과 문자를 버린다. */
+        }
+    }
+}
+
+/* 문자열을 비교한 후 AXI 레지스터에 기록하거나 읽는다. */
+static void handle_command(const char *line)
+{
+    if (strcmp(line, "LED ON") == 0) {
+        Xil_Out32(USER_IP_BASEADDR + LED_REG_OFFSET, 1U);
+        report_status("OK ");
+    } else if (strcmp(line, "LED OFF") == 0) {
+        Xil_Out32(USER_IP_BASEADDR + LED_REG_OFFSET, 0U);
+        report_status("OK ");
+    } else if (strcmp(line, "STATUS") == 0) {
+        report_status("STATUS ");
+    } else {
+        uart_puts("ERROR: use LED ON / LED OFF / STATUS\r\n");
+    }
+}
+
+int main(void)
+{
+    char line[LINE_CAPACITY]; /* ASCII 명령을 저장할 문자 배열 */
+    int result;
+    uart_puts("\r\nP2-01 AXI LED CONTROL\r\n");
+    uart_puts("Commands: LED ON | LED OFF | STATUS (Enter)\r\n");
+    report_status("STATUS ");
+
+    while (1) {
+        result = read_command_line(line, LINE_CAPACITY);
+        if (result &gt; 0) {
+            handle_command(line);
+        } else if (result == -2) {
+            uart_puts("ERROR: invalid character\r\n");
+        } else if (result &lt; 0) {
+            uart_puts("ERROR: command too long (max 31)\r\n");
+        }
+        /* 빈 줄 및 CRLF의 두 번째 줄바꿈은 무시한다. */
+    }
+}
+</code></pre></div>
+</section>
+<section class="section" id="types">
+<h2><span class="num">03</span>표준 C와 AMD BSP의 차이</h2>
+<div>C · 자료형 해설</div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>실제 표현</th><th>자료형·명령의 의미</th><th>코드에서 하는 일</th></tr></thead><tbody><tr><td><code>u8</code></td><td>AMD <code>xil_types.h</code>에 정의된 부호 없는 8비트 정수. <code>uint8_t</code>에 대응</td><td>UART 문자를 1바이트 단위로 받는다.</td></tr><tr><td><code>u32</code></td><td>AMD 부호 없는 32비트 정수. <code>uint32_t</code>에 대응</td><td>레지스터 읽기값과 수신 길이를 보관한다.</td></tr><tr><td><code>char line[32]</code></td><td>C 표준 문자 배열 32바이트</td><td>31개 문자와 문자열 끝 <code>\0</code> 저장</td></tr><tr><td><code>strcmp()</code></td><td>표준 C 라이브러리 <code>string.h</code>의 문자열 비교</td><td>정확하게 일치하면 0 반환</td></tr><tr><td><code>0x...U</code></td><td>16진수 부호 없는 정수 상수</td><td>주소·마스크·데이터에 사용</td></tr><tr><td><code>(u8)</code></td><td>자료형 변환(Cast)</td><td>문자를 8비트 전송값으로 변환</td></tr></tbody></table></div>
+</section>
+<section class="section" id="io">
+<h2><span class="num">04</span>CPU가 하드웨어에 접근하는 과정</h2>
+<div>C · AMD 전용 API</div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>실제 코드</th><th>동작</th><th>왜 필요한가</th></tr></thead><tbody><tr><td><code>XUartLite_RecvByte(UART_BASEADDR)</code></td><td>PC가 전송한 1바이트가 들어올 때까지 대기</td><td>문자열의 각 글자를 수신</td></tr><tr><td><code>XUartLite_SendByte(..., (u8)*text)</code></td><td>UART 송신 레지스터로 1바이트 전달</td><td>실행 결과를 PC로 표시</td></tr><tr><td><code>Xil_Out32(USER_IP_BASEADDR + 0x00, 1U)</code></td><td>사용자 IP의 REG0에 32비트 값 1 기록</td><td>LED0 켜기</td></tr><tr><td><code>Xil_In32(USER_IP_BASEADDR + 0x00)</code></td><td>REG0 32비트 읽기</td><td>실제 기록값을 읽어 확인</td></tr><tr><td><code>USER_IP_BASEADDR</code></td><td>Vivado에서 배정한 IP 시작 주소</td><td>CPU가 어떤 주변장치를 제어할지 결정</td></tr><tr><td><code>LED_REG_OFFSET</code></td><td>IP 시작 주소에서 REG0까지의 거리(0x00)</td><td>동일 IP 내부 레지스터 선택</td></tr></tbody></table></div><p>AXI 쓰기 데이터 1은 단순한 문자 <code>'1'</code>과 다릅니다. <code>'1'</code>의 ASCII 값은 <code>0x31</code>이지만, <code>1U</code>는 정수 1입니다. 이 코드는 한 줄을 문자열로 비교한 다음 정수 1을 레지스터에 씁니다.</p>
+</section>
+<section class="section" id="line">
+<h2><span class="num">05</span>read_command_line() — Enter까지 수신</h2>
+<div>D · 핵심 코드 풀이</div><div class="codeblock"><div class="codebar"><span>C</span></div><pre tabindex="0"><code>static int read_command_line(char *line, u32 capacity)
+{
+    u32 used = 0U;
+    int overflow = 0;
+    int invalid = 0;  /* NUL 등 제어문자 포함 명령 거부 */
+    while (1) {
+        u8 ch = XUartLite_RecvByte(UART_BASEADDR); /* 1바이트 대기 수신 */
+        if (ch == (u8)'\r' || ch == (u8)'\n') {
+            line[used] = '\0';       /* 항상 문자열을 종료한다. */
+            if (overflow) return -1; /* 버퍼 밖에 쓰지 않는다. */
+            if (invalid) return -2;  /* 제어문자가 포함되면 거부 */
+            return used ? 1 : 0;
+        }
+        if (ch &lt; (u8)0x20U || ch &gt; (u8)0x7EU) {
+            invalid = 1;  /* 출력 가능한 ASCII만 허용 */
+            continue;
+        }
+        if (used &lt; capacity - 1U) {
+            line[used++] = (char)ch;
+        } else {
+            overflow = 1; /* Enter 전까지 초과 문자를 버린다. */
+        }
+    }
+}</code></pre></div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>구문</th><th>이해 중심 해설</th></tr></thead><tbody><tr><td><code>used &lt; capacity - 1U</code></td><td>종료문자 공간 1바이트를 남기므로 배열을 넘지 않는다.</td></tr><tr><td><code>\r</code>, <code>\n</code></td><td>각각 CR, LF. 터미널의 Enter를 나타내는 값이다.</td></tr><tr><td><code>\0</code></td><td>문자열의 끝 표시로 <code>strcmp</code>가 어디까지 비교할지 알려준다.</td></tr><tr><td><code>overflow</code></td><td>31자 초과 시 잘린 앞부분을 정상 명령으로 오해하지 않도록 막는다.</td></tr><tr><td><code>return 1 / 0 / -1</code></td><td>명령 정상 / 빈 줄 / 길이 초과를 구분하며, -2는 제어문자 오류다.</td></tr></tbody></table></div>
+</section>
+<section class="section" id="handler">
+<h2><span class="num">06</span>handle_command() — 명령 비교·레지스터 제어</h2>
+<div>D · 핵심 코드 풀이</div><div class="codeblock"><div class="codebar"><span>Tcl</span></div><pre tabindex="0"><code>if (strcmp(line, "LED ON") == 0) {
+    Xil_Out32(USER_IP_BASEADDR + LED_REG_OFFSET, 1U);
+    report_status("OK ");
+} else if (strcmp(line, "LED OFF") == 0) {
+    Xil_Out32(USER_IP_BASEADDR + LED_REG_OFFSET, 0U);
+    report_status("OK ");
+} else if (strcmp(line, "STATUS") == 0) {
+    report_status("STATUS ");
+}</code></pre></div><p><code>strcmp()</code>가 0이면 문자열이 정확하게 일치합니다. <code>LED ON</code>·<code>LED OFF</code>는 쓰기 후 읽기, <code>STATUS</code>는 읽기만 합니다. 입력 오류는 어떤 레지스터도 변경하지 않습니다.</p><p><code>report_status()</code>가 읽은 32비트 값의 bit0을 검사해 <code>LED=ON</code> 또는 <code>LED=OFF</code>를 출력합니다. 이 값이 실제 LED 배선으로 전달되도록 Vivado의 <code>assign led_o = slv_reg0[0];</code>와 <code>.p2_led_o(ip_led0)</code>가 필요합니다.</p>
+</section>
+<section class="section" id="run">
+<h2><span class="num">07</span>명령 입력을 코드와 연결</h2>
+<div>E · 예제 추적</div><div aria-label="표 (가로 스크롤 가능)" class="table-wrap" role="region" tabindex="0"><table><thead><tr><th>PC 입력</th><th>C 처리</th><th>AXI 읽기·쓰기</th><th>결과</th></tr></thead><tbody><tr><td><code>LED ON↵</code></td><td><code>strcmp</code>가 LED ON 분기 선택</td><td>REG0 ← 1 → 재읽기</td><td>LED0 ON</td></tr><tr><td><code>STATUS↵</code></td><td>STATUS 분기 선택</td><td>REG0 읽기만 수행</td><td>LED0 ON 유지</td></tr><tr><td><code>LED OFF↵</code></td><td>LED OFF 분기 선택</td><td>REG0 ← 0 → 재읽기</td><td>LED0 OFF</td></tr><tr><td><code>LEDON↵</code></td><td>불일치</td><td>AXI 접근 없음</td><td>ERROR 응답</td></tr></tbody></table></div><div>PART 02 · CHAPTER 01</div>
+</section>
+    <div class="chapter-links" id="chapter-links"></div>
+  </main>
+</div>
+<script>
+window.COURSE={
+ "parent_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "parent_label": "소형 NPU 제작 학습안내서",
+ "next_course_url": "https://yuul-jung.github.io/amd_soc_npu/",
+ "next_course_label": "소형 NPU 제작 학습안내서",
+ "title": "제2부 · 사용자 AXI IP와 주변장치",
+ "short_title": "USER AXI IP · PERIPHERALS",
+ "home_label": "제2부 학습 안내서",
+ "chapters": [
+  {
+   "id": "p2-00",
+   "number": "00",
+   "title": "제2부 SoC 전체 구조",
+   "file": "p2_00_overview_v02.html"
+  },
+  {
+   "id": "p2-01",
+   "number": "01",
+   "title": "AXI LED IP",
+   "file": "p2_01_axi_led_v02.html"
+  },
+  {
+   "id": "p2-01-1",
+   "number": "01.1",
+   "title": "C 코드 풀이",
+   "file": "p2_01_1_c_v02.html"
+  },
+  {
+   "id": "p2-01-2",
+   "number": "01.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_01_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-02",
+   "number": "02",
+   "title": "AXI FND 4자리 표시",
+   "file": "p2_02_axi_fnd_v02.html"
+  },
+  {
+   "id": "p2-02-1",
+   "number": "02.1",
+   "title": "C 코드 풀이",
+   "file": "p2_02_1_c_v02.html"
+  },
+  {
+   "id": "p2-02-2",
+   "number": "02.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_02_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-03",
+   "number": "03",
+   "title": "방향 버튼 · AXI 인터럽트",
+   "file": "p2_03_button_irq_v02.html"
+  },
+  {
+   "id": "p2-03-1",
+   "number": "03.1",
+   "title": "C 코드 풀이",
+   "file": "p2_03_1_c_v02.html"
+  },
+  {
+   "id": "p2-03-2",
+   "number": "03.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_03_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-04",
+   "number": "04",
+   "title": "AXI PWM LED 밝기",
+   "file": "p2_04_pwm_v02.html"
+  },
+  {
+   "id": "p2-04-1",
+   "number": "04.1",
+   "title": "C 코드 풀이",
+   "file": "p2_04_1_c_v02.html"
+  },
+  {
+   "id": "p2-04-2",
+   "number": "04.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_04_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-05",
+   "number": "05",
+   "title": "CdS 조도센서 자동 조명",
+   "file": "p2_05_cds_v02.html"
+  },
+  {
+   "id": "p2-05-1",
+   "number": "05.1",
+   "title": "C 코드 풀이",
+   "file": "p2_05_1_c_v02.html"
+  },
+  {
+   "id": "p2-05-2",
+   "number": "05.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_05_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-06",
+   "number": "06",
+   "title": "HC-SR04 초음파 거리",
+   "file": "p2_06_ultrasonic_v02.html"
+  },
+  {
+   "id": "p2-06-1",
+   "number": "06.1",
+   "title": "C 코드 풀이",
+   "file": "p2_06_1_c_v02.html"
+  },
+  {
+   "id": "p2-06-2",
+   "number": "06.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_06_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-07",
+   "number": "07",
+   "title": "DC 모터 · 근접 정지",
+   "file": "p2_07_dc_motor_v02.html"
+  },
+  {
+   "id": "p2-07-1",
+   "number": "07.1",
+   "title": "C 코드 풀이",
+   "file": "p2_07_1_c_v02.html"
+  },
+  {
+   "id": "p2-07-2",
+   "number": "07.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_07_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-08",
+   "number": "08",
+   "title": "XADC 아날로그 입력",
+   "file": "p2_08_xadc_v02.html"
+  },
+  {
+   "id": "p2-08-1",
+   "number": "08.1",
+   "title": "C 코드 풀이",
+   "file": "p2_08_1_c_v02.html"
+  },
+  {
+   "id": "p2-08-2",
+   "number": "08.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_08_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-09",
+   "number": "09",
+   "title": "UART · 자동/수동 모드 통합",
+   "file": "p2_09_uart_mode_v02.html"
+  },
+  {
+   "id": "p2-09-1",
+   "number": "09.1",
+   "title": "C 코드 풀이",
+   "file": "p2_09_1_c_v02.html"
+  },
+  {
+   "id": "p2-09-2",
+   "number": "09.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_09_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10",
+   "number": "10",
+   "title": "주변장치 종합제어",
+   "file": "p2_10_capstone_v02.html"
+  },
+  {
+   "id": "p2-10-1",
+   "number": "10.1",
+   "title": "C 코드 풀이",
+   "file": "p2_10_1_c_v02.html"
+  },
+  {
+   "id": "p2-10-2",
+   "number": "10.2",
+   "title": "RTL · AXI 풀이",
+   "file": "p2_10_2_rtl_v02.html"
+  },
+  {
+   "id": "p2-10-3",
+   "number": "10.3",
+   "title": "사용자 AXI IP 라이브러리 사양",
+   "file": "p2_10_3_ip_library_v02.html"
+  },
+  {
+   "id": "p2-11",
+   "number": "11",
+   "title": "SG90 서보 모터",
+   "file": "p2_11_servo_v02.html"
+  },
+  {
+   "id": "p2-12",
+   "number": "12",
+   "title": "28BYJ-48 스테핑 모터",
+   "file": "p2_12_stepper_v02.html"
+  },
+  {
+   "id": "p2-12-1",
+   "number": "12.1",
+   "title": "실습 Vivado AXI IP SoC 연결",
+   "file": "p2_12_1_lab_v02.html"
+  },
+  {
+   "id": "p2-12-2",
+   "number": "12.2",
+   "title": "실습 ULN2003 배선·전원",
+   "file": "p2_12_2_lab_v02.html"
+  },
+  {
+   "id": "p2-12-3",
+   "number": "12.3",
+   "title": "실습 스테핑 모터 정·역회전",
+   "file": "p2_12_3_lab_v02.html"
+  },
+  {
+   "id": "p2-12-4",
+   "number": "12.4",
+   "title": "실습 스테핑 모터 가감속",
+   "file": "p2_12_4_lab_v02.html"
+  },
+  {
+   "id": "p2-13",
+   "number": "13",
+   "title": "MFRC522 SPI RFID",
+   "file": "p2_13_spi_rfid_v02.html"
+  },
+  {
+   "id": "p2-14",
+   "number": "14",
+   "title": "PCF8574 I²C 문자 LCD",
+   "file": "p2_14_i2c_lcd_v02.html"
+  },
+  {
+   "id": "p2-15",
+   "number": "15",
+   "title": "DS18B20 1-Wire 온도",
+   "file": "p2_15_ds18b20_v02.html"
+  },
+  {
+   "id": "p2-16",
+   "number": "16",
+   "title": "DS3231 I²C RTC",
+   "file": "p2_16_ds3231_rtc_v02.html"
+  },
+  {
+   "id": "p2-17",
+   "number": "17",
+   "title": "DHT22 온습도",
+   "file": "p2_17_dht22_v02.html"
+  },
+  {
+   "id": "p2-18",
+   "number": "18",
+   "title": "HC-SR501 PIR 인터럽트",
+   "file": "p2_18_pir_irq_v02.html"
+  },
+  {
+   "id": "p2-19",
+   "number": "19",
+   "title": "BME280 복합 환경 제어",
+   "file": "p2_19_bme280_environment_v02.html"
+  },
+  {
+   "id": "p2-20",
+   "number": "20",
+   "title": "종합 통합 · 안전 인터록",
+   "file": "p2_20_integrated_soc_v02.html"
+  }
+ ]
+};
+</script>
+<script defer src="assets/education/site.js"></script>
+<script>
+// 그림 확대: 그림을 누르면 쪽 안에서 크게 보기, 다시 누르거나 Escape로 닫기
+document.addEventListener("click", (e) => {
+  const img = e.target.closest("img.zoom");
+  const open = document.querySelector(".zoom-view");
+  if (open) { open.remove(); return; }
+  if (!img) return;
+  const v = document.createElement("div");
+  v.className = "zoom-view";
+  v.setAttribute("role", "dialog");
+  v.setAttribute("aria-label", img.alt || "그림 확대");
+  const big = document.createElement("img");
+  big.src = img.currentSrc || img.src;
+  big.alt = img.alt;
+  v.append(big);
+  document.body.append(v);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".zoom-view")?.remove(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+flowchart LR
+ A["poll_uart()"] --> B["handle_line()"]
+ B --> C["cap_handle_line()"]
+ C --> D["p2_10_parse()"]
+ D -->|RUN START| E["p2_10_start() / 가드 확인"]
+ D -->|RUN STOP| F["cap_motor_stop() / p2_10_stop()"]
+ D -->|RUN RESET| G["정지 확인 / p2_10_reset()"]
+ D -->|RUN STATUS| H["cap_run_status()"]
+ D -->|기존 명령| I["09장 기존 파서"]
